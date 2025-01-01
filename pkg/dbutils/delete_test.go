@@ -5,7 +5,7 @@ import (
 )
 
 func TestDeleteById(t *testing.T) {
-	db := setupTestDB(t)
+	db := SetupTestDB(t)
 	defer db.Close()
 
 	t.Run("successful deletion", func(t *testing.T) {

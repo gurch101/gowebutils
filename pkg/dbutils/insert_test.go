@@ -5,7 +5,7 @@ import (
 )
 
 func TestInsert(t *testing.T) {
-	db := setupTestDB(t)
+	db := SetupTestDB(t)
 	defer db.Close()
 
 	t.Run("successful insertion", func(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 )
 
 func TestUpdateById(t *testing.T) {
-	db := setupTestDB(t)
+	db := SetupTestDB(t)
 	defer db.Close()
 
 	t.Run("successful update", func(t *testing.T) {

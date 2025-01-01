@@ -5,7 +5,7 @@ import (
 )
 
 func TestGetById(t *testing.T) {
-	db := setupTestDB(t)
+	db := SetupTestDB(t)
 	defer db.Close()
 
 	t.Run("successful retrieval", func(t *testing.T) {

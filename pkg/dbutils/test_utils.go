@@ -28,7 +28,7 @@ func getProjectRoot() string {
 	}
 }
 
-func setupTestDB(t *testing.T) *sql.DB {
+func SetupTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
