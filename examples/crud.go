@@ -29,6 +29,7 @@ func NewTenantController(db *sql.DB) *TenantController {
 func (c *TenantController) GetMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /tenants", c.CreateTenantHandler)
+	mux.HandleFunc("GET /tenants/{id}", c.GetTenantHandler)
 	return mux
 }
 
@@ -84,6 +85,37 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 	parser.WriteJSON(w, http.StatusCreated, map[string]any{"id": tenantId}, nil)
 }
 
+type GetTenantResponse struct {
+	ID           int64      `json:"id"`
+	TenantName   string     `json:"tenantName"`
+	ContactEmail string     `json:"contactEmail"`
+	Plan         TenantPlan `json:"plan"`
+	IsActive     bool       `json:"isActive"`
+}
+
+func (tc *TenantController) GetTenantHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := parser.ReadIDPathParam(r)
+
+	if err != nil {
+		middleware.NotFoundResponse(w, r)
+		return
+	}
+
+	tenant, err := GetTenantById(tc.DB, id)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, dbutils.ErrRecordNotFound):
+			middleware.NotFoundResponse(w, r)
+		default:
+			middleware.ServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	parser.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
+}
+
 // service layer
 func CreateTenant(db *sql.DB, createTenantRequest *CreateTenantRequest) (*int64, error) {
 	tenantModel := NewTenantModel(createTenantRequest.TenantName, createTenantRequest.ContactEmail, createTenantRequest.Plan)
@@ -128,6 +160,24 @@ func InsertTenant(db *sql.DB, tenant *tenantModel) (*int64, error) {
 		"plan":          tenant.Plan,
 		"is_active":     tenant.IsActive,
 	})
+}
+
+func GetTenantById(db *sql.DB, tenantId int64) (*tenantModel, error) {
+	var tenant tenantModel
+
+	err := dbutils.GetById(db, "tenants", tenantId, map[string]any{
+		"id":            &tenant.ID,
+		"tenant_name":   &tenant.TenantName,
+		"contact_email": &tenant.ContactEmail,
+		"plan":          &tenant.Plan,
+		"is_active":     &tenant.IsActive,
+		"created_at":    &tenant.CreatedAt,
+		"version":       &tenant.Version,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &tenant, nil
 }
 
 func main() {

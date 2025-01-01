@@ -19,6 +19,12 @@ func CreatePostRequest(t *testing.T, url string, payload interface{}) *http.Requ
 	return req
 }
 
+func CreateGetRequest(t *testing.T, url string) *http.Request {
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
 func AssertError(t *testing.T, resp map[string]interface{}, expectedErrorField string, expectedErrorMessage string) {
 	error, ok := resp["errors"].([]interface{})[0].(map[string]interface{})
 	if !ok {

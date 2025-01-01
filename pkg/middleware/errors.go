@@ -43,7 +43,13 @@ func BadRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
 	errorResponse(w, r, http.StatusBadRequest, err)
 }
 
-// failedValidationResponse sends JSON-formatted error message to client with 400 Bad Request status code.
+// FailedValidationResponse sends JSON-formatted error message to client with 400 Bad Request status code.
 func FailedValidationResponse(w http.ResponseWriter, r *http.Request, errors []validation.ValidationError) {
 	errorResponse(w, r, http.StatusBadRequest, errors)
+}
+
+// NotFoundResponse method is used to send a 404 Not Found status code.
+func NotFoundResponse(w http.ResponseWriter, r *http.Request) {
+	message := "the requested resource could not be found"
+	errorResponse(w, r, http.StatusNotFound, message)
 }

@@ -137,3 +137,89 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 
 	testutils.AssertError(t, response, "tenantName", "This tenant is already registered")
 }
+
+func TestGetTenantHandler(t *testing.T) {
+	db := dbutils.SetupTestDB(t)
+
+	// Create the TenantController instance with the test database
+	tenantController := NewTenantController(db)
+
+	// Create a new HTTP request
+	req := testutils.CreateGetRequest(t, "/tenants/1")
+
+	// Record the response
+	rr := httptest.NewRecorder()
+
+	// Serve the HTTP request through the controller
+	tenantController.GetMux().ServeHTTP(rr, req)
+
+	// Check the response status code
+	if rr.Code != http.StatusOK {
+		t.Errorf("Expected status 200 OK, got %d", rr.Code)
+	}
+
+	// Check the response body
+	var response GetTenantResponse
+	err := json.Unmarshal(rr.Body.Bytes(), &response)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response.ID != 1 {
+		t.Errorf("Expected tenant ID 1, got %d", response.ID)
+	}
+	if response.TenantName != "Acme" {
+		t.Errorf("Expected tenant name 'Acme', got '%s'", response.TenantName)
+	}
+	if response.ContactEmail != "admin@acme.com" {
+		t.Errorf("Expected contact email 'admin@acme.com', got '%s'", response.ContactEmail)
+	}
+	if response.Plan != Free {
+		t.Errorf("Expected plan 'free', got '%s'", response.Plan)
+	}
+	if !response.IsActive {
+		t.Errorf("Expected tenant to be active")
+	}
+}
+
+func TestGetTenantHandler_InvalidID(t *testing.T) {
+	db := dbutils.SetupTestDB(t)
+
+	// Create the TenantController instance with the test database
+	tenantController := NewTenantController(db)
+
+	// Create a new HTTP request with an invalid ID
+	req := httptest.NewRequest(http.MethodGet, "/tenants/invalid", nil)
+
+	// Record the response
+	rr := httptest.NewRecorder()
+
+	// Serve the HTTP request through the controller
+	tenantController.GetMux().ServeHTTP(rr, req)
+
+	// Check the response status code
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404 Not Found, got %d", rr.Code)
+	}
+}
+
+func TestGetTenantHandler_NotFound(t *testing.T) {
+	db := dbutils.SetupTestDB(t)
+
+	// Create the TenantController instance with the test database
+	tenantController := NewTenantController(db)
+
+	// Create a new HTTP request for a non-existent tenant
+	req := httptest.NewRequest(http.MethodGet, "/tenants/9999", nil)
+
+	// Record the response
+	rr := httptest.NewRecorder()
+
+	// Serve the HTTP request through the controller
+	tenantController.GetMux().ServeHTTP(rr, req)
+
+	// Check the response status code
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404 Not Found, got %d", rr.Code)
+	}
+}
