@@ -34,9 +34,18 @@ var ErrRecordNotFound = fmt.Errorf("no rows found")
 var ErrEditConflict = fmt.Errorf("edit conflict")
 
 // Error returns the error message.
-func (e *ConstraintError) Error() string {
+func (e ConstraintError) Error() string {
 	errMsg := fmt.Sprintf("constraint error: %s %v", e.Type, e.Details)
 	return errMsg
+}
+
+func (e ConstraintError) DetailContains(d string) bool {
+	for _, detail := range e.Details {
+		if detail == d {
+			return true
+		}
+	}
+	return false
 }
 
 func parseError(err error) (*ConstraintError, error) {
@@ -101,5 +110,5 @@ func WrapDBError(err error) error {
 	if err != nil {
 		return err
 	}
-	return constraintError
+	return *constraintError
 }

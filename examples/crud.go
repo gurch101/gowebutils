@@ -2,10 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"errors"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"gurch101.github.io/go-web/pkg/dbutils"
+	"gurch101.github.io/go-web/pkg/middleware"
 	"gurch101.github.io/go-web/pkg/parser"
 	"gurch101.github.io/go-web/pkg/validation"
 )
@@ -53,7 +57,7 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 	createTenantRequest := &CreateTenantRequest{}
 	err := parser.ReadJSON(w, r, createTenantRequest)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		middleware.UnprocessableEntityResponse(w, r, err)
 		return
 	}
 
@@ -63,20 +67,41 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 	v.Check(IsValidTenantPlan(createTenantRequest.Plan), "plan", "Invalid plan")
 
 	if v.HasErrors() {
-		http.Error(w, "validation error", http.StatusBadRequest)
+		middleware.FailedValidationResponse(w, r, v.Errors)
 		return
 	}
 
-	tenantModel := NewTenantModel(createTenantRequest.TenantName, createTenantRequest.ContactEmail, createTenantRequest.Plan)
-	tenantId, err := InsertTenant(tc.DB, tenantModel)
+	tenantId, err := CreateTenant(tc.DB, createTenantRequest)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.As(err, &validation.ValidationError{}) {
+			middleware.FailedValidationResponse(w, r, []validation.ValidationError{err.(validation.ValidationError)})
+			return
+		}
+		middleware.ServerErrorResponse(w, r, err)
 		return
 	}
 
 	parser.WriteJSON(w, http.StatusCreated, map[string]any{"id": tenantId}, nil)
 }
 
+// service layer
+func CreateTenant(db *sql.DB, createTenantRequest *CreateTenantRequest) (*int64, error) {
+	tenantModel := NewTenantModel(createTenantRequest.TenantName, createTenantRequest.ContactEmail, createTenantRequest.Plan)
+
+	id, err := InsertTenant(db, tenantModel)
+
+	if err != nil {
+		if errors.As(err, &dbutils.ConstraintError{}) {
+			if err.(dbutils.ConstraintError).DetailContains("tenant_name") {
+				return nil, validation.ValidationError{Field: "tenantName", Message: "This tenant is already registered"}
+			}
+		}
+		return nil, err
+	}
+	return id, nil
+}
+
+// repository layer
 type tenantModel struct {
 	ID           int64
 	TenantName   string
@@ -106,6 +131,9 @@ func InsertTenant(db *sql.DB, tenant *tenantModel) (*int64, error) {
 }
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	db, err := sql.Open("sqlite3", "./app.db?_foreign_keys=1&_journal=WAL")
 	if err != nil {
 		panic(err)
