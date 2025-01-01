@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -75,8 +74,7 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(fmt.Sprintf("Created tenant with ID: %d", *tenantId)))
+	parser.WriteJSON(w, http.StatusCreated, map[string]any{"id": tenantId}, nil)
 }
 
 type tenantModel struct {

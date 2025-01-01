@@ -59,3 +59,114 @@ func TestReadJSON_InvalidUnmarshalError(t *testing.T) {
 	}()
 	ReadJSON(w, r, struct{}{})
 }
+
+func TestWriteJSON(t *testing.T) {
+	type testStruct struct {
+		Name  string `json:"name"`
+		Age   int    `json:"age"`
+		Email string `json:"email"`
+	}
+
+	// Test cases
+	tests := []struct {
+		name       string
+		status     int
+		data       interface{}
+		headers    http.Header
+		wantBody   string
+		wantHeader map[string]string
+		wantErr    bool
+	}{
+		{
+			name:   "valid JSON response with headers",
+			status: http.StatusOK,
+			data: testStruct{
+				Name:  "Alice",
+				Age:   30,
+				Email: "alice@example.com",
+			},
+			headers: http.Header{"X-Custom-Header": []string{"CustomValue"}},
+			wantBody: `{
+	"name": "Alice",
+	"age": 30,
+	"email": "alice@example.com"
+}
+`,
+			wantHeader: map[string]string{
+				"Content-Type":    "application/json",
+				"X-Custom-Header": "CustomValue",
+			},
+			wantErr: false,
+		},
+		{
+			name:   "valid JSON response without additional headers",
+			status: http.StatusCreated,
+			data: map[string]string{
+				"message": "Resource created",
+			},
+			headers: nil,
+			wantBody: `{
+	"message": "Resource created"
+}
+`,
+			wantHeader: map[string]string{
+				"Content-Type": "application/json",
+			},
+			wantErr: false,
+		},
+		{
+			name:       "nil data",
+			status:     http.StatusOK,
+			data:       nil,
+			headers:    nil,
+			wantBody:   "null\n",
+			wantHeader: map[string]string{"Content-Type": "application/json"},
+			wantErr:    false,
+		},
+		{
+			name:    "non-marshalable data",
+			status:  http.StatusOK,
+			data:    make(chan int), // Invalid JSON type
+			headers: nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a mock response recorder
+			rr := httptest.NewRecorder()
+
+			// Call the function under test
+			err := WriteJSON(rr, tt.status, tt.data, tt.headers)
+
+			// Verify the error
+			if (err != nil) != tt.wantErr {
+				t.Errorf("unexpected error: got %v, wantErr %v", err, tt.wantErr)
+			}
+
+			// If an error is expected, skip further checks
+			if tt.wantErr {
+				return
+			}
+
+			// Verify the response body
+			gotBody := rr.Body.String()
+			if gotBody != tt.wantBody {
+				t.Errorf("unexpected body: got %q, want %q", gotBody, tt.wantBody)
+			}
+
+			// Verify the response status
+			if rr.Code != tt.status {
+				t.Errorf("unexpected status: got %d, want %d", rr.Code, tt.status)
+			}
+
+			// Verify the headers
+			for key, value := range tt.wantHeader {
+				if got := rr.Header().Get(key); got != value {
+					t.Errorf("unexpected header %q: got %q, want %q", key, got, value)
+				}
+			}
+		})
+	}
+}
