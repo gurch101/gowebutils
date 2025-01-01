@@ -10,11 +10,13 @@ func TestInsert(t *testing.T) {
 
 	t.Run("successful insertion", func(t *testing.T) {
 		fields := map[string]any{
-			"name":  "Jane Smith",
-			"email": "jane@example.com",
+			"tenant_name":   "Test Tenant",
+			"contact_email": "jane@example.com",
+			"plan":          "paid",
+			"is_active":     true,
 		}
 
-		id, err := Insert(db, "users", fields)
+		id, err := Insert(db, "tenants", fields)
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}

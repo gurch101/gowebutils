@@ -16,7 +16,7 @@ func TestDeleteById(t *testing.T) {
 
 		// Verify deletion by attempting to get the record
 		var name string
-		fields := map[string]any{"name": &name}
+		fields := map[string]any{"user_name": &name}
 		err = GetById(db, "users", 1, fields)
 		if err != ErrRecordNotFound {
 			t.Errorf("Expected record to be deleted, but got error: %v", err)

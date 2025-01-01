@@ -10,8 +10,8 @@ func TestUpdateById(t *testing.T) {
 
 	t.Run("successful update", func(t *testing.T) {
 		fields := map[string]any{
-			"name":  "Jane Doe",
-			"email": "jane@example.com",
+			"user_name": "Jane Doe",
+			"email":     "jane@example.com",
 		}
 
 		err := UpdateById(db, "users", 1, 1, fields)
@@ -22,8 +22,8 @@ func TestUpdateById(t *testing.T) {
 		// Verify update
 		var name, email string
 		getFields := map[string]any{
-			"name":  &name,
-			"email": &email,
+			"user_name": &name,
+			"email":     &email,
 		}
 		err = GetById(db, "users", 1, getFields)
 		if err != nil {
@@ -92,7 +92,7 @@ func TestUpdateById(t *testing.T) {
 
 	t.Run("non-existent record", func(t *testing.T) {
 		fields := map[string]any{
-			"name": "Test User",
+			"user_name": "Test User",
 		}
 
 		err := UpdateById(db, "users", 999, 1, fields)
@@ -114,7 +114,7 @@ func TestUpdateById(t *testing.T) {
 
 	t.Run("version mismatch", func(t *testing.T) {
 		fields := map[string]any{
-			"name": "Test User",
+			"user_name": "Test User",
 		}
 
 		err := UpdateById(db, "users", 1, 999, fields)
