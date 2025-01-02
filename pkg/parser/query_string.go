@@ -4,53 +4,65 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"gurch101.github.io/go-web/pkg/validation"
 )
 
 // Filters contains common query string parameters for pagination and sort
 type Filters struct {
-	Page         int
-	PageSize     int
-	Sort         string
-	SortSafeList []string
+	Page     int
+	PageSize int
+	Sort     string
 }
 
 // ParseFilters parses the query string parameters and populates the Filters struct
-func (f *Filters) ParseFilters(qs url.Values) (err error) {
-	f.Page, err = ParseInt(qs, "page", 1)
+func (f *Filters) ParseFilters(qs url.Values, v *validation.Validator, sortSafeList []string) (err error) {
+	var defaultPage = 1
+	var defaultPageSize = 25
+	var defaultSort string = "id"
+	var page, pageSize *int
+	var sort *string
+	page, err = ParseInt(qs, "page", &defaultPage)
 	if err != nil {
 		return err
 	}
-	f.PageSize, err = ParseInt(qs, "pageSize", 10)
+	f.Page = *page
+	pageSize, err = ParseInt(qs, "pageSize", &defaultPageSize)
 	if err != nil {
 		return err
 	}
-	f.Sort = ParseString(qs, "sort", "id")
+	f.PageSize = *pageSize
+	sort = ParseString(qs, "sort", &defaultSort)
+	f.Sort = *sort
+	f.validate(v, sortSafeList)
 	return nil
 }
 
 // Validate checks that the page and page_size parameters contain sensible values and that the sort parameter matches a value in the safelist
-func (f *Filters) Validate() {
-	// Check that the page and page_size parameters contain sensible values. v.Check(f.Page > 0, "page", "must be greater than zero")
-	// v.Check(f.Page <= 10_000_000, "page", "must be a maximum of 10 million")
-	// v.Check(f.PageSize > 0, "page_size", "must be greater than zero")
-	// v.Check(f.PageSize <= 100, "page_size", "must be a maximum of 100")
+func (f *Filters) validate(v *validation.Validator, sortSafeList []string) {
+	// Check that the page and page_size parameters contain sensible values.
+	v.Check(f.Page > 0, "page", "must be greater than zero")
+	v.Check(f.Page <= 10_000_000, "page", "must be a maximum of 10 million")
+	v.Check(f.PageSize > 0, "page_size", "must be greater than zero")
+	v.Check(f.PageSize <= 100, "page_size", "must be a maximum of 100")
 	// Check that the sort parameter matches a value in the safelist.
-	// v.Check(validator.In(f.Sort, f.SortSafelist...), "sort", "invalid sort value")
+	v.In(f.Sort, sortSafeList, "sort", "invalid sort value")
 }
 
 // ParseString returns a string value from the query string or the provided default value if no matching key can be found
-func ParseString(qs url.Values, key string, defaultValue string) string {
+func ParseString(qs url.Values, key string, defaultValue *string) *string {
 	s := qs.Get(key)
 
 	if s == "" {
 		return defaultValue
 	}
 
-	return strings.TrimSpace(s)
+	s = strings.TrimSpace(s)
+	return &s
 }
 
 // ParseInt returns an integer value from the query string or the provided default value if no matching key can be found
-func ParseInt(qs url.Values, key string, defaultValue int) (int, error) {
+func ParseInt(qs url.Values, key string, defaultValue *int) (*int, error) {
 	s := qs.Get(key)
 
 	if s == "" {
@@ -63,5 +75,16 @@ func ParseInt(qs url.Values, key string, defaultValue int) (int, error) {
 		return defaultValue, err
 	}
 
-	return i, nil
+	return &i, nil
+}
+
+func ParseBool(qs url.Values, key string, defaultValue *bool) *bool {
+	s := qs.Get(key)
+
+	if s == "" {
+		return defaultValue
+	}
+
+	result := strings.ToLower(s) == "true"
+	return &result
 }

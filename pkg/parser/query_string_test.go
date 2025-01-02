@@ -3,6 +3,8 @@ package parser
 import (
 	"net/url"
 	"testing"
+
+	"gurch101.github.io/go-web/pkg/validation"
 )
 
 func TestParseString(t *testing.T) {
@@ -20,9 +22,9 @@ func TestParseString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ParseString(tt.qs, tt.key, tt.defaultValue)
-			if result != tt.expected {
-				t.Errorf("expected %s, got %s", tt.expected, result)
+			result := ParseString(tt.qs, tt.key, &tt.defaultValue)
+			if *result != tt.expected {
+				t.Errorf("expected %s, got %s", tt.expected, *result)
 			}
 		})
 	}
@@ -45,11 +47,11 @@ func TestParseInt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseInt(tt.qs, tt.key, tt.defaultValue)
+			result, err := ParseInt(tt.qs, tt.key, &tt.defaultValue)
 			if (err != nil) != tt.expectErr {
 				t.Errorf("expected error: %v, got: %v", tt.expectErr, err)
 			}
-			if result != tt.expected {
+			if *result != tt.expected {
 				t.Errorf("expected %d, got %d", tt.expected, result)
 			}
 		})
@@ -62,14 +64,15 @@ func TestFilters_ParseFilters(t *testing.T) {
 		qs       url.Values
 		expected Filters
 	}{
-		{"default values", url.Values{}, Filters{Page: 1, PageSize: 10, Sort: "id"}},
+		{"default values", url.Values{}, Filters{Page: 1, PageSize: 25, Sort: "id"}},
 		{"custom values", url.Values{"page": {"2"}, "pageSize": {"20"}, "sort": {"name"}}, Filters{Page: 2, PageSize: 20, Sort: "name"}},
 	}
 
+	v := validation.NewValidator()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var f Filters
-			err := f.ParseFilters(tt.qs)
+			err := f.ParseFilters(tt.qs, v, []string{"id", "name"})
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
@@ -89,10 +92,11 @@ func TestFilters_InvalidFilters(t *testing.T) {
 		{"invalid pageSize", url.Values{"page": {"1"}, "pageSize": {"invalid"}, "sort": {"name"}}},
 	}
 
+	v := validation.NewValidator()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var f Filters
-			err := f.ParseFilters(tt.qs)
+			err := f.ParseFilters(tt.qs, v, []string{"id", "name"})
 			if err == nil {
 				t.Error("expected error, got nil")
 			}
@@ -100,9 +104,45 @@ func TestFilters_InvalidFilters(t *testing.T) {
 	}
 }
 
-func TestFilters_Validate(t *testing.T) {
-	// This test assumes that the Validate method will be implemented in the future.
-	// Currently, it does nothing, so we just call it to ensure it doesn't panic.
-	f := Filters{}
-	f.Validate()
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+func TestFilters_InvalidFilterValues(t *testing.T) {
+	tests := []struct {
+		name string
+		qs   url.Values
+	}{
+		{"invalid page", url.Values{"page": {"-1"}, "pageSize": {"-1"}, "sort": {"invalid"}}},
+	}
+
+	v := validation.NewValidator()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var f Filters
+			err := f.ParseFilters(tt.qs, v, []string{"id", "name"})
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if !v.HasErrors() {
+				t.Error("expected validation errors, got none")
+			}
+			if len(v.Errors) != 3 {
+				t.Errorf("expected 3 errors, got %d", len(v.Errors))
+			}
+
+			var errorFields []string
+			for _, err := range v.Errors {
+				errorFields = append(errorFields, err.Field)
+			}
+			if !contains(errorFields, "page") || !contains(errorFields, "page_size") || !contains(errorFields, "sort") {
+				t.Errorf("expected errors for page, page_size, and sort, got %v", errorFields)
+			}
+		})
+	}
 }

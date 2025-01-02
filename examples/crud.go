@@ -15,6 +15,8 @@ import (
 	"gurch101.github.io/go-web/pkg/validation"
 )
 
+type envelope map[string]interface{}
+
 type Controller interface {
 	GetMux() *http.ServeMux
 }
@@ -31,6 +33,7 @@ func (c *TenantController) GetMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /tenants", c.CreateTenantHandler)
 	mux.HandleFunc("GET /tenants/{id}", c.GetTenantHandler)
+	mux.HandleFunc("GET /tenants", c.SearchTenantsHandler)
 	mux.HandleFunc("PATCH /tenants/{id}", c.UpdateTenantHandler)
 	mux.HandleFunc("DELETE /tenants/{id}", c.DeleteTenantHandler)
 	return mux
@@ -83,7 +86,7 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 
 	headers := make(http.Header)
 	headers.Set("Location", fmt.Sprintf("/tenants/%d", tenantId))
-	err = parser.WriteJSON(w, http.StatusCreated, map[string]any{"id": tenantId}, headers)
+	err = parser.WriteJSON(w, http.StatusCreated, envelope{"id": tenantId}, headers)
 	if err != nil {
 		middleware.ServerErrorResponse(w, r, err)
 	}
@@ -186,7 +189,40 @@ func (tc *TenantController) DeleteTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	err = parser.WriteJSON(w, http.StatusOK, map[string]any{"message": "Tenant successfully deleted"}, nil)
+	err = parser.WriteJSON(w, http.StatusOK, envelope{"message": "Tenant successfully deleted"}, nil)
+	if err != nil {
+		middleware.ServerErrorResponse(w, r, err)
+	}
+}
+
+type SearchTenantsRequest struct {
+	TenantName   *string
+	Plan         *string
+	IsActive     *bool
+	ContactEmail *string
+	parser.Filters
+}
+
+func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.Request) {
+	v := validation.NewValidator()
+	qs := r.URL.Query()
+	searchTenantsRequest := &SearchTenantsRequest{}
+	searchTenantsRequest.TenantName = parser.ParseString(qs, "tenantName", nil)
+	searchTenantsRequest.Plan = parser.ParseString(qs, "plan", nil)
+	searchTenantsRequest.IsActive = parser.ParseBool(qs, "isActive", nil)
+	searchTenantsRequest.ContactEmail = parser.ParseString(qs, "contactEmail", nil)
+	searchTenantsRequest.ParseFilters(qs, v, []string{"id", "tenantName", "plan", "contactEmail", "-tenantName", "-plan", "-contactEmail"})
+	if v.HasErrors() {
+		middleware.FailedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	tenants, err := SearchTenants(tc.DB, searchTenantsRequest)
+	if err != nil {
+		middleware.HandleErrorResponse(w, r, err)
+		return
+	}
+	err = parser.WriteJSON(w, http.StatusOK, envelope{"tenants": tenants}, nil)
 	if err != nil {
 		middleware.ServerErrorResponse(w, r, err)
 	}
@@ -207,6 +243,35 @@ func CreateTenant(db *sql.DB, createTenantRequest *CreateTenantRequest) (*int64,
 		return nil, err
 	}
 	return id, nil
+}
+
+type SearchTenantResponse struct {
+	ID           int64      `json:"id"`
+	TenantName   string     `json:"tenantName"`
+	ContactEmail string     `json:"contactEmail"`
+	Plan         TenantPlan `json:"plan"`
+	IsActive     bool       `json:"isActive"`
+	CreatedAt    time.Time  `json:"createdAt"`
+}
+
+func SearchTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]*SearchTenantResponse, error) {
+	tenants, err := FindTenants(db, searchTenantsRequest)
+	if err != nil {
+		return nil, err
+	}
+	var tenantResponses []*SearchTenantResponse
+	for _, tenant := range tenants {
+		tenantResponse := &SearchTenantResponse{
+			ID:           tenant.ID,
+			TenantName:   tenant.TenantName,
+			ContactEmail: tenant.ContactEmail,
+			Plan:         tenant.Plan,
+			IsActive:     tenant.IsActive,
+			CreatedAt:    tenant.CreatedAt,
+		}
+		tenantResponses = append(tenantResponses, tenantResponse)
+	}
+	return tenantResponses, nil
 }
 
 // repository layer
@@ -267,6 +332,32 @@ func UpdateTenant(db *sql.DB, tenant *tenantModel) error {
 		"plan":          tenant.Plan,
 		"is_active":     tenant.IsActive,
 	})
+}
+
+func FindTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]tenantModel, error) {
+	var tenants []tenantModel
+	err := dbutils.NewQueryBuilder(db).
+		Select("id", "tenant_name", "contact_email", "plan", "is_active", "created_at", "version").
+		From("tenants").
+		WhereLike("tenant_name", dbutils.OpContains, searchTenantsRequest.TenantName).
+		AndWhere("plan = ?", searchTenantsRequest.Plan).
+		AndWhere("is_active = ?", searchTenantsRequest.IsActive).
+		AndWhereLike("contact_email", dbutils.OpContains, searchTenantsRequest.ContactEmail).
+		OrderBy(searchTenantsRequest.Sort).
+		Page(searchTenantsRequest.Page, searchTenantsRequest.PageSize).
+		Execute(func(rows *sql.Rows) error {
+			var tenant tenantModel
+			err := rows.Scan(&tenant.ID, &tenant.TenantName, &tenant.ContactEmail, &tenant.Plan, &tenant.IsActive, &tenant.CreatedAt, &tenant.Version)
+			if err != nil {
+				return err
+			}
+			tenants = append(tenants, tenant)
+			return nil
+		})
+	if err != nil {
+		return nil, dbutils.WrapDBError(err)
+	}
+	return tenants, nil
 }
 
 func main() {
