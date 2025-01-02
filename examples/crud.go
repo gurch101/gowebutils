@@ -217,12 +217,12 @@ func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	tenants, err := SearchTenants(tc.DB, searchTenantsRequest)
+	tenants, pagination, err := SearchTenants(tc.DB, searchTenantsRequest)
 	if err != nil {
 		middleware.HandleErrorResponse(w, r, err)
 		return
 	}
-	err = parser.WriteJSON(w, http.StatusOK, envelope{"tenants": tenants}, nil)
+	err = parser.WriteJSON(w, http.StatusOK, envelope{"metadata": pagination, "tenants": tenants}, nil)
 	if err != nil {
 		middleware.ServerErrorResponse(w, r, err)
 	}
@@ -254,12 +254,13 @@ type SearchTenantResponse struct {
 	CreatedAt    time.Time  `json:"createdAt"`
 }
 
-func SearchTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]*SearchTenantResponse, error) {
-	tenants, err := FindTenants(db, searchTenantsRequest)
+func SearchTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]*SearchTenantResponse, parser.PaginationMetadata, error) {
+	tenants, pagination, err := FindTenants(db, searchTenantsRequest)
 	if err != nil {
-		return nil, err
+		return nil, pagination, err
 	}
-	var tenantResponses []*SearchTenantResponse
+	tenantResponses := make([]*SearchTenantResponse, 0)
+
 	for _, tenant := range tenants {
 		tenantResponse := &SearchTenantResponse{
 			ID:           tenant.ID,
@@ -271,7 +272,7 @@ func SearchTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]*S
 		}
 		tenantResponses = append(tenantResponses, tenantResponse)
 	}
-	return tenantResponses, nil
+	return tenantResponses, pagination, nil
 }
 
 // repository layer
@@ -334,10 +335,11 @@ func UpdateTenant(db *sql.DB, tenant *tenantModel) error {
 	})
 }
 
-func FindTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]tenantModel, error) {
+func FindTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]tenantModel, parser.PaginationMetadata, error) {
 	var tenants []tenantModel
+	var totalRecords int
 	err := dbutils.NewQueryBuilder(db).
-		Select("id", "tenant_name", "contact_email", "plan", "is_active", "created_at", "version").
+		Select("count(*) over()", "id", "tenant_name", "contact_email", "plan", "is_active", "created_at", "version").
 		From("tenants").
 		WhereLike("tenant_name", dbutils.OpContains, searchTenantsRequest.TenantName).
 		AndWhere("plan = ?", searchTenantsRequest.Plan).
@@ -347,7 +349,7 @@ func FindTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]tena
 		Page(searchTenantsRequest.Page, searchTenantsRequest.PageSize).
 		Execute(func(rows *sql.Rows) error {
 			var tenant tenantModel
-			err := rows.Scan(&tenant.ID, &tenant.TenantName, &tenant.ContactEmail, &tenant.Plan, &tenant.IsActive, &tenant.CreatedAt, &tenant.Version)
+			err := rows.Scan(&totalRecords, &tenant.ID, &tenant.TenantName, &tenant.ContactEmail, &tenant.Plan, &tenant.IsActive, &tenant.CreatedAt, &tenant.Version)
 			if err != nil {
 				return err
 			}
@@ -355,9 +357,10 @@ func FindTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]tena
 			return nil
 		})
 	if err != nil {
-		return nil, dbutils.WrapDBError(err)
+		return nil, parser.PaginationMetadata{}, dbutils.WrapDBError(err)
 	}
-	return tenants, nil
+	metadata := parser.ParsePaginationMetadata(totalRecords, searchTenantsRequest.Page, searchTenantsRequest.PageSize)
+	return tenants, metadata, nil
 }
 
 func main() {

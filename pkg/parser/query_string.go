@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -13,6 +14,30 @@ type Filters struct {
 	Page     int
 	PageSize int
 	Sort     string
+}
+
+// PaginationMetadata contains metadata about the current page of paginated data
+type PaginationMetadata struct {
+	CurrentPage  int `json:"current_page,omitempty"`
+	PageSize     int `json:"page_size,omitempty"`
+	FirstPage    int `json:"first_page,omitempty"`
+	LastPage     int `json:"last_page,omitempty"`
+	TotalRecords int `json:"total_records,omitempty"`
+}
+
+// ParsePaginationMetadata calculates the pagination metadata based on the total number of records, the current page, and the page size
+func ParsePaginationMetadata(totalRecords, page, pageSize int) PaginationMetadata {
+	if totalRecords == 0 {
+		return PaginationMetadata{}
+	}
+
+	return PaginationMetadata{
+		CurrentPage:  page,
+		PageSize:     pageSize,
+		FirstPage:    1,
+		LastPage:     int(math.Ceil(float64(totalRecords) / float64(pageSize))),
+		TotalRecords: totalRecords,
+	}
 }
 
 // ParseFilters parses the query string parameters and populates the Filters struct
