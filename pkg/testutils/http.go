@@ -8,19 +8,32 @@ import (
 	"testing"
 )
 
-func CreatePostRequest(t *testing.T, url string, payload interface{}) *http.Request {
+func createRequestWithBody(t *testing.T, method, url string, payload interface{}) *http.Request {
 	requestBody, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("Failed to marshal request body: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(requestBody))
+	req := httptest.NewRequest(method, url, bytes.NewReader(requestBody))
 	req.Header.Set("Content-Type", "application/json")
 	return req
+}
+func CreatePostRequest(t *testing.T, url string, payload interface{}) *http.Request {
+	return createRequestWithBody(t, http.MethodPost, url, payload)
+}
+
+func CreatePatchRequest(t *testing.T, url string, payload interface{}) *http.Request {
+	return createRequestWithBody(t, http.MethodPatch, url, payload)
 }
 
 func CreateGetRequest(t *testing.T, url string) *http.Request {
 	req := httptest.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func CreateDeleteRequest(t *testing.T, url string) *http.Request {
+	req := httptest.NewRequest(http.MethodDelete, url, nil)
 	req.Header.Set("Content-Type", "application/json")
 	return req
 }

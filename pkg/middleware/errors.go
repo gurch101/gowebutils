@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
+	"gurch101.github.io/go-web/pkg/dbutils"
 	"gurch101.github.io/go-web/pkg/parser"
 	"gurch101.github.io/go-web/pkg/validation"
 )
@@ -52,4 +54,22 @@ func FailedValidationResponse(w http.ResponseWriter, r *http.Request, errors []v
 func NotFoundResponse(w http.ResponseWriter, r *http.Request) {
 	message := "the requested resource could not be found"
 	errorResponse(w, r, http.StatusNotFound, message)
+}
+
+func EditConflictResponse(w http.ResponseWriter, r *http.Request) {
+	message := "unable to update the record due to an edit conflict, please try again"
+	errorResponse(w, r, http.StatusConflict, message)
+}
+
+func HandleErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.As(err, &validation.ValidationError{}):
+		FailedValidationResponse(w, r, []validation.ValidationError{err.(validation.ValidationError)})
+	case errors.Is(err, dbutils.ErrRecordNotFound):
+		NotFoundResponse(w, r)
+	case errors.Is(err, dbutils.ErrEditConflict):
+		EditConflictResponse(w, r)
+	default:
+		ServerErrorResponse(w, r, err)
+	}
 }

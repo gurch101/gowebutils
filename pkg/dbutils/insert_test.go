@@ -20,11 +20,8 @@ func TestInsert(t *testing.T) {
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
-		if id == nil {
-			t.Error("Expected non-nil ID, got nil")
-		}
-		if *id <= 0 {
-			t.Errorf("Expected positive ID, got %d", *id)
+		if id == nil || *id <= 0 {
+			t.Error("Expected non-nil positive ID, got nil")
 		}
 	})
 

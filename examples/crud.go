@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -30,6 +31,8 @@ func (c *TenantController) GetMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /tenants", c.CreateTenantHandler)
 	mux.HandleFunc("GET /tenants/{id}", c.GetTenantHandler)
+	mux.HandleFunc("PATCH /tenants/{id}", c.UpdateTenantHandler)
+	mux.HandleFunc("DELETE /tenants/{id}", c.DeleteTenantHandler)
 	return mux
 }
 
@@ -74,15 +77,16 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 
 	tenantId, err := CreateTenant(tc.DB, createTenantRequest)
 	if err != nil {
-		if errors.As(err, &validation.ValidationError{}) {
-			middleware.FailedValidationResponse(w, r, []validation.ValidationError{err.(validation.ValidationError)})
-			return
-		}
-		middleware.ServerErrorResponse(w, r, err)
+		middleware.HandleErrorResponse(w, r, err)
 		return
 	}
 
-	parser.WriteJSON(w, http.StatusCreated, map[string]any{"id": tenantId}, nil)
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/tenants/%d", tenantId))
+	err = parser.WriteJSON(w, http.StatusCreated, map[string]any{"id": tenantId}, headers)
+	if err != nil {
+		middleware.ServerErrorResponse(w, r, err)
+	}
 }
 
 type GetTenantResponse struct {
@@ -104,16 +108,88 @@ func (tc *TenantController) GetTenantHandler(w http.ResponseWriter, r *http.Requ
 	tenant, err := GetTenantById(tc.DB, id)
 
 	if err != nil {
-		switch {
-		case errors.Is(err, dbutils.ErrRecordNotFound):
-			middleware.NotFoundResponse(w, r)
-		default:
-			middleware.ServerErrorResponse(w, r, err)
-		}
+		middleware.HandleErrorResponse(w, r, err)
 		return
 	}
 
-	parser.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
+	err = parser.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
+	if err != nil {
+		middleware.ServerErrorResponse(w, r, err)
+	}
+}
+
+type UpdateTenantRequest struct {
+	TenantName   *string     `json:"tenantName"`
+	ContactEmail *string     `json:"contactEmail"`
+	Plan         *TenantPlan `json:"plan"`
+	IsActive     *bool       `json:"isActive"`
+}
+
+func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := parser.ReadIDPathParam(r)
+
+	if err != nil {
+		middleware.NotFoundResponse(w, r)
+		return
+	}
+
+	tenant, err := GetTenantById(tc.DB, id)
+	if err != nil {
+		middleware.HandleErrorResponse(w, r, err)
+		return
+	}
+
+	updateTenantRequest := &UpdateTenantRequest{}
+	err = parser.ReadJSON(w, r, updateTenantRequest)
+	if err != nil {
+		middleware.UnprocessableEntityResponse(w, r, err)
+		return
+	}
+	tenant.TenantName = validation.Coalesce(updateTenantRequest.TenantName, tenant.TenantName)
+	tenant.ContactEmail = validation.Coalesce(updateTenantRequest.ContactEmail, tenant.ContactEmail)
+	tenant.Plan = validation.Coalesce(updateTenantRequest.Plan, tenant.Plan)
+	tenant.IsActive = validation.Coalesce(updateTenantRequest.IsActive, tenant.IsActive)
+
+	v := validation.NewValidator()
+	v.Required(tenant.TenantName, "tenantName", "Tenant Name is required")
+	v.Email(tenant.ContactEmail, "contactEmail", "Contact Email is required")
+	v.Check(IsValidTenantPlan(tenant.Plan), "plan", "Invalid plan")
+
+	if v.HasErrors() {
+		middleware.FailedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	err = UpdateTenant(tc.DB, tenant)
+	if err != nil {
+		middleware.HandleErrorResponse(w, r, err)
+		return
+	}
+
+	err = parser.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
+	if err != nil {
+		middleware.ServerErrorResponse(w, r, err)
+	}
+}
+
+func (tc *TenantController) DeleteTenantHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := parser.ReadIDPathParam(r)
+
+	if err != nil {
+		middleware.NotFoundResponse(w, r)
+		return
+	}
+
+	err = DeleteTenantById(tc.DB, id)
+	if err != nil {
+		middleware.HandleErrorResponse(w, r, err)
+		return
+	}
+
+	err = parser.WriteJSON(w, http.StatusOK, map[string]any{"message": "Tenant successfully deleted"}, nil)
+	if err != nil {
+		middleware.ServerErrorResponse(w, r, err)
+	}
 }
 
 // service layer
@@ -178,6 +254,19 @@ func GetTenantById(db *sql.DB, tenantId int64) (*tenantModel, error) {
 		return nil, err
 	}
 	return &tenant, nil
+}
+
+func DeleteTenantById(db *sql.DB, tenantId int64) error {
+	return dbutils.DeleteById(db, "tenants", tenantId)
+}
+
+func UpdateTenant(db *sql.DB, tenant *tenantModel) error {
+	return dbutils.UpdateById(db, "tenants", tenant.ID, tenant.Version, map[string]any{
+		"tenant_name":   tenant.TenantName,
+		"contact_email": tenant.ContactEmail,
+		"plan":          tenant.Plan,
+		"is_active":     tenant.IsActive,
+	})
 }
 
 func main() {

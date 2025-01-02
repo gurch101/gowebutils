@@ -14,6 +14,12 @@ test:
 fmt:
 	go fmt ./...
 
+commit:
+	$(MAKE) test
+	$(MAKE) fmt
+	git add .
+	git commit -m "${m}"
+
 dev/run:
 	rm -rf ${DEV_DB_FILEPATH}
 	$(MAKE) migrate/up
