@@ -89,7 +89,7 @@ func RateLimitMiddleware(next http.Handler) http.Handler {
 		rateLimitConfig.burst = burst
 	}
 
-	slog.Info("Rate limit middleware enabled", "rate", rateLimitConfig.rate, "burst", rateLimitConfig.burst)
+	slog.Info("rate limit middleware enabled", "rate", rateLimitConfig.rate, "burst", rateLimitConfig.burst)
 
 	type client struct {
 		limiter  *rate.Limiter
