@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"gurch101.github.io/go-web/pkg/dbutils"
-	"gurch101.github.io/go-web/pkg/middleware"
+	"gurch101.github.io/go-web/pkg/httputils"
 	"gurch101.github.io/go-web/pkg/parser"
 	"gurch101.github.io/go-web/pkg/validation"
 )
@@ -64,7 +64,7 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 	createTenantRequest := &CreateTenantRequest{}
 	err := parser.ReadJSON(w, r, createTenantRequest)
 	if err != nil {
-		middleware.UnprocessableEntityResponse(w, r, err)
+		httputils.UnprocessableEntityResponse(w, r, err)
 		return
 	}
 
@@ -74,13 +74,13 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 	v.Check(IsValidTenantPlan(createTenantRequest.Plan), "plan", "Invalid plan")
 
 	if v.HasErrors() {
-		middleware.FailedValidationResponse(w, r, v.Errors)
+		httputils.FailedValidationResponse(w, r, v.Errors)
 		return
 	}
 
 	tenantId, err := CreateTenant(tc.DB, createTenantRequest)
 	if err != nil {
-		middleware.HandleErrorResponse(w, r, err)
+		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 	headers.Set("Location", fmt.Sprintf("/tenants/%d", tenantId))
 	err = parser.WriteJSON(w, http.StatusCreated, envelope{"id": tenantId}, headers)
 	if err != nil {
-		middleware.ServerErrorResponse(w, r, err)
+		httputils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -104,20 +104,20 @@ func (tc *TenantController) GetTenantHandler(w http.ResponseWriter, r *http.Requ
 	id, err := parser.ReadIDPathParam(r)
 
 	if err != nil {
-		middleware.NotFoundResponse(w, r)
+		httputils.NotFoundResponse(w, r)
 		return
 	}
 
 	tenant, err := GetTenantById(tc.DB, id)
 
 	if err != nil {
-		middleware.HandleErrorResponse(w, r, err)
+		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
 
 	err = parser.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
 	if err != nil {
-		middleware.ServerErrorResponse(w, r, err)
+		httputils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -132,20 +132,20 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 	id, err := parser.ReadIDPathParam(r)
 
 	if err != nil {
-		middleware.NotFoundResponse(w, r)
+		httputils.NotFoundResponse(w, r)
 		return
 	}
 
 	tenant, err := GetTenantById(tc.DB, id)
 	if err != nil {
-		middleware.HandleErrorResponse(w, r, err)
+		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
 
 	updateTenantRequest := &UpdateTenantRequest{}
 	err = parser.ReadJSON(w, r, updateTenantRequest)
 	if err != nil {
-		middleware.UnprocessableEntityResponse(w, r, err)
+		httputils.UnprocessableEntityResponse(w, r, err)
 		return
 	}
 	tenant.TenantName = validation.Coalesce(updateTenantRequest.TenantName, tenant.TenantName)
@@ -159,19 +159,19 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 	v.Check(IsValidTenantPlan(tenant.Plan), "plan", "Invalid plan")
 
 	if v.HasErrors() {
-		middleware.FailedValidationResponse(w, r, v.Errors)
+		httputils.FailedValidationResponse(w, r, v.Errors)
 		return
 	}
 
 	err = UpdateTenant(tc.DB, tenant)
 	if err != nil {
-		middleware.HandleErrorResponse(w, r, err)
+		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
 
 	err = parser.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
 	if err != nil {
-		middleware.ServerErrorResponse(w, r, err)
+		httputils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -179,19 +179,19 @@ func (tc *TenantController) DeleteTenantHandler(w http.ResponseWriter, r *http.R
 	id, err := parser.ReadIDPathParam(r)
 
 	if err != nil {
-		middleware.NotFoundResponse(w, r)
+		httputils.NotFoundResponse(w, r)
 		return
 	}
 
 	err = DeleteTenantById(tc.DB, id)
 	if err != nil {
-		middleware.HandleErrorResponse(w, r, err)
+		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
 
 	err = parser.WriteJSON(w, http.StatusOK, envelope{"message": "Tenant successfully deleted"}, nil)
 	if err != nil {
-		middleware.ServerErrorResponse(w, r, err)
+		httputils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -213,18 +213,18 @@ func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.
 	searchTenantsRequest.ContactEmail = parser.ParseString(qs, "contactEmail", nil)
 	searchTenantsRequest.ParseFilters(qs, v, []string{"id", "tenantName", "plan", "contactEmail", "-tenantName", "-plan", "-contactEmail"})
 	if v.HasErrors() {
-		middleware.FailedValidationResponse(w, r, v.Errors)
+		httputils.FailedValidationResponse(w, r, v.Errors)
 		return
 	}
 
 	tenants, pagination, err := SearchTenants(tc.DB, searchTenantsRequest)
 	if err != nil {
-		middleware.HandleErrorResponse(w, r, err)
+		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
 	err = parser.WriteJSON(w, http.StatusOK, envelope{"metadata": pagination, "tenants": tenants}, nil)
 	if err != nil {
-		middleware.ServerErrorResponse(w, r, err)
+		httputils.ServerErrorResponse(w, r, err)
 	}
 }
 
@@ -364,22 +364,28 @@ func FindTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]tena
 }
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	logger := httputils.InitializeSlog(os.Getenv("LOG_LEVEL"))
 
-	db, err := sql.Open("sqlite3", "./app.db?_foreign_keys=1&_journal=WAL")
+	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_foreign_keys=1&_journal=WAL", os.Getenv("DB_FILEPATH")))
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
 
+	slog.Info("Starting server on :8080")
+
 	tenantController := NewTenantController(db)
+
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      tenantController.GetMux(),
+		Handler:      httputils.LoggingMiddleware(tenantController.GetMux()),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
+		ErrorLog:     httputils.NewSlogErrorWriter(logger),
 	}
-	server.ListenAndServe()
+	err = server.ListenAndServe()
+	if err != nil {
+		slog.Error(err.Error())
+	}
 }

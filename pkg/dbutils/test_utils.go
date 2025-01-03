@@ -37,16 +37,10 @@ func SetupTestDB(t *testing.T) *sql.DB {
 	// Apply all migrations
 	projectRoot := getProjectRoot()
 	migrationDir := filepath.Join(projectRoot, "db", "migrations")
-	dataDir := filepath.Join(projectRoot, "db", "data")
 
 	files, err := os.ReadDir(migrationDir)
 	if err != nil {
 		t.Fatalf("Failed to read migrations directory: %v", err)
-	}
-
-	dataFiles, err := os.ReadDir(dataDir)
-	if err != nil {
-		t.Fatalf("Failed to read data directory: %v", err)
 	}
 
 	for _, file := range files {
@@ -66,19 +60,11 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		}
 	}
 
-	for _, file := range dataFiles {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".sql") {
-			continue
-		}
-		filePath := filepath.Join(dataDir, file.Name())
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			t.Fatalf("Failed to read data file %s: %v", filePath, err)
-		}
-		_, err = db.Exec(string(data))
-		if err != nil {
-			t.Fatalf("Failed to execute data file %s: %v", filePath, err)
-		}
+	// Seed the database
+	err = SeedDb(db)
+	if err != nil {
+		t.Fatalf("Failed to seed database: %v", err)
 	}
+
 	return db
 }

@@ -3,10 +3,10 @@ migrate/new:
 
 # add force 1 to force the migration to run if dirty
 migrate/up:
-	@migrate -path db/migrations -database ${MIGRATE_DSN} up
+	@migrate -path db/migrations -database sqlite3://${DB_FILEPATH} up
 
 migrate/down:
-	@migrate -path db/migrations -database ${MIGRATE_DSN} down 1
+	@migrate -path db/migrations -database sqlite3://${DB_FILEPATH} down 1
 
 test:
 	go test -v ./...
@@ -21,6 +21,7 @@ commit:
 	git commit -m "${m}"
 
 dev/run:
-	rm -rf ${DEV_DB_FILEPATH}
+	rm -rf ${DB_FILEPATH}*
 	$(MAKE) migrate/up
-	go run .
+	go run ./cmd/seeddb
+	go run ./examples
