@@ -61,6 +61,11 @@ func EditConflictResponse(w http.ResponseWriter, r *http.Request) {
 	errorResponse(w, r, http.StatusConflict, message)
 }
 
+func RateLimitExceededResponse(w http.ResponseWriter, r *http.Request) {
+	message := "rate limit exceeded"
+	errorResponse(w, r, http.StatusTooManyRequests, message)
+}
+
 func HandleErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &validation.ValidationError{}):

@@ -1,3 +1,11 @@
 export DB_DSN="sqlite3://app.db"
 export DB_FILEPATH="./app.db"
-export LOG_LEVEL="info"
+# defaults to info. Possible values: debug, info, warn, error
+export LOG_LEVEL=
+
+# defaults to true
+export RATE_LIMIT_ENABLED=
+# defaults to 10
+export RATE_LIMIT_RPS=
+# defaults to 20
+export RATE_LIMIT_BURST=

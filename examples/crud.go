@@ -380,9 +380,11 @@ func main() {
 
 	tenantController := NewTenantController(db)
 
+	var handler http.Handler = tenantController.GetMux()
+
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      httputils.LoggingMiddleware(httputils.RecoveryMiddleware(tenantController.GetMux())),
+		Handler:      httputils.LoggingMiddleware(httputils.RecoveryMiddleware(httputils.RateLimitMiddleware(handler))),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
