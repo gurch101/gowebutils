@@ -370,6 +370,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	if err = db.Ping(); err != nil {
+		panic(err)
+	}
+
 	defer db.Close()
 
 	slog.Info("Starting server on :8080")
@@ -378,7 +382,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      httputils.LoggingMiddleware(tenantController.GetMux()),
+		Handler:      httputils.LoggingMiddleware(httputils.RecoveryMiddleware(tenantController.GetMux())),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,

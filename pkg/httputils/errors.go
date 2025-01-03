@@ -11,7 +11,7 @@ import (
 )
 
 func logError(r *http.Request, err error) {
-	slog.Error(err.Error(), "request_method", r.Method, "request_url", r.URL.String())
+	slog.ErrorContext(r.Context(), err.Error(), "request_method", r.Method, "request_url", r.URL.String())
 }
 
 func errorResponse(w http.ResponseWriter, r *http.Request, status int, message interface{}) {

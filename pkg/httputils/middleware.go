@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// LoggingMiddleware logs the request and response details.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -31,5 +32,19 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		duration := time.Since(start)
 
 		slog.InfoContext(r.Context(), "request completed", "request_method", r.Method, "request_url", r.URL.String(), "duration", duration.Milliseconds())
+	})
+}
+
+// RecoveryMiddleware recovers from panics and sends a 500 Internal Server Error response.
+func RecoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				w.Header().Set("Connection", "close")
+				ServerErrorResponse(w, r, fmt.Errorf("%s", err))
+			}
+		}()
+
+		next.ServeHTTP(w, r)
 	})
 }
