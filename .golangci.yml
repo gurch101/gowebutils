@@ -1,0 +1,160 @@
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - cyclop
+    - decorder
+    - depguard
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - err113
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - exhaustruct
+    - exptostd
+    - fatcontext
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    - gci
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gochecknoglobals
+    - gochecknoinits
+    - gochecksumtype
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gofmt
+    - gofumpt
+    - goheader
+    - goimports
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - gosmopolitan
+    - govet
+    - grouper
+    - iface
+    - importas
+    - inamedparam
+    - ineffassign
+    - interfacebloat
+    - intrange
+    - ireturn
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
+    - misspell
+    - mnd
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - recvcheck
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - tagalign
+    - tagliatelle
+    - tenv
+    - testableexamples
+    - testifylint
+    - testpackage
+    - thelper
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - wsl
+    - zerologlint
+issues:
+  exclude-rules:
+    - source: "^func Test"
+      linters:
+        - funlen
+linters-settings:
+  varnamelen:
+    ignore-names:
+      - tt
+      - id
+      - ip
+      - i
+      - n
+      - ok
+    ignore-decls:
+      - db *sql.DB
+      - v *validation.Validator
+      - w http.ResponseWriter
+      - r *http.Request
+      - rr *httptest.ResponseRecorder
+      - mu sync.Mutex
+  depguard:
+    rules:
+      main:
+        list-mode: strict
+        files:
+          - "**/*.go"
+          - "!**/pkg/**/*.go"
+        allow:
+          - $gostd
+          - gurch101.github.io/go-web/pkg
+      pkg:
+        list-mode: strict
+        files:
+          - "**/pkg/**/*.go"
+        allow:
+          - $gostd
+          - github.com/mattn/go-sqlite3
+          - github.com/google/uuid
+          - github.com/coreos/go-oidc/v3/oidc
+          - golang.org/x/oauth2
+          - golang.org/x/time/rate
+          - gurch101.github.io/go-web/pkg
+  ireturn:
+    allow:
+      - generic
+      - error
+      - stdlib
+  funlen:
+    ignore-comments: true

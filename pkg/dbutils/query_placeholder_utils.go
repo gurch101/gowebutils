@@ -1,16 +1,22 @@
 package dbutils
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
+var ErrNoArgumentsProvided = errors.New("no arguments provided")
+
+var ErrInvalidNumFields = errors.New("invalid number of fields")
+
 // generatePlaceholders creates a SQL-compatible placeholder string for a given number of fields.
 func generatePlaceholders(rowNum, numFields int) string {
 	placeholders := make([]string, numFields)
-	for i := 0; i < numFields; i++ {
+	for i := range numFields {
 		placeholders[i] = fmt.Sprintf("$%d", (rowNum*numFields)+i+1)
 	}
+
 	return fmt.Sprintf("(%s)", strings.Join(placeholders, ", "))
 }
 
@@ -26,6 +32,9 @@ func GetChunkSize(numRows, numFields int) int {
 	return min(numRows, rowsPerChunk)
 }
 
+// ChunkCallbackFunc is a function type that processes a chunk of data.
+type ChunkCallbackFunc[T any] func(chunk []T, placeholders string) error
+
 // ProcessInChunks splits a large set of arguments into manageable chunks and applies a callback to each chunk.
 // This ensures SQL statements do not exceed database limits.
 //
@@ -38,26 +47,28 @@ func GetChunkSize(numRows, numFields int) int {
 // Returns:
 //
 //	An error if the callback fails for any chunk.
-func ProcessInChunks[T any](args []T, chunkSize, numFields int, callback func(chunk []T, placeholders string) error) error {
+func ProcessInChunks[T any](args []T, chunkSize, numFields int, callback ChunkCallbackFunc[T]) error {
 	if len(args) == 0 {
-		return fmt.Errorf("no arguments provided")
+		return ErrNoArgumentsProvided
 	}
+
 	if numFields <= 0 {
-		return fmt.Errorf("invalid number of fields: %d", numFields)
+		return fmt.Errorf("%w: %d", ErrInvalidNumFields, numFields)
 	}
 
 	if chunkSize == len(args) {
 		placeholders := make([]string, 0, len(args))
-		for i := 0; i < len(args); i++ {
+		for i := range args {
 			placeholders = append(placeholders, generatePlaceholders(i, numFields))
 		}
+
 		return callback(args, strings.Join(placeholders, ","))
 	}
 
 	placeholders := make([]string, 0, chunkSize)
 	chunk := make([]T, 0, chunkSize)
 
-	for i := 0; i < len(args); i++ {
+	for i := range args {
 		if len(chunk) >= chunkSize {
 			// Process the current chunk with the callback
 			if err := callback(chunk, strings.Join(placeholders, ",")); err != nil {

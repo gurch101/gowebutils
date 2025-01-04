@@ -7,18 +7,21 @@ import (
 	"time"
 )
 
-// DeleteById deletes a record from the specified table by its ID.
-func DeleteById(db *sql.DB, tableName string, id int64) error {
+const deleteTimeout = 3 * time.Second
+
+// DeleteByID deletes a record from the specified table by its ID.
+func DeleteByID(db *sql.DB, tableName string, id int64) error {
 	if id < 0 {
 		return ErrRecordNotFound
 	}
-	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", tableName)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// #nosec G201
+	query := fmt.Sprintf("DELETE FROM %s WHERE id = ?", tableName)
+
+	ctx, cancel := context.WithTimeout(context.Background(), deleteTimeout)
 	defer cancel()
 
 	result, err := db.ExecContext(ctx, query, id)
-
 	if err != nil {
 		return WrapDBError(err)
 	}
@@ -28,5 +31,6 @@ func DeleteById(db *sql.DB, tableName string, id int64) error {
 	if rowsAffected == 0 {
 		return ErrRecordNotFound
 	}
+
 	return nil
 }

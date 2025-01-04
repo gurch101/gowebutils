@@ -2,41 +2,50 @@ package httputils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/time/rate"
+	"gurch101.github.io/go-web/pkg/parser"
 )
+
+var ErrPanic = errors.New("panic")
 
 // LoggingMiddleware logs the request and response details.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		requestId := r.Header.Get("X-Request-ID")
-		if requestId != "" {
-			ctx := context.WithValue(r.Context(), LogRequestIdKey, fmt.Sprintf("ext-%s", requestId))
-			r = r.WithContext(ctx)
+		RequestID := r.Header.Get("X-Request-ID")
+		ctx := r.Context()
+
+		if RequestID != "" {
+			ctx = context.WithValue(ctx, LogRequestIDKey, "ext-"+RequestID)
 		} else {
 			id := uuid.New()
-			ctx := context.WithValue(r.Context(), LogRequestIdKey, id.String())
-			r = r.WithContext(ctx)
+			ctx = context.WithValue(ctx, LogRequestIDKey, id.String())
 		}
 
-		slog.InfoContext(r.Context(), "request started")
+		slog.InfoContext(ctx, "request started")
+		r = r.WithContext(ctx)
 
 		next.ServeHTTP(w, r)
 
 		duration := time.Since(start)
 
-		slog.InfoContext(r.Context(), "request completed", "request_method", r.Method, "request_url", r.URL.String(), "duration", duration.Milliseconds())
+		slog.InfoContext(
+			ctx,
+			"request completed",
+			"request_method", r.Method,
+			"request_url", r.URL.String(),
+			"duration", duration.Milliseconds(),
+		)
 	})
 }
 
@@ -46,7 +55,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 		defer func() {
 			if err := recover(); err != nil {
 				w.Header().Set("Connection", "close")
-				ServerErrorResponse(w, r, fmt.Errorf("%s", err))
+				ServerErrorResponse(w, r, fmt.Errorf("%w: %s", ErrPanic, err))
 			}
 		}()
 
@@ -60,33 +69,44 @@ type RateLimitConfig struct {
 	burst   int
 }
 
+const (
+	defaultRateLimitRate = 10
+
+	defaultRateLimitBurst = 20
+)
+
+func getRateLimitConfig() *RateLimitConfig {
+	rateLimitConfig := &RateLimitConfig{
+		enabled: parser.ParseEnvBool("RATE_LIMIT_ENABLED", true),
+		rate:    defaultRateLimitRate,
+		burst:   defaultRateLimitBurst,
+	}
+	if !rateLimitConfig.enabled {
+		return rateLimitConfig
+	}
+
+	rateLimit, err := parser.ParseEnvFloat64("RATE_LIMIT_RATE", rateLimitConfig.rate)
+	if err != nil {
+		panic(err)
+	}
+
+	rateLimitConfig.rate = rateLimit
+
+	burst, err := parser.ParseEnvInt("RATE_LIMIT_BURST", rateLimitConfig.burst)
+	if err != nil {
+		panic(err)
+	}
+
+	rateLimitConfig.burst = burst
+
+	return rateLimitConfig
+}
+
 func RateLimitMiddleware(next http.Handler) http.Handler {
-	rateLimitConfig := &RateLimitConfig{rate: 10, burst: 20}
-	rlEnabled := os.Getenv("RATE_LIMIT_ENABLED")
-	rateLimitConfig.enabled = rlEnabled == "" || rlEnabled == "true"
+	rateLimitConfig := getRateLimitConfig()
+
 	if !rateLimitConfig.enabled {
 		return next
-	}
-	rateLimitRate := os.Getenv("RATE_LIMIT_RATE")
-	if rateLimitRate != "" {
-		rateLimitRate, err := strconv.ParseFloat(rateLimitRate, 64)
-
-		if err != nil {
-			panic(err)
-		}
-
-		rateLimitConfig.rate = rateLimitRate
-	}
-
-	burst := os.Getenv("RATE_LIMIT_BURST")
-	if burst != "" {
-		burst, err := strconv.Atoi(burst)
-
-		if err != nil {
-			panic(err)
-		}
-
-		rateLimitConfig.burst = burst
 	}
 
 	slog.Info("rate limit middleware enabled", "rate", rateLimitConfig.rate, "burst", rateLimitConfig.burst)
@@ -118,20 +138,24 @@ func RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
-			ServerErrorResponse(w, r, fmt.Errorf("could not parse remote address: %v", err))
+			ServerErrorResponse(w, r, fmt.Errorf("could not parse remote address: %w", err))
 		}
 
 		mu.Lock()
 		if _, ok := clients[ip]; !ok {
-			// Rate limit to 2 requests per second with a burst of 4 requests. 4 is the bucket size, 2 is the refill rate/s.
-			clients[ip] = &client{limiter: rate.NewLimiter(rate.Limit(rateLimitConfig.rate), rateLimitConfig.burst)}
+			limiter := rate.NewLimiter(
+				rate.Limit(rateLimitConfig.rate),
+				rateLimitConfig.burst,
+			)
+			clients[ip] = &client{limiter: limiter, lastSeen: time.Now()}
+		} else {
+			clients[ip].lastSeen = time.Now()
 		}
-
-		clients[ip].lastSeen = time.Now()
 
 		if !clients[ip].limiter.Allow() {
 			mu.Unlock()
 			RateLimitExceededResponse(w, r)
+
 			return
 		}
 
@@ -141,7 +165,9 @@ func RateLimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func GetStateAwareAuthenticationMiddleware(authredirectfn func(w http.ResponseWriter, r*http.Request, destUrl string)) func (next http.Handler) http.Handler {
+type UnauthorizedRedirector func(w http.ResponseWriter, r *http.Request, destURL string)
+
+func GetStateAwareAuthenticationMiddleware(_ UnauthorizedRedirector) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			next.ServeHTTP(w, r)

@@ -11,8 +11,18 @@ migrate/down:
 test:
 	go test -race -shuffle=on -v ./...
 
+coverage:
+	go test -coverpkg=./... -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out
+
+lint:
+	golangci-lint run
+
+lint-fix:
+	golangci-lint run --fix
+
 fmt:
-	go fmt ./...
+	gofmt -s -w .
 
 check-env:
 ifndef DB_FILEPATH
@@ -20,6 +30,7 @@ ifndef DB_FILEPATH
 endif
 
 commit:
+	$(MAKE) lint
 	$(MAKE) test
 	$(MAKE) fmt
 	git add .

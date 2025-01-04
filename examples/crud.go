@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"gurch101.github.io/go-web/pkg/authutils"
@@ -53,6 +53,13 @@ func IsValidTenantPlan(plan TenantPlan) bool {
 	return false
 }
 
+const (
+	tenantNameRequestKey   = "tenantName"
+	planRequestKey         = "plan"
+	contactEmailRequestKey = "contactEmail"
+	tenantResourceKey      = "tenants"
+)
+
 type CreateTenantRequest struct {
 	TenantName   string     `json:"tenantName"`
 	ContactEmail string     `json:"contactEmail"`
@@ -61,16 +68,16 @@ type CreateTenantRequest struct {
 
 func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.Request) {
 	createTenantRequest := &CreateTenantRequest{}
-	err := parser.ReadJSON(w, r, createTenantRequest)
+	err := httputils.ReadJSON(w, r, createTenantRequest)
 	if err != nil {
 		httputils.UnprocessableEntityResponse(w, r, err)
 		return
 	}
 
 	v := validation.NewValidator()
-	v.Required(createTenantRequest.TenantName, "tenantName", "Tenant Name is required")
-	v.Email(createTenantRequest.ContactEmail, "contactEmail", "Contact Email is required")
-	v.Check(IsValidTenantPlan(createTenantRequest.Plan), "plan", "Invalid plan")
+	v.Required(createTenantRequest.TenantName, tenantNameRequestKey, "Tenant Name is required")
+	v.Email(createTenantRequest.ContactEmail, contactEmailRequestKey, "Contact Email is required")
+	v.Check(IsValidTenantPlan(createTenantRequest.Plan), planRequestKey, "Invalid plan")
 
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
@@ -85,7 +92,7 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 
 	headers := make(http.Header)
 	headers.Set("Location", fmt.Sprintf("/tenants/%d", tenantId))
-	err = parser.WriteJSON(w, http.StatusCreated, envelope{"id": tenantId}, headers)
+	err = httputils.WriteJSON(w, http.StatusCreated, envelope{"id": tenantId}, headers)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
@@ -114,7 +121,7 @@ func (tc *TenantController) GetTenantHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err = parser.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
+	err = httputils.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
@@ -142,7 +149,7 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 	}
 
 	updateTenantRequest := &UpdateTenantRequest{}
-	err = parser.ReadJSON(w, r, updateTenantRequest)
+	err = httputils.ReadJSON(w, r, updateTenantRequest)
 	if err != nil {
 		httputils.UnprocessableEntityResponse(w, r, err)
 		return
@@ -153,9 +160,9 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 	tenant.IsActive = validation.Coalesce(updateTenantRequest.IsActive, tenant.IsActive)
 
 	v := validation.NewValidator()
-	v.Required(tenant.TenantName, "tenantName", "Tenant Name is required")
-	v.Email(tenant.ContactEmail, "contactEmail", "Contact Email is required")
-	v.Check(IsValidTenantPlan(tenant.Plan), "plan", "Invalid plan")
+	v.Required(tenant.TenantName, tenantNameRequestKey, "Tenant Name is required")
+	v.Email(tenant.ContactEmail, contactEmailRequestKey, "Contact Email is required")
+	v.Check(IsValidTenantPlan(tenant.Plan), planRequestKey, "Invalid plan")
 
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
@@ -168,7 +175,7 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	err = parser.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
+	err = httputils.WriteJSON(w, http.StatusOK, &GetTenantResponse{ID: tenant.ID, TenantName: tenant.TenantName, ContactEmail: tenant.ContactEmail, Plan: tenant.Plan, IsActive: tenant.IsActive}, nil)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
@@ -188,7 +195,7 @@ func (tc *TenantController) DeleteTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	err = parser.WriteJSON(w, http.StatusOK, envelope{"message": "Tenant successfully deleted"}, nil)
+	err = httputils.WriteJSON(w, http.StatusOK, envelope{"message": "Tenant successfully deleted"}, nil)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
@@ -206,11 +213,11 @@ func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.
 	v := validation.NewValidator()
 	qs := r.URL.Query()
 	searchTenantsRequest := &SearchTenantsRequest{}
-	searchTenantsRequest.TenantName = parser.ParseString(qs, "tenantName", nil)
-	searchTenantsRequest.Plan = parser.ParseString(qs, "plan", nil)
+	searchTenantsRequest.TenantName = parser.ParseString(qs, tenantNameRequestKey, nil)
+	searchTenantsRequest.Plan = parser.ParseString(qs, planRequestKey, nil)
 	searchTenantsRequest.IsActive = parser.ParseBool(qs, "isActive", nil)
-	searchTenantsRequest.ContactEmail = parser.ParseString(qs, "contactEmail", nil)
-	searchTenantsRequest.ParseFilters(qs, v, []string{"id", "tenantName", "plan", "contactEmail", "-tenantName", "-plan", "-contactEmail"})
+	searchTenantsRequest.ContactEmail = parser.ParseString(qs, contactEmailRequestKey, nil)
+	searchTenantsRequest.ParseFilters(qs, v, []string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)})
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
 		return
@@ -221,10 +228,15 @@ func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.
 		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
-	err = parser.WriteJSON(w, http.StatusOK, envelope{"metadata": pagination, "tenants": tenants}, nil)
+	err = httputils.WriteJSON(w, http.StatusOK, envelope{"metadata": pagination, tenantResourceKey: tenants}, nil)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
+}
+
+var ErrTenantAlreadyRegistered = validation.Error{
+	Field:   tenantNameRequestKey,
+	Message: "This tenant is already registered",
 }
 
 // service layer
@@ -234,11 +246,10 @@ func CreateTenant(db *sql.DB, createTenantRequest *CreateTenantRequest) (*int64,
 	id, err := InsertTenant(db, tenantModel)
 
 	if err != nil {
-		if errors.As(err, &dbutils.ConstraintError{}) {
-			if err.(dbutils.ConstraintError).DetailContains("tenant_name") {
-				return nil, validation.ValidationError{Field: "tenantName", Message: "This tenant is already registered"}
-			}
+		if errors.Is(err, dbutils.ErrUniqueConstraint) && strings.Contains(err.Error(), tenantNameDbFieldName) {
+			return nil, ErrTenantAlreadyRegistered
 		}
+
 		return nil, err
 	}
 	return id, nil
@@ -274,98 +285,11 @@ func SearchTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]*S
 	return tenantResponses, pagination, nil
 }
 
-// repository layer
-type tenantModel struct {
-	ID           int64
-	TenantName   string
-	ContactEmail string
-	Plan         TenantPlan
-	IsActive     bool
-	CreatedAt    time.Time
-	Version      int32
-}
-
-func NewTenantModel(name, email string, plan TenantPlan) *tenantModel {
-	return &tenantModel{
-		TenantName:   name,
-		ContactEmail: email,
-		Plan:         plan,
-		IsActive:     true,
-	}
-}
-
-func InsertTenant(db *sql.DB, tenant *tenantModel) (*int64, error) {
-	return dbutils.Insert(db, "tenants", map[string]any{
-		"tenant_name":   tenant.TenantName,
-		"contact_email": tenant.ContactEmail,
-		"plan":          tenant.Plan,
-		"is_active":     tenant.IsActive,
-	})
-}
-
-func GetTenantById(db *sql.DB, tenantId int64) (*tenantModel, error) {
-	var tenant tenantModel
-
-	err := dbutils.GetById(db, "tenants", tenantId, map[string]any{
-		"id":            &tenant.ID,
-		"tenant_name":   &tenant.TenantName,
-		"contact_email": &tenant.ContactEmail,
-		"plan":          &tenant.Plan,
-		"is_active":     &tenant.IsActive,
-		"created_at":    &tenant.CreatedAt,
-		"version":       &tenant.Version,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &tenant, nil
-}
-
-func DeleteTenantById(db *sql.DB, tenantId int64) error {
-	return dbutils.DeleteById(db, "tenants", tenantId)
-}
-
-func UpdateTenant(db *sql.DB, tenant *tenantModel) error {
-	return dbutils.UpdateById(db, "tenants", tenant.ID, tenant.Version, map[string]any{
-		"tenant_name":   tenant.TenantName,
-		"contact_email": tenant.ContactEmail,
-		"plan":          tenant.Plan,
-		"is_active":     tenant.IsActive,
-	})
-}
-
-func FindTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]tenantModel, parser.PaginationMetadata, error) {
-	var tenants []tenantModel
-	var totalRecords int
-	err := dbutils.NewQueryBuilder(db).
-		Select("count(*) over()", "id", "tenant_name", "contact_email", "plan", "is_active", "created_at", "version").
-		From("tenants").
-		WhereLike("tenant_name", dbutils.OpContains, searchTenantsRequest.TenantName).
-		AndWhere("plan = ?", searchTenantsRequest.Plan).
-		AndWhere("is_active = ?", searchTenantsRequest.IsActive).
-		AndWhereLike("contact_email", dbutils.OpContains, searchTenantsRequest.ContactEmail).
-		OrderBy(searchTenantsRequest.Sort).
-		Page(searchTenantsRequest.Page, searchTenantsRequest.PageSize).
-		Execute(func(rows *sql.Rows) error {
-			var tenant tenantModel
-			err := rows.Scan(&totalRecords, &tenant.ID, &tenant.TenantName, &tenant.ContactEmail, &tenant.Plan, &tenant.IsActive, &tenant.CreatedAt, &tenant.Version)
-			if err != nil {
-				return err
-			}
-			tenants = append(tenants, tenant)
-			return nil
-		})
-	if err != nil {
-		return nil, parser.PaginationMetadata{}, dbutils.WrapDBError(err)
-	}
-	metadata := parser.ParsePaginationMetadata(totalRecords, searchTenantsRequest.Page, searchTenantsRequest.PageSize)
-	return tenants, metadata, nil
-}
-
 func main() {
-	logger := httputils.InitializeSlog(os.Getenv("LOG_LEVEL"))
+	logger := httputils.InitializeSlog(parser.ParseEnvString("LOG_LEVEL", "info"))
 
-	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_foreign_keys=1&_journal=WAL", os.Getenv("DB_FILEPATH")))
+	db, err := sql.Open(dbutils.SqliteDriverName, fmt.Sprintf("%s?_foreign_keys=1&_journal=WAL", parser.ParseEnvStringPanic("DB_FILEPATH")))
+
 	if err != nil {
 		panic(err)
 	}
@@ -373,7 +297,12 @@ func main() {
 		panic(err)
 	}
 
-	defer db.Close()
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			panic(closeErr)
+		}
+	}()
 
 	oidcConfig, err := authutils.CreateOauthConfig(
 		parser.ParseEnvStringPanic("OIDC_CLIENT_ID"),
@@ -388,7 +317,7 @@ func main() {
 	}
 
 	oidcController := authutils.NewOidcController(db, oidcConfig)
-	router := httputils.NewRouter(httputils.GetStateAwareAuthenticationMiddleware(oidcController.RedirectToAuthUrl))
+	router := httputils.NewRouter(httputils.GetStateAwareAuthenticationMiddleware(oidcController.RedirectToAuthURL))
 	router.Use(httputils.LoggingMiddleware, httputils.RecoveryMiddleware, httputils.RateLimitMiddleware)
 
 	tenantController := NewTenantController(db)

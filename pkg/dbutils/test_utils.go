@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	// needed for sqlite3 driver.
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -24,12 +25,15 @@ func getProjectRoot() string {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 			return dir
 		}
+
 		dir = filepath.Dir(dir)
 	}
 }
 
 func SetupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	t.Helper()
+
+	db, err := sql.Open(SqliteDriverName, ":memory:")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
@@ -49,6 +53,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		}
 
 		filePath := filepath.Join(migrationDir, file.Name())
+
 		migration, err := os.ReadFile(filePath)
 		if err != nil {
 			t.Fatalf("Failed to read migration file %s: %v", filePath, err)
@@ -61,7 +66,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 	}
 
 	// Seed the database
-	err = SeedDb(db)
+	err = SeedDB(db)
 	if err != nil {
 		t.Fatalf("Failed to seed database: %v", err)
 	}

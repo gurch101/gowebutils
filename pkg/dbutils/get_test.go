@@ -1,13 +1,22 @@
-package dbutils
+package dbutils_test
 
 import (
+	"errors"
 	"testing"
+
+	"gurch101.github.io/go-web/pkg/dbutils"
 )
 
-func TestGetById(t *testing.T) {
+func TestGetByID(t *testing.T) {
 	t.Parallel()
-	db := SetupTestDB(t)
-	defer db.Close()
+	db := dbutils.SetupTestDB(t)
+
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 
 	t.Run("successful retrieval", func(t *testing.T) {
 		var name, email string
@@ -16,7 +25,7 @@ func TestGetById(t *testing.T) {
 			"email":     &email,
 		}
 
-		err := GetById(db, "users", 1, fields)
+		err := dbutils.GetByID(db, "users", 1, fields)
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -24,6 +33,7 @@ func TestGetById(t *testing.T) {
 		if name != "admin" {
 			t.Errorf("Expected name 'admin', got '%s'", name)
 		}
+
 		if email != "admin@acme.com" {
 			t.Errorf("Expected email 'admin@acme.com', got '%s'", email)
 		}
@@ -35,8 +45,8 @@ func TestGetById(t *testing.T) {
 			"user_name": &name,
 		}
 
-		err := GetById(db, "users", -1, fields)
-		if err != ErrRecordNotFound {
+		err := dbutils.GetByID(db, "users", -1, fields)
+		if !errors.Is(err, dbutils.ErrRecordNotFound) {
 			t.Errorf("Expected ErrRecordNotFound, got %v", err)
 		}
 	})
@@ -47,8 +57,8 @@ func TestGetById(t *testing.T) {
 			"user_name": &name,
 		}
 
-		err := GetById(db, "users", 999, fields)
-		if err != ErrRecordNotFound {
+		err := dbutils.GetByID(db, "users", 999, fields)
+		if !errors.Is(err, dbutils.ErrRecordNotFound) {
 			t.Errorf("Expected ErrRecordNotFound, got %v", err)
 		}
 	})
@@ -56,7 +66,7 @@ func TestGetById(t *testing.T) {
 	t.Run("empty fields map", func(t *testing.T) {
 		fields := map[string]any{}
 
-		err := GetById(db, "users", 1, fields)
+		err := dbutils.GetByID(db, "users", 1, fields)
 		if err == nil {
 			t.Error("Expected error for empty fields map, got nil")
 		}

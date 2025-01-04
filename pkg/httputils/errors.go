@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"gurch101.github.io/go-web/pkg/dbutils"
-	"gurch101.github.io/go-web/pkg/parser"
 	"gurch101.github.io/go-web/pkg/validation"
 )
 
@@ -18,11 +17,15 @@ func errorResponse(w http.ResponseWriter, r *http.Request, status int, message i
 	// Write the response using the writeJSON() helper. If this happens to return an error
 	// then log it, and fall back to sending the client an empty response with a 500 Internal
 	// Server Error status code
-	err := parser.WriteJSON(w, status, map[string]any{"errors": message}, nil)
+	err := WriteJSON(w, status, map[string]any{"errors": message}, nil)
 	if err != nil {
 		logError(r, err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("internal server error"))
+
+		_, err = w.Write([]byte("internal server error"))
+		if err != nil {
+			logError(r, err)
+		}
 	}
 }
 
@@ -46,7 +49,7 @@ func BadRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 // FailedValidationResponse sends JSON-formatted error message to client with 400 Bad Request status code.
-func FailedValidationResponse(w http.ResponseWriter, r *http.Request, errors []validation.ValidationError) {
+func FailedValidationResponse(w http.ResponseWriter, r *http.Request, errors []validation.Error) {
 	errorResponse(w, r, http.StatusBadRequest, errors)
 }
 
@@ -67,9 +70,11 @@ func RateLimitExceededResponse(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
+	var validationErr validation.Error
+
 	switch {
-	case errors.As(err, &validation.ValidationError{}):
-		FailedValidationResponse(w, r, []validation.ValidationError{err.(validation.ValidationError)})
+	case errors.As(err, &validationErr):
+		FailedValidationResponse(w, r, []validation.Error{validationErr})
 	case errors.Is(err, dbutils.ErrRecordNotFound):
 		NotFoundResponse(w, r)
 	case errors.Is(err, dbutils.ErrEditConflict):

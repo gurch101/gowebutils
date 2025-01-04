@@ -2,6 +2,7 @@ package httputils
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,20 +11,39 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"gurch101.github.io/go-web/pkg/parser"
 )
 
+const defaultPort = 8080
+
+const readTimeout = 5 * time.Second
+
+const writeTimeout = 10 * time.Second
+
+const shutdownTimeout = 5 * time.Second
+
 func ServeHTTP(handler http.Handler, logger *slog.Logger) error {
-	port := os.Getenv("SERVER_PORT")
-	if port == "" {
-		port = "8080"
+	port, err := parser.ParseEnvInt("SERVER_PORT", defaultPort)
+	if err != nil {
+		return fmt.Errorf("invalid server port: %w", err)
 	}
+
+	//nolint: exhaustruct
+	tlsConfig := &tls.Config{
+		MinVersion:       tls.VersionTLS13,
+		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+	}
+
+	//nolint: exhaustruct
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%s", port),
-		Handler:      handler,
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		ErrorLog:     NewSlogErrorWriter(logger),
+		Addr:              fmt.Sprintf(":%d", port),
+		Handler:           handler,
+		TLSConfig:         tlsConfig,
+		IdleTimeout:       time.Minute,
+		ReadHeaderTimeout: readTimeout,
+		WriteTimeout:      writeTimeout,
+		ErrorLog:          NewSlogErrorWriter(logger),
 	}
 
 	shutdownError := make(chan error)
@@ -39,7 +59,7 @@ func ServeHTTP(handler http.Handler, logger *slog.Logger) error {
 
 		slog.Info("shutting down server", "signal", s.String())
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 
 		shutdownError <- server.Shutdown(ctx)
@@ -47,17 +67,18 @@ func ServeHTTP(handler http.Handler, logger *slog.Logger) error {
 
 	slog.Info("starting server", "port", port)
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 
 	if !errors.Is(err, http.ErrServerClosed) {
-		return err
+		return fmt.Errorf("server error %w", err)
 	}
 
 	err = <-shutdownError
 	if err != nil {
-		return err
+		return fmt.Errorf("server shutdown error %w", err)
 	}
 
 	slog.Info("server stopped", "port", port)
+
 	return nil
 }

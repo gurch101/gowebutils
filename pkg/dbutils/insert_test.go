@@ -1,68 +1,87 @@
-package dbutils
+package dbutils_test
 
 import (
 	"testing"
+
+	"gurch101.github.io/go-web/pkg/dbutils"
 )
 
 func TestInsert(t *testing.T) {
 	t.Parallel()
-	db := SetupTestDB(t)
-	defer db.Close()
+	db := dbutils.SetupTestDB(t)
 
-	t.Run("successful insertion", func(t *testing.T) {
-		fields := map[string]any{
-			"tenant_name":   "Test Tenant",
-			"contact_email": "jane@example.com",
-			"plan":          "paid",
-			"is_active":     true,
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
+	}()
 
-		id, err := Insert(db, "tenants", fields)
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
-		if id == nil || *id <= 0 {
-			t.Error("Expected non-nil positive ID, got nil")
-		}
-	})
+	fields := map[string]any{
+		"tenant_name":   "Test Tenant",
+		"contact_email": "jane@example.com",
+		"plan":          "paid",
+		"is_active":     true,
+	}
 
-	t.Run("empty fields map", func(t *testing.T) {
-		fields := map[string]any{}
+	id, err := dbutils.Insert(db, "tenants", fields)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
-		id, err := Insert(db, "users", fields)
-		if err == nil {
-			t.Error("Expected error for empty fields map, got nil")
-		}
-		if id != nil {
-			t.Errorf("Expected nil ID, got %d", *id)
-		}
-	})
+	if id == nil || *id <= 0 {
+		t.Error("Expected non-nil positive ID, got nil")
+	}
+}
 
-	t.Run("invalid table name", func(t *testing.T) {
-		fields := map[string]any{
-			"name": "Test User",
-		}
+func TestInsert_ErrorHandling(t *testing.T) {
+	t.Parallel()
+	db := dbutils.SetupTestDB(t)
 
-		id, err := Insert(db, "nonexistent_table", fields)
-		if err == nil {
-			t.Error("Expected error for invalid table name, got nil")
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
-		if id != nil {
-			t.Errorf("Expected nil ID, got %d", *id)
-		}
-	})
+	}()
 
-	t.Run("invalid field name", func(t *testing.T) {
-		fields := map[string]any{
-			"nonexistent_column": "Test Value",
-		}
+	tests := []struct {
+		name   string
+		table  string
+		fields map[string]any
+	}{
+		{
+			name:   "empty fields map",
+			table:  "users",
+			fields: map[string]any{},
+		},
+		{
+			name:  "invalid table name",
+			table: "nonexistent_table",
+			fields: map[string]any{
+				"name": "Test User",
+			},
+		},
+		{
+			name:  "invalid field name",
+			table: "users",
+			fields: map[string]any{
+				"nonexistent_column": "Test Value",
+			},
+		},
+	}
 
-		id, err := Insert(db, "users", fields)
-		if err == nil {
-			t.Error("Expected error for invalid field name, got nil")
-		}
-		if id != nil {
-			t.Errorf("Expected nil ID, got %d", *id)
-		}
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id, err := dbutils.Insert(db, tt.table, tt.fields)
+
+			if err == nil {
+				t.Error("Expected error, got nil")
+			}
+
+			if id != nil {
+				t.Errorf("Expected nil ID, got %d", *id)
+			}
+		})
+	}
 }

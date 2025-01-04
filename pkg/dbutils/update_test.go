@@ -1,126 +1,145 @@
-package dbutils
+package dbutils_test
 
 import (
+	"errors"
 	"testing"
+
+	"gurch101.github.io/go-web/pkg/dbutils"
 )
 
-func TestUpdateById(t *testing.T) {
+func TestUpdateByID(t *testing.T) {
 	t.Parallel()
-	db := SetupTestDB(t)
-	defer db.Close()
+	db := dbutils.SetupTestDB(t)
 
-	t.Run("successful update", func(t *testing.T) {
-		fields := map[string]any{
-			"user_name": "Jane Doe",
-			"email":     "jane@example.com",
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
+	}()
 
-		err := UpdateById(db, "users", 1, 1, fields)
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
+	fields := map[string]any{
+		"user_name": "Jane Doe",
+		"email":     "jane@example.com",
+	}
 
-		// Verify update
-		var name, email string
-		getFields := map[string]any{
-			"user_name": &name,
-			"email":     &email,
-		}
-		err = GetById(db, "users", 1, getFields)
-		if err != nil {
-			t.Errorf("Failed to verify update: %v", err)
-		}
-		if name != "Jane Doe" {
-			t.Errorf("Expected name 'Jane Doe', got '%s'", name)
-		}
-		if email != "jane@example.com" {
-			t.Errorf("Expected email 'jane@example.com', got '%s'", email)
-		}
-	})
+	err := dbutils.UpdateByID(db, "users", 1, 1, fields)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
-	t.Run("negative ID", func(t *testing.T) {
-		fields := map[string]any{
-			"name": "Test User",
-		}
+	// Verify update
+	var name, email string
+	getFields := map[string]any{
+		"user_name": &name,
+		"email":     &email,
+	}
 
-		err := UpdateById(db, "users", -1, 1, fields)
-		if err != ErrRecordNotFound {
-			t.Errorf("Expected ErrRecordNotFound, got %v", err)
-		}
-	})
+	err = dbutils.GetByID(db, "users", 1, getFields)
+	if err != nil {
+		t.Errorf("Failed to verify update: %v", err)
+	}
 
-	t.Run("negative version", func(t *testing.T) {
-		fields := map[string]any{
-			"name": "Test User",
-		}
+	if name != "Jane Doe" {
+		t.Errorf("Expected name 'Jane Doe', got '%s'", name)
+	}
 
-		err := UpdateById(db, "users", 1, -1, fields)
-		if err != ErrRecordNotFound {
-			t.Errorf("Expected ErrRecordNotFound, got %v", err)
-		}
-	})
+	if email != "jane@example.com" {
+		t.Errorf("Expected email 'jane@example.com', got '%s'", email)
+	}
+}
 
-	t.Run("attempt to update id field", func(t *testing.T) {
-		fields := map[string]any{
-			"id": 2,
-		}
+func TestUpdateByID_ErrorHandling(t *testing.T) {
+	t.Parallel()
+	db := dbutils.SetupTestDB(t)
 
-		err := UpdateById(db, "users", 1, 1, fields)
-		if err == nil {
-			t.Error("Expected error when updating id field, got nil")
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
-	})
+	}()
 
-	t.Run("attempt to update version field", func(t *testing.T) {
-		fields := map[string]any{
-			"version": 2,
-		}
+	tests := []struct {
+		name     string
+		table    string
+		id       int64
+		version  int32
+		fields   map[string]any
+		expected error
+	}{
+		{
+			name:     "negative ID",
+			table:    "users",
+			id:       -1,
+			version:  1,
+			fields:   map[string]any{"name": "Test User"},
+			expected: dbutils.ErrRecordNotFound,
+		},
+		{
+			name:     "negative version",
+			table:    "users",
+			id:       1,
+			version:  -1,
+			fields:   map[string]any{"name": "Test User"},
+			expected: dbutils.ErrRecordNotFound,
+		},
+		{
+			name:     "attempt to update id field",
+			table:    "users",
+			id:       1,
+			version:  1,
+			fields:   map[string]any{"id": 2},
+			expected: dbutils.ErrIDNoUpdate,
+		},
+		{
+			name:     "attempt to update version field",
+			table:    "users",
+			id:       1,
+			version:  1,
+			fields:   map[string]any{"version": 2},
+			expected: dbutils.ErrVersionNoUpdate,
+		},
+		{
+			name:     "empty fields map",
+			table:    "users",
+			id:       1,
+			version:  1,
+			fields:   map[string]any{},
+			expected: dbutils.ErrNoFieldsToUpdate,
+		},
+		{
+			name:     "non-existent field",
+			table:    "users",
+			id:       1,
+			version:  1,
+			fields:   map[string]any{"foobar": "Test User"},
+			expected: dbutils.ErrNoSuchColumn,
+		},
+		{
+			name:     "non-existent record",
+			table:    "users",
+			id:       999,
+			version:  1,
+			fields:   map[string]any{"user_name": "Test User"},
+			expected: dbutils.ErrEditConflict,
+		},
+		{
+			name:     "version mismatch",
+			table:    "users",
+			id:       1,
+			version:  999,
+			fields:   map[string]any{"user_name": "Test User"},
+			expected: dbutils.ErrEditConflict,
+		},
+	}
 
-		err := UpdateById(db, "users", 1, 1, fields)
-		if err == nil {
-			t.Error("Expected error when updating version field, got nil")
-		}
-	})
-
-	t.Run("empty fields map", func(t *testing.T) {
-		fields := map[string]any{}
-
-		err := UpdateById(db, "users", 1, 1, fields)
-		if err == nil {
-			t.Error("Expected error for empty fields map, got nil")
-		}
-	})
-
-	t.Run("non-existent record", func(t *testing.T) {
-		fields := map[string]any{
-			"user_name": "Test User",
-		}
-
-		err := UpdateById(db, "users", 999, 1, fields)
-		if err != ErrEditConflict {
-			t.Errorf("Expected ErrEditConflict, got %v", err)
-		}
-	})
-
-	t.Run("non-existent field", func(t *testing.T) {
-		fields := map[string]any{
-			"foobar": "Test User",
-		}
-
-		err := UpdateById(db, "users", 1, 1, fields)
-		if err == nil {
-			t.Errorf("Expected error")
-		}
-	})
-
-	t.Run("version mismatch", func(t *testing.T) {
-		fields := map[string]any{
-			"user_name": "Test User",
-		}
-
-		err := UpdateById(db, "users", 1, 999, fields)
-		if err != ErrEditConflict {
-			t.Errorf("Expected ErrEditConflict, got %v", err)
-		}
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := dbutils.UpdateByID(db, tt.table, tt.id, tt.version, tt.fields)
+			if !errors.Is(err, tt.expected) {
+				t.Errorf("Expected %v, got %v", tt.expected, err)
+			}
+		})
+	}
 }

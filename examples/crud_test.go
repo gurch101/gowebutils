@@ -22,7 +22,12 @@ func doTenantRequest(controller *TenantController, req *http.Request) *httptest.
 func TestCreateTenant(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
-
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
@@ -63,7 +68,12 @@ func TestCreateTenant(t *testing.T) {
 func TestCreateTenantInvalidPlan(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
-
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
@@ -95,7 +105,12 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
-
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
@@ -135,11 +150,16 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 func TestGetTenantHandler(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
-
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
-	req := testutils.CreateGetRequest(t, "/tenants/1")
+	req := testutils.CreateGetRequest("/tenants/1")
 	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
@@ -174,11 +194,16 @@ func TestGetTenantHandler(t *testing.T) {
 func TestGetTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
-
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
-	req := testutils.CreateGetRequest(t, "/tenants/invalid")
+	req := testutils.CreateGetRequest("/tenants/invalid")
 	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
@@ -190,11 +215,16 @@ func TestGetTenantHandler_InvalidID(t *testing.T) {
 func TestGetTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
-
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
-	req := testutils.CreateGetRequest(t, "/tenants/9999")
+	req := testutils.CreateGetRequest("/tenants/9999")
 	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
@@ -206,11 +236,16 @@ func TestGetTenantHandler_NotFound(t *testing.T) {
 func TestDeleteTenantHandler(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
-
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
-	req := testutils.CreateDeleteRequest(t, "/tenants/1")
+	req := testutils.CreateDeleteRequest("/tenants/1")
 	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
@@ -232,8 +267,14 @@ func TestDeleteTenantHandler(t *testing.T) {
 func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	tenantController := NewTenantController(db)
-	req := testutils.CreateDeleteRequest(t, "/tenants/invalid")
+	req := testutils.CreateDeleteRequest("/tenants/invalid")
 	rr := doTenantRequest(tenantController, req)
 
 	if rr.Code != http.StatusNotFound {
@@ -244,8 +285,14 @@ func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 func TestDeleteTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	tenantController := NewTenantController(db)
-	req := testutils.CreateDeleteRequest(t, "/tenants/9999")
+	req := testutils.CreateDeleteRequest("/tenants/9999")
 	rr := doTenantRequest(tenantController, req)
 
 	if rr.Code != http.StatusNotFound {
@@ -256,7 +303,12 @@ func TestDeleteTenantHandler_NotFound(t *testing.T) {
 func TestUpdateTenantHandler(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
-
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
@@ -318,6 +370,12 @@ func TestUpdateTenantHandler(t *testing.T) {
 func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	tenantController := NewTenantController(db)
 	req := testutils.CreatePatchRequest(t, "/tenants/invalid", map[string]interface{}{})
 	rr := doTenantRequest(tenantController, req)
@@ -330,6 +388,12 @@ func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 func TestUpdateTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	tenantController := NewTenantController(db)
 	req := testutils.CreatePatchRequest(t, "/tenants/9999", map[string]interface{}{})
 	rr := doTenantRequest(tenantController, req)
@@ -342,6 +406,12 @@ func TestUpdateTenantHandler_NotFound(t *testing.T) {
 func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
 	t.Parallel()
 	db := dbutils.SetupTestDB(t)
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
 	tenantController := NewTenantController(db)
 	req := testutils.CreatePatchRequest(t, "/tenants/1", map[string]interface{}{
 		"tenantName":   "UpdatedTenant",

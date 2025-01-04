@@ -1,9 +1,14 @@
-package validation
+package validation_test
 
-import "testing"
+import (
+	"testing"
+
+	"gurch101.github.io/go-web/pkg/validation"
+)
 
 func TestCoalesce(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name       string
 		ptr        *int
@@ -16,7 +21,9 @@ func TestCoalesce(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := Coalesce(tt.ptr, tt.defaultVal)
+			t.Parallel()
+
+			result := validation.Coalesce(tt.ptr, tt.defaultVal)
 			if result != tt.expected {
 				t.Errorf("expected %d, got %d", tt.expected, result)
 			}
@@ -26,6 +33,7 @@ func TestCoalesce(t *testing.T) {
 
 func TestValidatorMatches(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name     string
 		value    string
@@ -37,8 +45,11 @@ func TestValidatorMatches(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewValidator()
-			v.Matches(tt.value, EmailRX, "email", "invalid email")
+			t.Parallel()
+
+			v := validation.NewValidator()
+			v.Matches(tt.value, validation.EmailRX, "email", "invalid email")
+
 			if v.HasErrors() != tt.expected {
 				t.Errorf("expected %v, got %v", tt.expected, v.HasErrors())
 			}
@@ -48,6 +59,7 @@ func TestValidatorMatches(t *testing.T) {
 
 func TestValidatorCheck(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name      string
 		condition bool
@@ -59,8 +71,11 @@ func TestValidatorCheck(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewValidator()
+			t.Parallel()
+
+			v := validation.NewValidator()
 			v.Check(tt.condition, "field", "message")
+
 			if v.HasErrors() != tt.expected {
 				t.Errorf("expected %v, got %v", tt.expected, v.HasErrors())
 			}
@@ -70,6 +85,7 @@ func TestValidatorCheck(t *testing.T) {
 
 func TestValidatorRequired(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name     string
 		value    string
@@ -81,8 +97,11 @@ func TestValidatorRequired(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewValidator()
+			t.Parallel()
+
+			v := validation.NewValidator()
 			v.Required(tt.value, "field", "message")
+
 			if v.HasErrors() != tt.expected {
 				t.Errorf("expected %v, got %v", tt.expected, v.HasErrors())
 			}

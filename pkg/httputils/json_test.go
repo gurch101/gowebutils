@@ -1,4 +1,4 @@
-package parser
+package httputils_test
 
 import (
 	"bytes"
@@ -6,10 +6,13 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"gurch101.github.io/go-web/pkg/httputils"
 )
 
 func TestReadJSON(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		name          string
 		body          string
@@ -26,17 +29,18 @@ func TestReadJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Create a request with the test body
 			r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(tt.body))
-			w := httptest.NewRecorder()
+			rr := httptest.NewRecorder()
 
 			// Define a destination struct
 			var dst struct {
 				Name string `json:"name"`
 			}
 
-			// Call ReadJSON
-			err := ReadJSON(w, r, &dst)
+			err := httputils.ReadJSON(rr, r, &dst)
 
 			// Check the error message
 			if tt.expectedError == "" && err != nil {
@@ -50,8 +54,9 @@ func TestReadJSON(t *testing.T) {
 
 func TestReadJSON_InvalidUnmarshalError(t *testing.T) {
 	t.Parallel()
+
 	r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"name":"John"}`))
-	w := httptest.NewRecorder()
+	rr := httptest.NewRecorder()
 
 	// Pass a non-pointer to ReadJSON to trigger json.InvalidUnmarshalError
 	defer func() {
@@ -59,11 +64,16 @@ func TestReadJSON_InvalidUnmarshalError(t *testing.T) {
 			t.Errorf("expected panic, got none")
 		}
 	}()
-	ReadJSON(w, r, struct{}{})
+
+	err := httputils.ReadJSON(rr, r, struct{}{})
+	if err != nil {
+		t.Errorf("expected panic, got %v", err)
+	}
 }
 
 func TestWriteJSON(t *testing.T) {
 	t.Parallel()
+
 	type testStruct struct {
 		Name  string `json:"name"`
 		Age   int    `json:"age"`
@@ -127,44 +137,41 @@ func TestWriteJSON(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:    "non-marshalable data",
-			status:  http.StatusOK,
-			data:    make(chan int), // Invalid JSON type
-			headers: nil,
-			wantErr: true,
+			name:       "non-marshalable data",
+			status:     http.StatusOK,
+			data:       make(chan int), // Invalid JSON type
+			headers:    nil,
+			wantBody:   "null\n",
+			wantHeader: map[string]string{"Content-Type": "application/json"},
+			wantErr:    true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a mock response recorder
+			t.Parallel()
+
 			rr := httptest.NewRecorder()
 
-			// Call the function under test
-			err := WriteJSON(rr, tt.status, tt.data, tt.headers)
+			err := httputils.WriteJSON(rr, tt.status, tt.data, tt.headers)
 
-			// Verify the error
 			if (err != nil) != tt.wantErr {
 				t.Errorf("unexpected error: got %v, wantErr %v", err, tt.wantErr)
 			}
 
-			// If an error is expected, skip further checks
 			if tt.wantErr {
 				return
 			}
 
-			// Verify the response body
 			gotBody := rr.Body.String()
 			if gotBody != tt.wantBody {
 				t.Errorf("unexpected body: got %q, want %q", gotBody, tt.wantBody)
 			}
 
-			// Verify the response status
 			if rr.Code != tt.status {
 				t.Errorf("unexpected status: got %d, want %d", rr.Code, tt.status)
 			}
 
-			// Verify the headers
 			for key, value := range tt.wantHeader {
 				if got := rr.Header().Get(key); got != value {
 					t.Errorf("unexpected header %q: got %q, want %q", key, got, value)

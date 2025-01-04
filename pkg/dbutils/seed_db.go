@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func SeedDb(db *sql.DB) error {
+func SeedDB(db *sql.DB) error {
 	projectRoot := getProjectRoot()
 	dataDir := filepath.Join(projectRoot, "db", "data")
 
@@ -21,15 +21,19 @@ func SeedDb(db *sql.DB) error {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".sql") {
 			continue
 		}
+
 		filePath := filepath.Join(dataDir, file.Name())
+
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return fmt.Errorf("failed to read data file %s: %w", filePath, err)
 		}
+
 		_, err = db.Exec(string(data))
 		if err != nil {
 			return fmt.Errorf("failed to execute data file %s: %w", filePath, err)
 		}
 	}
+
 	return nil
 }

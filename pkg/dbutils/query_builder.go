@@ -4,11 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"gurch101.github.io/go-web/pkg/stringutils"
 )
+
+const execTimeout = 3 * time.Second
 
 type QueryBuilder struct {
 	selectFields []string
@@ -34,6 +37,7 @@ const (
 func NewQueryBuilder(db *sql.DB) *QueryBuilder {
 	return &QueryBuilder{
 		selectFields: []string{},
+		table:        "",
 		joins:        []string{},
 		conditions:   []string{},
 		args:         []interface{}{},
@@ -47,37 +51,55 @@ func NewQueryBuilder(db *sql.DB) *QueryBuilder {
 
 func (qb *QueryBuilder) Select(fields ...string) *QueryBuilder {
 	qb.selectFields = append(qb.selectFields, fields...)
+
 	return qb
 }
 
 func (qb *QueryBuilder) From(table string) *QueryBuilder {
 	qb.table = table
+
 	return qb
 }
 
 func (qb *QueryBuilder) Join(joinType, table, onCondition string) *QueryBuilder {
 	qb.joins = append(qb.joins, fmt.Sprintf("%s JOIN %s ON %s", joinType, table, onCondition))
+
 	return qb
 }
 
 func (qb *QueryBuilder) Where(condition string, args ...any) *QueryBuilder {
 	if len(args) > 0 && !isNilValue(args[0]) {
-		qb.conditions = append(qb.conditions, fmt.Sprintf("(%s)", condition))
+		qb.conditions = append(qb.conditions, parenthesize(condition))
 		qb.args = append(qb.args, args[0])
 	}
+
 	return qb
 }
 
 func generateLikePattern(patternType QueryOperator, value string) string {
 	switch patternType {
-	case "starts_with":
-		return fmt.Sprintf("%s%%", value) // e.g., "abc%"
-	case "ends_with":
-		return fmt.Sprintf("%%%s", value) // e.g., "%abc"
-	case "contains":
+	case OpStartsWith:
+		return value + "%" // e.g., "abc%"
+	case OpEndsWith:
+		return "%" + value // e.g., "%abc"
+	case OpContains:
 		return fmt.Sprintf("%%%s%%", value) // e.g., "%abc%"
 	default:
 		panic("Invalid pattern type: use 'starts_with', 'ends_with', or 'contains'")
+	}
+}
+
+func (qb *QueryBuilder) addLikeCondition(condition, conjunction string) {
+	qb.addCondition(condition+" LIKE ?", conjunction)
+}
+
+func (qb *QueryBuilder) addCondition(condition, conjunction string) {
+	if len(qb.conditions) > 0 {
+		lastConditionIndex := len(qb.conditions) - 1
+		formattedCondition := fmt.Sprintf("%s %s (%s)", qb.conditions[lastConditionIndex], conjunction, condition)
+		qb.conditions[lastConditionIndex] = formattedCondition
+	} else {
+		qb.conditions = append(qb.conditions, parenthesize(condition))
 	}
 }
 
@@ -87,20 +109,19 @@ func (qb *QueryBuilder) WhereLike(condition string, patternType QueryOperator, v
 	}
 
 	pattern := generateLikePattern(patternType, *value)
-	qb.conditions = append(qb.conditions, fmt.Sprintf("(%s LIKE ?)", condition))
+
+	qb.addLikeCondition(condition, "")
 	qb.args = append(qb.args, pattern)
+
 	return qb
 }
 
 func (qb *QueryBuilder) AndWhere(condition string, args ...interface{}) *QueryBuilder {
 	if len(args) > 0 && !isNilValue(args[0]) {
-		if len(qb.conditions) > 0 {
-			qb.conditions[len(qb.conditions)-1] = fmt.Sprintf("%s AND (%s)", qb.conditions[len(qb.conditions)-1], condition)
-		} else {
-			qb.conditions = append(qb.conditions, fmt.Sprintf("(%s)", condition))
-		}
+		qb.addCondition(condition, "AND")
 		qb.args = append(qb.args, args...)
 	}
+
 	return qb
 }
 
@@ -110,24 +131,19 @@ func (qb *QueryBuilder) AndWhereLike(condition string, patternType QueryOperator
 	}
 
 	pattern := generateLikePattern(patternType, *value)
-	if len(qb.conditions) > 0 {
-		qb.conditions[len(qb.conditions)-1] = fmt.Sprintf("%s AND (%s LIKE ?)", qb.conditions[len(qb.conditions)-1], condition)
-	} else {
-		qb.conditions = append(qb.conditions, fmt.Sprintf("(%s LIKE ?)", condition))
-	}
+
+	qb.addLikeCondition(condition, "AND")
 	qb.args = append(qb.args, pattern)
+
 	return qb
 }
 
 func (qb *QueryBuilder) OrWhere(condition string, args ...interface{}) *QueryBuilder {
 	if len(args) > 0 && !isNilValue(args[0]) {
-		if len(qb.conditions) > 0 {
-			qb.conditions[len(qb.conditions)-1] = fmt.Sprintf("%s OR (%s)", qb.conditions[len(qb.conditions)-1], condition)
-		} else {
-			qb.conditions = append(qb.conditions, fmt.Sprintf("(%s)", condition))
-		}
+		qb.addCondition(condition, "OR")
 		qb.args = append(qb.args, args...)
 	}
+
 	return qb
 }
 
@@ -137,16 +153,16 @@ func (qb *QueryBuilder) OrWhereLike(condition string, patternType QueryOperator,
 	}
 
 	pattern := generateLikePattern(patternType, *value)
-	if len(qb.conditions) > 0 {
-		qb.conditions[len(qb.conditions)-1] = fmt.Sprintf("%s OR (%s LIKE ?)", qb.conditions[len(qb.conditions)-1], condition)
-	} else {
-		qb.conditions = append(qb.conditions, fmt.Sprintf("(%s LIKE ?)", condition))
-	}
+
+	qb.addLikeCondition(condition, "OR")
 	qb.args = append(qb.args, pattern)
+
 	return qb
 }
+
 func (qb *QueryBuilder) GroupBy(fields ...string) *QueryBuilder {
 	qb.groupBy = append(qb.groupBy, fields...)
+
 	return qb
 }
 
@@ -155,28 +171,33 @@ func (qb *QueryBuilder) OrderBy(fields ...string) *QueryBuilder {
 	// e.g. "name", "-age"
 	for i, field := range fields {
 		if strings.HasPrefix(field, "-") {
-			fields[i] = fmt.Sprintf("%s DESC", stringutils.CamelToSnake(strings.TrimPrefix(field, "-")))
+			fields[i] = stringutils.CamelToSnake(strings.TrimPrefix(field, "-")) + " DESC"
 		} else {
-			fields[i] = fmt.Sprintf("%s ASC", stringutils.CamelToSnake(field))
+			fields[i] = stringutils.CamelToSnake(field) + " ASC"
 		}
 	}
+
 	qb.orderBy = append(qb.orderBy, fields...)
+
 	return qb
 }
 
 func (qb *QueryBuilder) Limit(limit int) *QueryBuilder {
 	qb.limit = limit
+
 	return qb
 }
 
 func (qb *QueryBuilder) Offset(offset int) *QueryBuilder {
 	qb.offset = offset
+
 	return qb
 }
 
 func (qb *QueryBuilder) Page(page, pageSize int) *QueryBuilder {
 	qb.offset = (page - 1) * pageSize
 	qb.limit = pageSize
+
 	return qb
 }
 
@@ -227,6 +248,7 @@ func (qb *QueryBuilder) Build() (string, []interface{}) {
 	if qb.limit >= 0 {
 		query.WriteString(fmt.Sprintf(" LIMIT %d", qb.limit))
 	}
+
 	if qb.offset >= 0 {
 		query.WriteString(fmt.Sprintf(" OFFSET %d", qb.offset))
 	}
@@ -236,13 +258,27 @@ func (qb *QueryBuilder) Build() (string, []interface{}) {
 
 func (qb *QueryBuilder) Execute(callback func(*sql.Rows) error) error {
 	query, args := qb.Build()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
 	defer cancel()
+
 	rows, err := qb.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return err
+		return fmt.Errorf("query builder exec error: %w", err)
 	}
-	defer rows.Close()
+
+	defer func() {
+		closeErr := rows.Close()
+		if err != nil {
+			if closeErr != nil {
+				slog.Error(fmt.Sprintf("Failed to close rows: %v", closeErr))
+			}
+
+			return
+		}
+
+		err = closeErr
+	}()
 
 	for rows.Next() {
 		if err := callback(rows); err != nil {
@@ -250,14 +286,20 @@ func (qb *QueryBuilder) Execute(callback func(*sql.Rows) error) error {
 		}
 	}
 
-	return rows.Err()
+	err = rows.Err()
+	if err != nil {
+		return fmt.Errorf("query builder rows error: %w", err)
+	}
+
+	return nil
 }
 
-// Helper function to check if the value inside an interface{} is nil
+// Helper function to check if the value inside an interface{} is nil.
 func isNilValue(v any) bool {
 	if v == nil {
 		return true
 	}
+
 	switch val := v.(type) {
 	case *int:
 		return val == nil
@@ -275,4 +317,8 @@ func isNilValue(v any) bool {
 	default:
 		return false
 	}
+}
+
+func parenthesize(s string) string {
+	return fmt.Sprintf("(%s)", s)
 }

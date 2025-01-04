@@ -2,20 +2,27 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
-	"os"
 
 	"gurch101.github.io/go-web/pkg/dbutils"
+	"gurch101.github.io/go-web/pkg/parser"
 )
 
 func main() {
-	db, err := sql.Open("sqlite3", fmt.Sprintf("%s?_foreign_keys=1&_journal=WAL", os.Getenv("DB_FILEPATH")))
+	dbDSN := parser.ParseEnvStringPanic("DB_FILEPATH") + "?_foreign_keys=1&_journal=WAL"
+
+	db, err := sql.Open(dbutils.SqliteDriverName, dbDSN)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
 
-	err = dbutils.SeedDb(db)
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			panic(closeErr)
+		}
+	}()
+
+	err = dbutils.SeedDB(db)
 	if err != nil {
 		panic(err)
 	}

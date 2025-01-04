@@ -2,37 +2,37 @@ package validation
 
 import "regexp"
 
-var (
-	// EmailRX is a regex for sanity checking the format of email addresses.
-	// The regex pattern used is taken from  https://html.spec.whatwg.org/#valid-e-mail-address.
-	EmailRX = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-)
+// EmailRX is a regex for sanity checking the format of email addresses.
+// The regex pattern used is taken from  https://html.spec.whatwg.org/#valid-e-mail-address.
+var EmailRX = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$") //nolint:lll
 
 // Validator is a simple struct for collecting validation errors.
 type Validator struct {
-	Errors []ValidationError `json:"errors"`
+	Errors []Error `json:"errors"`
 }
 
-// ValidationError is a simple struct for representing a validation error.
-type ValidationError struct {
+// Error is a simple struct for representing a validation error.
+type Error struct {
 	Field   string `json:"field"`
 	Message string `json:"message"`
 }
 
 // Error returns the validation error message.
-func (v ValidationError) Error() string {
+func (v Error) Error() string {
 	return v.Message
 }
 
 // NewValidator creates a new Validator.
 func NewValidator() *Validator {
-	return &Validator{}
+	return &Validator{
+		Errors: []Error{},
+	}
 }
 
 // Check adds an error to the Validator if the condition is false.
 func (v *Validator) Check(condition bool, field, message string) {
 	if !condition {
-		v.Errors = append(v.Errors, ValidationError{Field: field, Message: message})
+		v.Errors = append(v.Errors, Error{Field: field, Message: message})
 	}
 }
 
@@ -56,12 +56,13 @@ func (v *Validator) In(value string, list []string, key, message string) {
 			return
 		}
 	}
+
 	v.AddError(key, message)
 }
 
 // AddError adds an error to the Validator.
 func (v *Validator) AddError(field, message string) {
-	newError := ValidationError{
+	newError := Error{
 		Field:   field,
 		Message: message,
 	}
