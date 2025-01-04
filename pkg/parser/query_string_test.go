@@ -8,6 +8,7 @@ import (
 )
 
 func TestParseString(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		qs           url.Values
@@ -31,6 +32,7 @@ func TestParseString(t *testing.T) {
 }
 
 func TestParseInt(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		qs           url.Values
@@ -59,6 +61,7 @@ func TestParseInt(t *testing.T) {
 }
 
 func TestFilters_ParseFilters(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		qs       url.Values
@@ -84,6 +87,7 @@ func TestFilters_ParseFilters(t *testing.T) {
 }
 
 func TestFilters_InvalidFilters(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		qs   url.Values
@@ -114,6 +118,7 @@ func contains(slice []string, item string) bool {
 }
 
 func TestFilters_InvalidFilterValues(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		qs   url.Values

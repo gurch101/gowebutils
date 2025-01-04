@@ -8,6 +8,7 @@ import (
 )
 
 func TestGeneratePlaceholders(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		rowNum    int
 		numFields int
@@ -29,6 +30,7 @@ func TestGeneratePlaceholders(t *testing.T) {
 }
 
 func TestGetChunkSize(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		numRows   int
 		numFields int
@@ -39,7 +41,9 @@ func TestGetChunkSize(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(fmt.Sprintf("NumRows=%d_NumFields=%d", test.numRows, test.numFields), func(t *testing.T) {
+			t.Parallel()
 			result := GetChunkSize(test.numRows, test.numFields)
 			if result != test.expected {
 				t.Errorf("expected %d, got %d", test.expected, result)
@@ -49,6 +53,7 @@ func TestGetChunkSize(t *testing.T) {
 }
 
 func TestProcessInChunks_EmptyArgs(t *testing.T) {
+	t.Parallel()
 	args := []any{}
 	numFields := 2
 
@@ -63,6 +68,7 @@ func TestProcessInChunks_EmptyArgs(t *testing.T) {
 	}
 }
 func TestProcessInChunks_InvalidNumFields(t *testing.T) {
+	t.Parallel()
 	args := []any{1, 2, 3}
 	numFields := 0
 
@@ -78,6 +84,7 @@ func TestProcessInChunks_InvalidNumFields(t *testing.T) {
 }
 
 func TestProcessInChunks_SingleChunk(t *testing.T) {
+	t.Parallel()
 	args := []any{1, 2, 3}
 	numFields := 2
 	var processedChunks [][]any
@@ -104,6 +111,7 @@ func TestProcessInChunks_SingleChunk(t *testing.T) {
 }
 
 func TestProcessInChunks_MultipleChunks(t *testing.T) {
+	t.Parallel()
 	args := []any{1, 2, 3}
 	numFields := 2
 	chunkSize := 2
@@ -133,6 +141,7 @@ func TestProcessInChunks_MultipleChunks(t *testing.T) {
 }
 
 func TestProcessInChunks_CallbackError(t *testing.T) {
+	t.Parallel()
 	args := []any{1, 2, 3}
 	numFields := 2
 	expectedError := errors.New("callback error")

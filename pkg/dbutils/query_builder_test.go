@@ -7,7 +7,9 @@ import (
 )
 
 func TestQueryBuilder(t *testing.T) {
+	t.Parallel()
 	t.Run("Build basic SELECT query", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).From("users")
 		query, args := qb.Build()
 		expectedQuery := "SELECT * FROM users"
@@ -20,6 +22,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with fields", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).Select("id", "name").From("users")
 		query, args := qb.Build()
 
@@ -33,6 +36,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with WHERE clause", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).Select("id", "name").From("users").Where("id = ?", 1)
 		query, args := qb.Build()
 
@@ -47,6 +51,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with JOIN clause", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).Select("u.id", "u.name", "p.name").From("users u").Join("INNER", "profiles p", "u.id = p.user_id")
 		query, args := qb.Build()
 
@@ -60,6 +65,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with GROUP BY clause", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).Select("name", "COUNT(*)").From("users").GroupBy("name")
 		query, args := qb.Build()
 
@@ -73,6 +79,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with ORDER BY clause", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).Select("id", "name").From("users").OrderBy("name", "-id")
 		query, args := qb.Build()
 
@@ -86,6 +93,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with LIMIT and OFFSET", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).Select("id", "name").From("users").Limit(10).Offset(20)
 		query, args := qb.Build()
 
@@ -99,6 +107,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with LIKE clause", func(t *testing.T) {
+		t.Parallel()
 		var filterVal = "doe"
 		qb := NewQueryBuilder(nil).Select("id", "name").From("users").WhereLike("name", OpContains, &filterVal).AndWhereLike("email", OpStartsWith, &filterVal).OrWhereLike("phone", OpEndsWith, &filterVal)
 		query, args := qb.Build()
@@ -114,6 +123,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with nil WHERE clause value", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).Select("id", "name").From("users").Where("id = ?", nil).AndWhere("name = ?", "foo")
 		query, args := qb.Build()
 		expectedQuery := "SELECT id, name FROM users WHERE (name = ?)"
@@ -126,6 +136,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build SELECT query with Page", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).Select("id", "name").From("users").Page(2, 10)
 		query, _ := qb.Build()
 		expectedQuery := "SELECT id, name FROM users LIMIT 10 OFFSET 10"
@@ -135,6 +146,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Build complex SELECT query", func(t *testing.T) {
+		t.Parallel()
 		qb := NewQueryBuilder(nil).
 			Select("u.id", "u.name", "p.name").
 			From("users u").
@@ -159,6 +171,7 @@ func TestQueryBuilder(t *testing.T) {
 	})
 
 	t.Run("Execute SELECT query", func(t *testing.T) {
+		t.Parallel()
 		type User struct {
 			ID   int64
 			Name string

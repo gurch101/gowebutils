@@ -3,6 +3,7 @@ package validation
 import "testing"
 
 func TestCoalesce(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		ptr        *int
@@ -24,6 +25,7 @@ func TestCoalesce(t *testing.T) {
 }
 
 func TestValidatorMatches(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		value    string
@@ -45,6 +47,7 @@ func TestValidatorMatches(t *testing.T) {
 }
 
 func TestValidatorCheck(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		condition bool
@@ -66,6 +69,7 @@ func TestValidatorCheck(t *testing.T) {
 }
 
 func TestValidatorRequired(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		value    string

@@ -9,10 +9,15 @@ migrate/down:
 	@migrate -path db/migrations -database sqlite3://${DB_FILEPATH} down 1
 
 test:
-	go test -race -v ./...
+	go test -race -shuffle=on -v ./...
 
 fmt:
 	go fmt ./...
+
+check-env:
+ifndef DB_FILEPATH
+	$(error DB_FILEPATH is undefined)
+endif
 
 commit:
 	$(MAKE) test
@@ -20,8 +25,8 @@ commit:
 	git add .
 	git commit -m "${m}"
 
-dev/run:
-	rm -rf ${DB_FILEPATH}*
+dev/run: check-env
+	rm ${DB_FILEPATH}
 	$(MAKE) migrate/up
 	go run ./cmd/seeddb
 	go run ./examples

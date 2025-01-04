@@ -9,3 +9,11 @@ export RATE_LIMIT_ENABLED=
 export RATE_LIMIT_RPS=
 # defaults to 20
 export RATE_LIMIT_BURST=
+
+
+export OIDC_CLIENT_ID=
+export OIDC_CLIENT_SECRET=
+export OIDC_DISCOVERY_URL=
+# optional - defaults to OIDC_DISCOVERY_URL. Used for azure ad since the discovery url is not the same as the issuer url
+export OIDC_ISSUER_URL=
+export OIDC_SP_URL="http://localhost:8080"

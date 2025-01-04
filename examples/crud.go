@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"gurch101.github.io/go-web/pkg/authutils"
 	"gurch101.github.io/go-web/pkg/dbutils"
 	"gurch101.github.io/go-web/pkg/httputils"
 	"gurch101.github.io/go-web/pkg/parser"
@@ -29,14 +30,12 @@ func NewTenantController(db *sql.DB) *TenantController {
 	return &TenantController{DB: db}
 }
 
-func (c *TenantController) GetMux() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /tenants", c.CreateTenantHandler)
-	mux.HandleFunc("GET /tenants/{id}", c.GetTenantHandler)
-	mux.HandleFunc("GET /tenants", c.SearchTenantsHandler)
-	mux.HandleFunc("PATCH /tenants/{id}", c.UpdateTenantHandler)
-	mux.HandleFunc("DELETE /tenants/{id}", c.DeleteTenantHandler)
-	return mux
+func (c *TenantController) RegisterRoutes(router *httputils.Router) {
+	router.AddAuthenticatedRoute("POST /tenants", c.CreateTenantHandler)
+	router.AddAuthenticatedRoute("GET /tenants/{id}", c.GetTenantHandler)
+	router.AddAuthenticatedRoute("GET /tenants", c.SearchTenantsHandler)
+	router.AddAuthenticatedRoute("PATCH /tenants/{id}", c.UpdateTenantHandler)
+	router.AddAuthenticatedRoute("DELETE /tenants/{id}", c.DeleteTenantHandler)
 }
 
 type TenantPlan string
@@ -376,10 +375,27 @@ func main() {
 
 	defer db.Close()
 
-	tenantController := NewTenantController(db)
-	handler := httputils.LoggingMiddleware(httputils.RecoveryMiddleware(httputils.RateLimitMiddleware(tenantController.GetMux())))
+	oidcConfig, err := authutils.CreateOauthConfig(
+		parser.ParseEnvStringPanic("OIDC_CLIENT_ID"),
+		parser.ParseEnvStringPanic("OIDC_CLIENT_SECRET"),
+		parser.ParseEnvStringPanic("OIDC_DISCOVERY_URL"),
+		parser.ParseEnvStringPanic("OIDC_ISSUER_URL"),
+		parser.ParseEnvStringPanic("OIDC_SP_URL"),
+	)
 
-	err = httputils.ServeHTTP(handler, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	oidcController := authutils.NewOidcController(db, oidcConfig)
+	router := httputils.NewRouter(httputils.GetStateAwareAuthenticationMiddleware(oidcController.RedirectToAuthUrl))
+	router.Use(httputils.LoggingMiddleware, httputils.RecoveryMiddleware, httputils.RateLimitMiddleware)
+
+	tenantController := NewTenantController(db)
+	tenantController.RegisterRoutes(router)
+	oidcController.RegisterRoutes(router)
+
+	err = httputils.ServeHTTP(router.BuildHandler(), logger)
 
 	if err != nil {
 		slog.Error(err.Error())

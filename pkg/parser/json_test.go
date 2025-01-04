@@ -9,6 +9,7 @@ import (
 )
 
 func TestReadJSON(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		body          string
@@ -48,6 +49,7 @@ func TestReadJSON(t *testing.T) {
 }
 
 func TestReadJSON_InvalidUnmarshalError(t *testing.T) {
+	t.Parallel()
 	r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"name":"John"}`))
 	w := httptest.NewRecorder()
 
@@ -61,6 +63,7 @@ func TestReadJSON_InvalidUnmarshalError(t *testing.T) {
 }
 
 func TestWriteJSON(t *testing.T) {
+	t.Parallel()
 	type testStruct struct {
 		Name  string `json:"name"`
 		Age   int    `json:"age"`

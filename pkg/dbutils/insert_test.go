@@ -5,6 +5,7 @@ import (
 )
 
 func TestInsert(t *testing.T) {
+	t.Parallel()
 	db := SetupTestDB(t)
 	defer db.Close()
 

@@ -7,10 +7,20 @@ import (
 	"testing"
 
 	"gurch101.github.io/go-web/pkg/dbutils"
+	"gurch101.github.io/go-web/pkg/httputils"
 	"gurch101.github.io/go-web/pkg/testutils"
 )
 
+func doTenantRequest(controller *TenantController, req *http.Request) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	router := httputils.NewRouter(testutils.StubAuthMiddleware)
+	controller.RegisterRoutes(router)
+	router.BuildHandler().ServeHTTP(rr, req)
+	return rr
+}
+
 func TestCreateTenant(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 
 	// Create the TenantController instance with the test database
@@ -25,12 +35,7 @@ func TestCreateTenant(t *testing.T) {
 
 	// Create a new HTTP request
 	req := testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
-
-	// Record the response
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request through the controller
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusCreated {
@@ -56,6 +61,7 @@ func TestCreateTenant(t *testing.T) {
 }
 
 func TestCreateTenantInvalidPlan(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 
 	// Create the TenantController instance with the test database
@@ -68,14 +74,8 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 		"plan":         "invalid",
 	}
 
-	// Create a new HTTP request
 	req := testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
-
-	// Record the response
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request through the controller
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusBadRequest {
@@ -93,6 +93,7 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 }
 
 func TestCreateTenant_DuplicateTenant(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 
 	// Create the TenantController instance with the test database
@@ -105,14 +106,8 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 		"plan":         "free",
 	}
 
-	// Create a new HTTP request
 	req := testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
-
-	// Record the response
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request through the controller
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusCreated {
@@ -120,8 +115,7 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	}
 
 	req = testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
-	rr = httptest.NewRecorder()
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr = doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusBadRequest {
@@ -139,19 +133,14 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 }
 
 func TestGetTenantHandler(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
-	// Create a new HTTP request
 	req := testutils.CreateGetRequest(t, "/tenants/1")
-
-	// Record the response
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request through the controller
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusOK {
@@ -183,19 +172,14 @@ func TestGetTenantHandler(t *testing.T) {
 }
 
 func TestGetTenantHandler_InvalidID(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
-	// Create a new HTTP request with an invalid ID
 	req := testutils.CreateGetRequest(t, "/tenants/invalid")
-
-	// Record the response
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request through the controller
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusNotFound {
@@ -204,19 +188,14 @@ func TestGetTenantHandler_InvalidID(t *testing.T) {
 }
 
 func TestGetTenantHandler_NotFound(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
-	// Create a new HTTP request for a non-existent tenant
 	req := testutils.CreateGetRequest(t, "/tenants/9999")
-
-	// Record the response
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request through the controller
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusNotFound {
@@ -225,19 +204,14 @@ func TestGetTenantHandler_NotFound(t *testing.T) {
 }
 
 func TestDeleteTenantHandler(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 
 	// Create the TenantController instance with the test database
 	tenantController := NewTenantController(db)
 
-	// Create a new HTTP request
 	req := testutils.CreateDeleteRequest(t, "/tenants/1")
-
-	// Record the response
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request through the controller
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusOK {
@@ -256,28 +230,31 @@ func TestDeleteTenantHandler(t *testing.T) {
 }
 
 func TestDeleteTenantHandler_InvalidID(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 	tenantController := NewTenantController(db)
 	req := testutils.CreateDeleteRequest(t, "/tenants/invalid")
-	rr := httptest.NewRecorder()
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
+
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", rr.Code)
 	}
 }
 
 func TestDeleteTenantHandler_NotFound(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 	tenantController := NewTenantController(db)
 	req := testutils.CreateDeleteRequest(t, "/tenants/9999")
-	rr := httptest.NewRecorder()
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
+
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", rr.Code)
 	}
 }
 
 func TestUpdateTenantHandler(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 
 	// Create the TenantController instance with the test database
@@ -293,12 +270,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 
 	// Create a new HTTP request for the update
 	req := testutils.CreatePatchRequest(t, "/tenants/1", updateTenantRequest)
-
-	// Record the response
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request through the controller
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
 
 	// Check the response status code
 	if rr.Code != http.StatusOK {
@@ -344,28 +316,31 @@ func TestUpdateTenantHandler(t *testing.T) {
 }
 
 func TestUpdateTenantHandler_InvalidID(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 	tenantController := NewTenantController(db)
 	req := testutils.CreatePatchRequest(t, "/tenants/invalid", map[string]interface{}{})
-	rr := httptest.NewRecorder()
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
+
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", rr.Code)
 	}
 }
 
 func TestUpdateTenantHandler_NotFound(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 	tenantController := NewTenantController(db)
 	req := testutils.CreatePatchRequest(t, "/tenants/9999", map[string]interface{}{})
-	rr := httptest.NewRecorder()
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
+
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", rr.Code)
 	}
 }
 
 func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
+	t.Parallel()
 	db := dbutils.SetupTestDB(t)
 	tenantController := NewTenantController(db)
 	req := testutils.CreatePatchRequest(t, "/tenants/1", map[string]interface{}{
@@ -374,8 +349,8 @@ func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
 		"plan":         "invalid_plan",
 		"isActive":     true,
 	})
-	rr := httptest.NewRecorder()
-	tenantController.GetMux().ServeHTTP(rr, req)
+	rr := doTenantRequest(tenantController, req)
+
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", rr.Code)
 	}
