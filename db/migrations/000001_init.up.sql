@@ -1,3 +1,11 @@
+CREATE TABLE sessions (
+	token TEXT PRIMARY KEY,
+	data BLOB NOT NULL,
+	expiry REAL NOT NULL
+);
+
+CREATE INDEX sessions_expiry_idx ON sessions(expiry);
+
 CREATE TABLE IF NOT EXISTS tenants (
     id INTEGER PRIMARY KEY,         -- Unique ID for each tenant
     tenant_name TEXT NOT NULL CONSTRAINT unique_tenant_name UNIQUE CHECK(tenant_name <> ''),    -- Name of the tenant

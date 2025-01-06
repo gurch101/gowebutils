@@ -2,7 +2,6 @@ package authutils
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -27,9 +27,10 @@ var ErrInvalidState = errors.New("invalid state")
 // ErrTokenExchangeFailed is returned when the token exchange fails.
 var ErrTokenExchangeFailed = errors.New("token exchange failed")
 
-type OidcController struct {
-	DB           *sql.DB
-	oauth2Config *Oauth2Config
+type OidcController[T any] struct {
+	oauth2Config      *Oauth2Config
+	getOrCreateUserFn GetOrCreateUser[T]
+	sessionManager    *scs.SessionManager
 }
 
 type Oauth2Config struct {
@@ -44,7 +45,8 @@ func formatCallbackURL(host string) string {
 }
 
 // CreateOauthConfig creates an oauth2.Config object for the given idp URL.
-// for azure, the should https://<tenant-id>.b2clogin.com/<tenant-id>.onmicrosoft.com/<policy-name>/v2.0/
+// discoveryURL is the base URL that exposes /.well-known/openid-configuration
+// issuerURL is normally blank provided the issuer and the discoveryURL are the same. For Azure, they are not.
 // spURL should be the host URL of your app.
 func CreateOauthConfig(clientID, clientSecret, discoveryURL, issuerURL, spURL string) (*Oauth2Config, error) {
 	ctx := context.Background()
@@ -79,16 +81,22 @@ func CreateOauthConfig(clientID, clientSecret, discoveryURL, issuerURL, spURL st
 	}, nil
 }
 
-func NewOidcController(db *sql.DB, config *Oauth2Config) *OidcController {
-	return &OidcController{DB: db, oauth2Config: config}
+type GetOrCreateUser[T any] func(ctx context.Context, username, email string) (T, error)
+
+func NewOidcController[T any](
+	sessionManager *scs.SessionManager,
+	fn GetOrCreateUser[T],
+	config *Oauth2Config,
+) *OidcController[T] {
+	return &OidcController[T]{sessionManager: sessionManager, getOrCreateUserFn: fn, oauth2Config: config}
 }
 
-func (c *OidcController) RegisterRoutes(router *httputils.Router) {
+func (c *OidcController[T]) RegisterRoutes(router *httputils.Router) {
 	router.AddRoute("GET /login", c.loginHandler)
-	router.AddRoute("GET /auth/callback", c.callbackHandler)
+	router.AddRoute("GET /auth/callback", c.authCallback)
 }
 
-func (c *OidcController) RedirectToAuthURL(w http.ResponseWriter, r *http.Request, destURL string) {
+func (c *OidcController[T]) RedirectToAuthURL(w http.ResponseWriter, r *http.Request, destURL string) {
 	state := uuid.New().String()
 
 	if destURL != "" {
@@ -102,19 +110,21 @@ func (c *OidcController) RedirectToAuthURL(w http.ResponseWriter, r *http.Reques
 		Value:    state,
 		Quoted:   false,
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		// use lax since we are using a third-party for auth
+		SameSite: http.SameSiteLaxMode,
 	})
 
+	slog.InfoContext(r.Context(), "log state", "state", state)
 	url := c.oauth2Config.config.AuthCodeURL(state)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func (c *OidcController) loginHandler(w http.ResponseWriter, r *http.Request) {
+func (c *OidcController[T]) loginHandler(w http.ResponseWriter, r *http.Request) {
 	c.RedirectToAuthURL(w, r, "")
 }
 
-// need to use this since the built-in exchange requires an access_token.
-func (c *OidcController) exchange(ctx context.Context, code string) (string, error) {
+// need to use this since the built-in exchange requires an access_token which azure doesnt provide.
+func (c *OidcController[T]) exchange(ctx context.Context, code string) (string, error) {
 	if code == "" {
 		return "", ErrAuthCodeNotFound
 	}
@@ -174,25 +184,14 @@ func (c *OidcController) exchange(ctx context.Context, code string) (string, err
 	return tokenResponse.IDToken, nil
 }
 
-func (c *OidcController) callbackHandler(w http.ResponseWriter, r *http.Request) {
-	// Verify state and errors.
-	state := r.URL.Query().Get("state")
-	cookie, err := r.Cookie("state")
-
-	if err != nil || cookie.Value != state {
-		httputils.BadRequestResponse(w, r, ErrInvalidState)
-
-		return
+func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request) {
+	if ok := c.verifyStateAndErrors(w, r); !ok {
+		return // Error already handled in helper function.
 	}
 
-	code := r.URL.Query().Get("code")
-
-	// changed from context.Background() to r.Context()
-	rawIDToken, err := c.exchange(r.Context(), code)
+	rawIDToken, err := c.exchangeCodeForToken(w, r)
 	if err != nil {
-		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to exchange token: %w", err))
-
-		return
+		return // Error already handled in helper function.
 	}
 
 	// Parse and verify ID Token payload.
@@ -205,7 +204,8 @@ func (c *OidcController) callbackHandler(w http.ResponseWriter, r *http.Request)
 
 	// Extract custom claims
 	var claims struct {
-		Oid string `json:"oid"`
+		UserID string `json:"sub"`
+		Email  string `json:"email"`
 	}
 
 	if err := idToken.Claims(&claims); err != nil {
@@ -213,4 +213,63 @@ func (c *OidcController) callbackHandler(w http.ResponseWriter, r *http.Request)
 
 		return
 	}
+
+	_, err = c.getOrCreateUserFn(r.Context(), claims.UserID, claims.Email)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to get or create user: %w", err))
+
+		return
+	}
+
+	err = c.sessionManager.RenewToken(r.Context())
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to renew session: %w", err))
+
+		return
+	}
+
+	slog.InfoContext(r.Context(), "logged in", "raw_id_token", rawIDToken)
+	// Add the ID of the current user to the session, so that they are now // 'logged in'.
+	// c.sessionManager.Put(r.Context(), "user", user)
+	// TODO create a session
+	// TODO redirect to dashboard
+}
+
+func (c *OidcController[T]) verifyStateAndErrors(w http.ResponseWriter, r *http.Request) bool {
+	errString := r.URL.Query().Get("error")
+	errDesc := r.URL.Query().Get("error_description")
+	dest := r.URL.Query().Get("dest")
+
+	if errString != "" {
+		slog.ErrorContext(r.Context(), "error", "error", errString, "error_description", errDesc)
+		c.RedirectToAuthURL(w, r, dest)
+
+		return false
+	}
+
+	state := r.URL.Query().Get("state")
+	cookie, err := r.Cookie("state")
+
+	if err != nil || cookie.Value != state {
+		slog.ErrorContext(r.Context(), "invalid state", "state", state, "has cookie", cookie != nil, "value", cookie.Value)
+		httputils.BadRequestResponse(w, r, ErrInvalidState)
+
+		return false
+	}
+
+	return true
+}
+
+// Helper function to exchange code for token.
+func (c *OidcController[T]) exchangeCodeForToken(w http.ResponseWriter, r *http.Request) (string, error) {
+	code := r.URL.Query().Get("code")
+
+	rawIDToken, err := c.exchange(r.Context(), code)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to exchange token: %w", err))
+
+		return "", err
+	}
+
+	return rawIDToken, nil
 }

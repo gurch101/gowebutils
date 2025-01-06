@@ -1,0 +1,3 @@
+- update tenant id across all files
+- update storageReferenceId in base
+- add client id and proxy id to extensions

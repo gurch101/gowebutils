@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -285,6 +286,34 @@ func SearchTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]*S
 	return tenantResponses, pagination, nil
 }
 
+type User struct {
+	ID int64
+	TenantID int64
+	UserName string
+	Email string
+}
+
+type AuthService struct {
+	db *sql.DB
+}
+
+func NewAuthService(db *sql.DB) *AuthService {
+	return &AuthService{db: db}
+}
+
+func (a *AuthService) GetOrCreateUser(ctx context.Context, username, email string) (User, error) {
+	return User{
+		ID: 1,
+		TenantID: 1,
+		UserName: username,
+		Email: email,
+	}, nil
+}
+
+func (a* AuthService) UserExists(ctx context.Context, user User) (bool, error) {
+	return true, nil
+}
+
 func main() {
 	logger := httputils.InitializeSlog(parser.ParseEnvString("LOG_LEVEL", "info"))
 
@@ -316,9 +345,19 @@ func main() {
 		panic(err)
 	}
 
-	oidcController := authutils.NewOidcController(db, oidcConfig)
-	router := httputils.NewRouter(httputils.GetStateAwareAuthenticationMiddleware(oidcController.RedirectToAuthURL))
-	router.Use(httputils.LoggingMiddleware, httputils.RecoveryMiddleware, httputils.RateLimitMiddleware)
+	sessionManager := authutils.CreateSessionManager(db)
+	authService := NewAuthService(db)
+
+	oidcController := authutils.NewOidcController(sessionManager, authService.GetOrCreateUser, oidcConfig)
+	router := httputils.NewRouter(
+		authutils.GetSessionMiddleware(sessionManager, authService.UserExists),
+	)
+	router.Use(
+		httputils.LoggingMiddleware,
+		httputils.RecoveryMiddleware,
+		httputils.RateLimitMiddleware,
+		sessionManager.LoadAndSave,
+	)
 
 	tenantController := NewTenantController(db)
 	tenantController.RegisterRoutes(router)

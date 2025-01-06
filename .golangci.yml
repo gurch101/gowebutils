@@ -150,7 +150,10 @@ linters-settings:
           - github.com/coreos/go-oidc/v3/oidc
           - golang.org/x/oauth2
           - golang.org/x/time/rate
+          - github.com/alexedwards/scs/sqlite3store
+          - github.com/alexedwards/scs/v2
           - gurch101.github.io/go-web/pkg
+
   ireturn:
     allow:
       - generic

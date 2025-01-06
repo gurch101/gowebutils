@@ -1,3 +1,4 @@
 .envrc
 *.db*
 coverage.out
+azure/dev

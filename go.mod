@@ -11,6 +11,8 @@ require (
 )
 
 require (
+	github.com/alexedwards/scs/sqlite3store v0.0.0-20240316134038-7e11d57e8885 // indirect
+	github.com/alexedwards/scs/v2 v2.8.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
 )
