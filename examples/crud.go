@@ -345,6 +345,8 @@ func main() {
 		panic(err)
 	}
 
+	allowedOrigins := strings.Fields(parser.ParseEnvString("CORS_ALLOWED_ORIGINS", ""))
+	fileServer := http.FileServer(http.Dir("./web/static/"))
 	sessionManager := authutils.CreateSessionManager(db)
 	authService := NewAuthService(db)
 
@@ -362,6 +364,7 @@ func main() {
 	tenantController := NewTenantController(db)
 	tenantController.RegisterRoutes(router)
 	oidcController.RegisterRoutes(router)
+	router.AddStaticRoute("/static/", httputils.GetCORSMiddleware(allowedOrigins)(http.StripPrefix("/static", fileServer)))
 
 	err = httputils.ServeHTTP(router.BuildHandler(), logger)
 

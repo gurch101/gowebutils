@@ -25,6 +25,10 @@ func (r *Router) Use(middlewares ...Middleware) {
 	r.globalMiddlewares = append(r.globalMiddlewares, middlewares...)
 }
 
+func (r *Router) AddStaticRoute(path string, handler http.Handler) {
+	r.mux.Handle(path, handler)
+}
+
 // AddRoute adds a route with optional route-specific middleware.
 func (r *Router) AddRoute(path string, handler http.HandlerFunc, middlewares ...Middleware) {
 	// Chain the middleware with the handler

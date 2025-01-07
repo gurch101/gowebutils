@@ -174,3 +174,33 @@ func GetStateAwareAuthenticationMiddleware(_ UnauthorizedRedirector) func(next h
 		})
 	}
 }
+
+func GetCORSMiddleware(trustedOrigins []string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Add the "Vary: Origin" header.
+			w.Header().Add("Vary", "Origin")
+			// Get the value of the request's Origin header.
+			origin := r.Header.Get("Origin")
+			// Only run this if there's an Origin request header present.
+			if origin != "" {
+				// Loop through the list of trusted origins, checking to see if the request
+				// origin exactly matches one of them. If there are no trusted origins, then
+				// the loop won't be iterated.
+				for i := range trustedOrigins {
+					if origin == trustedOrigins[i] {
+						// If there is a match, then set a "Access-Control-Allow-Origin"
+						// response header with the request origin as the value and break
+						// out of the loop.
+						w.Header().Set("Access-Control-Allow-Origin", origin)
+
+						break
+					}
+				}
+			}
+
+			// Call the next handler in the chain.
+			next.ServeHTTP(w, r)
+		})
+	}
+}
