@@ -278,31 +278,6 @@
       </ClaimType>
 
       <!-- SECTION III: Additional claims that can be collected from the users, stored in the directory, and sent in the token. Add additional claims here. -->
-
-      <ClaimType Id="givenName">
-        <DisplayName>Given Name</DisplayName>
-        <DataType>string</DataType>
-        <DefaultPartnerClaimTypes>
-          <Protocol Name="OAuth2" PartnerClaimType="given_name" />
-          <Protocol Name="OpenIdConnect" PartnerClaimType="given_name" />
-          <Protocol Name="SAML2" PartnerClaimType="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname" />
-        </DefaultPartnerClaimTypes>
-        <UserHelpText>Your given name (also known as first name).</UserHelpText>
-        <UserInputType>TextBox</UserInputType>
-      </ClaimType>
-
-      <ClaimType Id="surname">
-        <DisplayName>Surname</DisplayName>
-        <DataType>string</DataType>
-        <DefaultPartnerClaimTypes>
-          <Protocol Name="OAuth2" PartnerClaimType="family_name" />
-          <Protocol Name="OpenIdConnect" PartnerClaimType="family_name" />
-          <Protocol Name="SAML2" PartnerClaimType="http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname" />
-        </DefaultPartnerClaimTypes>
-        <UserHelpText>Your surname (also known as family name or last name).</UserHelpText>
-        <UserInputType>TextBox</UserInputType>
-      </ClaimType>
-
     </ClaimsSchema>
 
     <ClaimsTransformations>
@@ -469,9 +444,6 @@
           <OutputClaims>
             <OutputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="oid" />
             <OutputClaim ClaimTypeReferenceId="tenantId" PartnerClaimType="tid" />
-            <OutputClaim ClaimTypeReferenceId="givenName" PartnerClaimType="given_name" />
-            <OutputClaim ClaimTypeReferenceId="surName" PartnerClaimType="family_name" />
-            <OutputClaim ClaimTypeReferenceId="displayName" PartnerClaimType="name" />
             <OutputClaim ClaimTypeReferenceId="userPrincipalName" PartnerClaimType="upn" />
             <OutputClaim ClaimTypeReferenceId="authenticationSource" DefaultValue="localAccountAuthentication" />
           </OutputClaims>
@@ -515,8 +487,6 @@
             <PersistedClaim ClaimTypeReferenceId="passwordPolicies" DefaultValue="DisablePasswordExpiration" />
 
             <!-- Optional claims. -->
-            <PersistedClaim ClaimTypeReferenceId="givenName" />
-            <PersistedClaim ClaimTypeReferenceId="surname" />
           </PersistedClaims>
           <OutputClaims>
             <OutputClaim ClaimTypeReferenceId="objectId" />
@@ -545,7 +515,6 @@
 
             <!-- Optional claims -->
             <OutputClaim ClaimTypeReferenceId="userPrincipalName" />
-            <OutputClaim ClaimTypeReferenceId="displayName" />
             <OutputClaim ClaimTypeReferenceId="accountEnabled" />
             <OutputClaim ClaimTypeReferenceId="otherMails" />
             <OutputClaim ClaimTypeReferenceId="signInNames.emailAddress" />
@@ -590,8 +559,6 @@
             <PersistedClaim ClaimTypeReferenceId="objectId" />
 
             <!-- Optional claims -->
-            <PersistedClaim ClaimTypeReferenceId="givenName" />
-            <PersistedClaim ClaimTypeReferenceId="surname" />
           </PersistedClaims>
           <IncludeTechnicalProfile ReferenceId="AAD-Common" />
         </TechnicalProfile>
@@ -610,10 +577,7 @@
 
             <!-- Optional claims -->
             <OutputClaim ClaimTypeReferenceId="signInNames.emailAddress" />
-            <OutputClaim ClaimTypeReferenceId="displayName" />
             <OutputClaim ClaimTypeReferenceId="otherMails" />
-            <OutputClaim ClaimTypeReferenceId="givenName" />
-            <OutputClaim ClaimTypeReferenceId="surname" />
           </OutputClaims>
           <IncludeTechnicalProfile ReferenceId="AAD-Common" />
         </TechnicalProfile>
@@ -637,8 +601,6 @@
 
             <!-- Optional claims. These claims are collected from the user and can be modified. Any claim added here should be updated in the
                  ValidationTechnicalProfile referenced below so it can be written to directory after being updated by the user, i.e. AAD-UserWriteProfileUsingObjectId. -->
-            <InputClaim ClaimTypeReferenceId="givenName" />
-            <InputClaim ClaimTypeReferenceId="surname" />
           </InputClaims>
           <OutputClaims>
             <!-- Required claims -->
@@ -646,8 +608,6 @@
 
             <!-- Optional claims. These claims are collected from the user and can be modified. Any claim added here should be updated in the
                  ValidationTechnicalProfile referenced below so it can be written to directory after being updated by the user, i.e. AAD-UserWriteProfileUsingObjectId. -->
-            <OutputClaim ClaimTypeReferenceId="givenName" />
-            <OutputClaim ClaimTypeReferenceId="surname" />
           </OutputClaims>
           <ValidationTechnicalProfiles>
             <ValidationTechnicalProfile ReferenceId="AAD-UserWriteProfileUsingObjectId" />
@@ -683,9 +643,6 @@
             <OutputClaim ClaimTypeReferenceId="newUser" />
 
             <!-- Optional claims, to be collected from the user -->
-            <OutputClaim ClaimTypeReferenceId="displayName" />
-            <OutputClaim ClaimTypeReferenceId="givenName" />
-            <OutputClaim ClaimTypeReferenceId="surName" />
           </OutputClaims>
           <ValidationTechnicalProfiles>
             <ValidationTechnicalProfile ReferenceId="AAD-UserWriteUsingLogonEmail" />
@@ -834,40 +791,6 @@
         </TechnicalProfile>
       </TechnicalProfiles>
     </ClaimsProvider>
-    <!--claims provider for refresh token revocation-->
-  <ClaimsProvider>
-    <DisplayName>Refresh token journey</DisplayName>
-    <TechnicalProfiles>
-      <TechnicalProfile Id="RefreshTokenReadAndSetup">
-        <DisplayName>Trustframework Policy Engine Refresh Token Setup Technical Profile</DisplayName>
-        <Protocol Name="None" />
-        <OutputClaims>
-          <OutputClaim ClaimTypeReferenceId="objectId" />
-          <OutputClaim ClaimTypeReferenceId="refreshTokenIssuedOnDateTime" />
-           <!--Requirement: Claims that you return in the relying party technical profile output claims
-            that are not stored in Azure AD B2C, must be added to the output claims collection here-->
-          <!--
-
-          <OutputClaim ClaimTypeReferenceId="RESTAPIclaim1" />
-          <OutputClaim ClaimTypeReferenceId="IDPclaim1" />
-           -->
-        </OutputClaims>
-      </TechnicalProfile>
-
-
-      <TechnicalProfile Id="AAD-UserReadUsingObjectId-CheckRefreshTokenDate">
-        <OutputClaims>
-          <OutputClaim ClaimTypeReferenceId="refreshTokensValidFromDateTime" />
-          <OutputClaim ClaimTypeReferenceId="displayName" />
-        </OutputClaims>
-        <OutputClaimsTransformations>
-          <OutputClaimsTransformation ReferenceId="AssertRefreshTokenIssuedLaterThanValidFromDate" />
-        </OutputClaimsTransformations>
-        <IncludeTechnicalProfile ReferenceId="AAD-UserReadUsingObjectId" />
-      </TechnicalProfile>
-    </TechnicalProfiles>
-  </ClaimsProvider>
-
   </ClaimsProviders>
 
   <UserJourneys>
@@ -909,36 +832,6 @@
       <ClientDefinition ReferenceId="DefaultWeb" />
     </UserJourney>
 
-    <UserJourney Id="ProfileEdit">
-      <OrchestrationSteps>
-
-        <OrchestrationStep Order="1" Type="ClaimsProviderSelection" ContentDefinitionReferenceId="api.idpselections">
-          <ClaimsProviderSelections>
-            <ClaimsProviderSelection TargetClaimsExchangeId="LocalAccountSigninEmailExchange" />
-          </ClaimsProviderSelections>
-        </OrchestrationStep>
-        <OrchestrationStep Order="2" Type="ClaimsExchange">
-          <ClaimsExchanges>
-            <ClaimsExchange Id="LocalAccountSigninEmailExchange" TechnicalProfileReferenceId="SelfAsserted-LocalAccountSignin-Email" />
-          </ClaimsExchanges>
-        </OrchestrationStep>
-        <OrchestrationStep Order="3" Type="ClaimsExchange">
-          <ClaimsExchanges>
-            <ClaimsExchange Id="AADUserReadWithObjectId" TechnicalProfileReferenceId="AAD-UserReadUsingObjectId" />
-          </ClaimsExchanges>
-        </OrchestrationStep>
-
-        <OrchestrationStep Order="4" Type="ClaimsExchange">
-          <ClaimsExchanges>
-            <ClaimsExchange Id="B2CUserProfileUpdateExchange" TechnicalProfileReferenceId="SelfAsserted-ProfileUpdate" />
-          </ClaimsExchanges>
-        </OrchestrationStep>
-        <OrchestrationStep Order="5" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
-
-      </OrchestrationSteps>
-      <ClientDefinition ReferenceId="DefaultWeb" />
-    </UserJourney>
-
     <UserJourney Id="PasswordReset">
       <OrchestrationSteps>
         <OrchestrationStep Order="1" Type="ClaimsExchange">
@@ -955,26 +848,5 @@
       </OrchestrationSteps>
       <ClientDefinition ReferenceId="DefaultWeb" />
     </UserJourney>
-
-    <UserJourney Id="RedeemRefreshToken">
-      <PreserveOriginalAssertion>false</PreserveOriginalAssertion>
-      <OrchestrationSteps>
-        <OrchestrationStep Order="1" Type="ClaimsExchange">
-          <ClaimsExchanges>
-            <ClaimsExchange Id="RefreshTokenSetupExchange" TechnicalProfileReferenceId="RefreshTokenReadAndSetup" />
-          </ClaimsExchanges>
-        </OrchestrationStep>
-
-        <!-- Extra steps can be added before or after this step for REST API or claims transformation calls-->
-
-        <OrchestrationStep Order="2" Type="ClaimsExchange">
-          <ClaimsExchanges>
-            <ClaimsExchange Id="CheckRefreshTokenDateFromAadExchange" TechnicalProfileReferenceId="AAD-UserReadUsingObjectId-CheckRefreshTokenDate" />
-          </ClaimsExchanges>
-        </OrchestrationStep>
-        <OrchestrationStep Order="3" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
-      </OrchestrationSteps>
-    </UserJourney>
-
   </UserJourneys>
 </TrustFrameworkPolicy>
