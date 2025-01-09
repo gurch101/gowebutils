@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"gurch101.github.io/go-web/pkg/validation"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 // Filters contains common query string parameters for pagination and sort.

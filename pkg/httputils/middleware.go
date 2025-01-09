@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gurch101/gowebutils/pkg/parser"
 	"golang.org/x/time/rate"
-	"gurch101.github.io/go-web/pkg/parser"
 )
 
 var ErrPanic = errors.New("panic")

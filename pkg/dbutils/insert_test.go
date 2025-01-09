@@ -1,9 +1,10 @@
 package dbutils_test
 
 import (
+	"context"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
 )
 
 func TestInsert(t *testing.T) {
@@ -24,7 +25,7 @@ func TestInsert(t *testing.T) {
 		"is_active":     true,
 	}
 
-	id, err := dbutils.Insert(db, "tenants", fields)
+	id, err := dbutils.Insert(context.Background(), db, "tenants", fields)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -73,7 +74,7 @@ func TestInsert_ErrorHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := dbutils.Insert(db, tt.table, tt.fields)
+			id, err := dbutils.Insert(context.Background(), db, tt.table, tt.fields)
 
 			if err == nil {
 				t.Error("Expected error, got nil")

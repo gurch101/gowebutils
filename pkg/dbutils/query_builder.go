@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"gurch101.github.io/go-web/pkg/stringutils"
+	"github.com/gurch101/gowebutils/pkg/stringutils"
 )
 
 const execTimeout = 3 * time.Second
@@ -289,6 +289,20 @@ func (qb *QueryBuilder) Execute(callback func(*sql.Rows) error) error {
 	err = rows.Err()
 	if err != nil {
 		return fmt.Errorf("query builder rows error: %w", err)
+	}
+
+	return nil
+}
+
+func (qb *QueryBuilder) QueryRow(dest ...any) error {
+	query, args := qb.Build()
+
+	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
+	defer cancel()
+
+	err := qb.db.QueryRowContext(ctx, query, args...).Scan(dest...)
+	if err != nil {
+		return WrapDBError(err)
 	}
 
 	return nil

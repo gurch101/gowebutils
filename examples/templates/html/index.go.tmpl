@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang='en'> <head>
+<meta charset='utf-8'>
+<title>GoWeb</title>
+<script type="text/javascript">
+  document.addEventListener('DOMContentLoaded', function () {
+      // Get the form element by its ID
+      const form = document.querySelector('form');
+
+      // Add a submit event listener to the form
+      form.addEventListener('submit', function (event) {
+        // Prevent the form from submitting the traditional way
+        event.preventDefault();
+
+        // Handle the form submission
+        const data = {};
+        // You can access form data here using event.target or form.elements
+        const formData = new FormData(form);
+        for (const [key, value] of formData.entries()) {
+          data[key] = value;
+        }
+
+        fetch('/api/invite', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json', // Set the content type to JSON
+          },
+          body: JSON.stringify(data), // Convert the JSON object to a string
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json(); // Parse the JSON response
+          })
+          .then(data => {
+            console.log('Success:', data);
+            // Handle the successful response (e.g., show a success message)
+            alert('Form submitted successfully!');
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            // Handle errors (e.g., show an error message)
+            alert('There was an error submitting the form.');
+          });
+      });
+    });
+</script>
+</head>
+<body>
+<header>
+<h1><a href='/'>GoWeb</a></h1>
+</header>
+<main>
+<h3>Send Invite</h3>
+<form>
+  <input type="text" name="email" />
+  <input type="submit" value="Send" />
+</form>
+</main>
+</body>
+</html>

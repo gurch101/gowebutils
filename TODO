@@ -1,0 +1,29 @@
+add json response writer - done
+add error middleware - done
+log stack trace for internal errors
+update db test_utils to load all migrations - done
+add create tenant e2e test
+
+deal with edit conflict errors
+
+db:
+
+- exceed varchar lengths
+- select for some columns
+- select with joins
+- select with joins and group by
+- transactions
+
+API framework:
+
+- examples with every query type I need
+- examples with every controller type I need
+- validator/error handling middleware
+- email
+- file upload
+- azure auth
+- stripe integration
+- ai integration
+- authz framework
+- logging
+- metrics

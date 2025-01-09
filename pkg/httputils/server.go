@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"gurch101.github.io/go-web/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/parser"
 )
 
 const defaultPort = 8080

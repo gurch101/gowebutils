@@ -2,10 +2,11 @@ package dbutils_test
 
 import (
 	"database/sql"
+	"errors"
 	"reflect"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
 )
 
 func TestQueryBuilder_SimpleSelect(t *testing.T) {
@@ -246,5 +247,47 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 	if len(users) != 2 {
 		t.Errorf("Expected 2 users, got %d", len(users))
+	}
+}
+
+func TestQueryBuilder_QueryRow(t *testing.T) {
+	t.Parallel()
+	db := dbutils.SetupTestDB(t)
+
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
+
+	var id int64
+
+	err := dbutils.NewQueryBuilder(db).Select("id").From("users").Where("id = ?", 1).QueryRow(&id)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	if id != 1 {
+		t.Errorf("Expected id 1, got %d", id)
+	}
+}
+
+func TestQueryBuilder_QueryRowNoRow(t *testing.T) {
+	t.Parallel()
+
+	db := dbutils.SetupTestDB(t)
+	defer func() {
+		closeErr := db.Close()
+		if closeErr != nil {
+			t.Fatalf("Failed to close database connection: %v", closeErr)
+		}
+	}()
+
+	var id int64
+
+	err := dbutils.NewQueryBuilder(db).Select("id").From("users").Where("id = ?", 999).QueryRow(&id)
+	if !errors.Is(err, dbutils.ErrRecordNotFound) {
+		t.Errorf("Expected no record error, got %v", err)
 	}
 }

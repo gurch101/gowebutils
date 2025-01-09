@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
 )
 
 func TestReadJSON(t *testing.T) {

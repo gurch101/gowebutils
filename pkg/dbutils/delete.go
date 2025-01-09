@@ -2,7 +2,6 @@ package dbutils
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 )
@@ -10,7 +9,7 @@ import (
 const deleteTimeout = 3 * time.Second
 
 // DeleteByID deletes a record from the specified table by its ID.
-func DeleteByID(db *sql.DB, tableName string, id int64) error {
+func DeleteByID(ctx context.Context, db DB, tableName string, id int64) error {
 	if id < 0 {
 		return ErrRecordNotFound
 	}
@@ -18,7 +17,7 @@ func DeleteByID(db *sql.DB, tableName string, id int64) error {
 	// #nosec G201
 	query := fmt.Sprintf("DELETE FROM %s WHERE id = ?", tableName)
 
-	ctx, cancel := context.WithTimeout(context.Background(), deleteTimeout)
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 
 	result, err := db.ExecContext(ctx, query, id)

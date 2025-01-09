@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
 )
 
 func createRequestWithBody(t *testing.T, method, url string, payload interface{}) *http.Request {

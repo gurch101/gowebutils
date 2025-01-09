@@ -1,10 +1,11 @@
 package dbutils_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
 )
 
 func TestUpdateByID(t *testing.T) {
@@ -35,7 +36,7 @@ func TestUpdateByID(t *testing.T) {
 		"email":     &email,
 	}
 
-	err = dbutils.GetByID(db, "users", 1, getFields)
+	err = dbutils.GetByID(context.Background(), db, "users", 1, getFields)
 	if err != nil {
 		t.Errorf("Failed to verify update: %v", err)
 	}

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
 )
 
 func TestGetChunkSize(t *testing.T) {

@@ -1,10 +1,11 @@
 package dbutils_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
 )
 
 func TestDeleteByID(t *testing.T) {
@@ -18,7 +19,7 @@ func TestDeleteByID(t *testing.T) {
 		}
 	}()
 
-	err := dbutils.DeleteByID(db, "users", 1)
+	err := dbutils.DeleteByID(context.Background(), db, "users", 1)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -27,7 +28,7 @@ func TestDeleteByID(t *testing.T) {
 	var name string
 	fields := map[string]any{"user_name": &name}
 
-	err = dbutils.GetByID(db, "users", 1, fields)
+	err = dbutils.GetByID(context.Background(), db, "users", 1, fields)
 	if !errors.Is(err, dbutils.ErrRecordNotFound) {
 		t.Errorf("Expected record to be deleted, but got error: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestDelete_ErrorHandling(t *testing.T) {
 				}
 			}()
 
-			err := dbutils.DeleteByID(db, tt.table, tt.id)
+			err := dbutils.DeleteByID(context.Background(), db, tt.table, tt.id)
 
 			if err == nil {
 				t.Error("Expected error, got nil")

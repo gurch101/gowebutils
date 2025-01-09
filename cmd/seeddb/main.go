@@ -3,8 +3,8 @@ package main
 import (
 	"database/sql"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
-	"gurch101.github.io/go-web/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/parser"
 )
 
 func main() {

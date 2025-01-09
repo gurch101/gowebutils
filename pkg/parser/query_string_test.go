@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/parser"
-	"gurch101.github.io/go-web/pkg/validation"
+	"github.com/gurch101/gowebutils/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 func TestParseString(t *testing.T) {

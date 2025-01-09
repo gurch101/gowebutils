@@ -124,6 +124,8 @@ linters-settings:
       - ok
     ignore-decls:
       - db *sql.DB
+      - db DB
+      - tx *sql.Tx
       - v *validation.Validator
       - w http.ResponseWriter
       - r *http.Request
@@ -138,7 +140,7 @@ linters-settings:
           - "!**/pkg/**/*.go"
         allow:
           - $gostd
-          - gurch101.github.io/go-web/pkg
+          - github.com/gurch101/gowebutils/pkg
       pkg:
         list-mode: strict
         files:
@@ -152,7 +154,8 @@ linters-settings:
           - golang.org/x/time/rate
           - github.com/alexedwards/scs/sqlite3store
           - github.com/alexedwards/scs/v2
-          - gurch101.github.io/go-web/pkg
+          - github.com/gurch101/gowebutils/pkg
+          - gopkg.in/gomail.v2
 
   ireturn:
     allow:

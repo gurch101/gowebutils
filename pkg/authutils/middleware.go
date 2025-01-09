@@ -2,12 +2,14 @@ package authutils
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/alexedwards/scs/v2"
+	"github.com/gurch101/gowebutils/pkg/httputils"
 )
 
-type getUserExistsFn[T any] func(ctx context.Context, user T) (bool, error)
+type getUserExistsFn[T any] func(ctx context.Context, user T) bool
 
 func GetSessionMiddleware[T any](
 	sessionManager *scs.SessionManager,
@@ -17,18 +19,21 @@ func GetSessionMiddleware[T any](
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := sessionManager.Get(r.Context(), "user").(T)
 			if !ok {
-				// TODO unauthenticated error
+				slog.ErrorContext(r.Context(), "failed to get user from session")
+				httputils.UnauthorizedResponse(w, r)
+
 				return
 			}
 
-			exists, err := userExistsFn(r.Context(), user)
-			if err != nil || !exists {
-				// TODO unauthenticated error
+			exists := userExistsFn(r.Context(), user)
+			if !exists {
+				slog.ErrorContext(r.Context(), "failed to check if user exists", "user", user)
+				httputils.UnauthorizedResponse(w, r)
+
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserContextKey, user)
-			r = r.WithContext(ctx)
+			r = ContextSetUser(r, user)
 			next.ServeHTTP(w, r)
 		})
 	}

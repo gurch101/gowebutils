@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"time"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
-	"gurch101.github.io/go-web/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/parser"
 )
 
 type tenantModel struct {
@@ -39,7 +40,7 @@ func NewTenantModel(name, email string, plan TenantPlan) *tenantModel {
 }
 
 func InsertTenant(db *sql.DB, tenant *tenantModel) (*int64, error) {
-	return dbutils.Insert(db, tenantResourceKey, map[string]any{
+	return dbutils.Insert(context.Background(), db, tenantResourceKey, map[string]any{
 		tenantNameDbFieldName:   tenant.TenantName,
 		contactEmailDbFieldName: tenant.ContactEmail,
 		planDbFieldName:         tenant.Plan,
@@ -50,7 +51,7 @@ func InsertTenant(db *sql.DB, tenant *tenantModel) (*int64, error) {
 func GetTenantById(db *sql.DB, tenantId int64) (*tenantModel, error) {
 	var tenant tenantModel
 
-	err := dbutils.GetByID(db, tenantResourceKey, tenantId, map[string]any{
+	err := dbutils.GetByID(context.Background(), db, tenantResourceKey, tenantId, map[string]any{
 		tenantIdDbFieldName:     &tenant.ID,
 		tenantNameDbFieldName:   &tenant.TenantName,
 		contactEmailDbFieldName: &tenant.ContactEmail,
@@ -66,7 +67,7 @@ func GetTenantById(db *sql.DB, tenantId int64) (*tenantModel, error) {
 }
 
 func DeleteTenantById(db *sql.DB, tenantId int64) error {
-	return dbutils.DeleteByID(db, tenantResourceKey, tenantId)
+	return dbutils.DeleteByID(context.Background(), db, tenantResourceKey, tenantId)
 }
 
 func UpdateTenant(db *sql.DB, tenant *tenantModel) error {

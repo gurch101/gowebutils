@@ -4,9 +4,10 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
-	"gurch101.github.io/go-web/pkg/validation"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 func logError(r *http.Request, err error) {
@@ -67,6 +68,15 @@ func EditConflictResponse(w http.ResponseWriter, r *http.Request) {
 func RateLimitExceededResponse(w http.ResponseWriter, r *http.Request) {
 	message := "rate limit exceeded"
 	errorResponse(w, r, http.StatusTooManyRequests, message)
+}
+
+func UnauthorizedResponse(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api") {
+		message := "You must be authenticated to access this resource"
+		errorResponse(w, r, http.StatusUnauthorized, message)
+	} else {
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+	}
 }
 
 func HandleErrorResponse(w http.ResponseWriter, r *http.Request, err error) {

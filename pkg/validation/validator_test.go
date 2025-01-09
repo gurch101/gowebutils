@@ -3,7 +3,7 @@ package validation_test
 import (
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/validation"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 func TestCoalesce(t *testing.T) {

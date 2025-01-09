@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gurch101.github.io/go-web/pkg/dbutils"
-	"gurch101.github.io/go-web/pkg/httputils"
-	"gurch101.github.io/go-web/pkg/testutils"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
 func doTenantRequest(controller *TenantController, req *http.Request) *httptest.ResponseRecorder {

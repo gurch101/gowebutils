@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"database/sql"
+	"embed"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,11 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"gurch101.github.io/go-web/pkg/authutils"
-	"gurch101.github.io/go-web/pkg/dbutils"
-	"gurch101.github.io/go-web/pkg/httputils"
-	"gurch101.github.io/go-web/pkg/parser"
-	"gurch101.github.io/go-web/pkg/validation"
+	"github.com/gurch101/gowebutils/pkg/authutils"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/mailutils"
+	"github.com/gurch101/gowebutils/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/templateutils"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 type envelope map[string]interface{}
@@ -286,33 +290,11 @@ func SearchTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]*S
 	return tenantResponses, pagination, nil
 }
 
-type User struct {
-	ID int64
-	TenantID int64
-	UserName string
-	Email string
-}
+//go:embed templates/email
+var emailTemplates embed.FS
 
-type AuthService struct {
-	db *sql.DB
-}
-
-func NewAuthService(db *sql.DB) *AuthService {
-	return &AuthService{db: db}
-}
-
-func (a *AuthService) GetOrCreateUser(ctx context.Context, username, email string) (User, error) {
-	return User{
-		ID: 1,
-		TenantID: 1,
-		UserName: username,
-		Email: email,
-	}, nil
-}
-
-func (a* AuthService) UserExists(ctx context.Context, user User) (bool, error) {
-	return true, nil
-}
+//go:embed templates/html
+var htmlTemplates embed.FS
 
 func main() {
 	logger := httputils.InitializeSlog(parser.ParseEnvString("LOG_LEVEL", "info"))
@@ -332,13 +314,30 @@ func main() {
 			panic(closeErr)
 		}
 	}()
+	emailTemplateMap, err := templateutils.LoadTemplates(emailTemplates, "templates/email")
+	if err != nil {
+		panic(fmt.Sprintf("error loading email templates: %v", err))
+	}
+	htmlTemplateMap, err := templateutils.LoadTemplates(htmlTemplates, "templates/html")
+	if err != nil {
+		panic(fmt.Sprintf("error loading html templates: %v", err))
+	}
+	mailer := mailutils.NewMailer(
+		parser.ParseEnvStringPanic("SMTP_HOST"),
+		parser.ParseEnvIntPanic("SMTP_PORT"),
+		parser.ParseEnvStringPanic("SMTP_USERNAME"),
+		parser.ParseEnvStringPanic("SMTP_PASSWORD"),
+		parser.ParseEnvStringPanic("SMTP_FROM"),
+		emailTemplateMap,
+	)
 
+	gob.Register(User{})
 	oidcConfig, err := authutils.CreateOauthConfig(
 		parser.ParseEnvStringPanic("OIDC_CLIENT_ID"),
 		parser.ParseEnvStringPanic("OIDC_CLIENT_SECRET"),
 		parser.ParseEnvStringPanic("OIDC_DISCOVERY_URL"),
-		parser.ParseEnvStringPanic("OIDC_ISSUER_URL"),
-		parser.ParseEnvStringPanic("OIDC_SP_URL"),
+		parser.ParseEnvStringPanic("REGISTRATION_URL"),
+		parser.ParseEnvStringPanic("OIDC_REDIRECT_URL"),
 	)
 
 	if err != nil {
@@ -348,11 +347,32 @@ func main() {
 	allowedOrigins := strings.Fields(parser.ParseEnvString("CORS_ALLOWED_ORIGINS", ""))
 	fileServer := http.FileServer(http.Dir("./web/static/"))
 	sessionManager := authutils.CreateSessionManager(db)
-	authService := NewAuthService(db)
+	authService := NewAuthService(db, mailer, parser.ParseEnvStringPanic("HOST"))
 
-	oidcController := authutils.NewOidcController(sessionManager, authService.GetOrCreateUser, oidcConfig)
+	getOrCreateUser := func(ctx context.Context, username, email string) (User, error) {
+		user, err := authService.GetUserByEmail(ctx, email)
+		slog.InfoContext(ctx, "getOrCreateUser", "user exists?", err != nil)
+		if err != nil {
+			if errors.Is(err, dbutils.ErrRecordNotFound) {
+				user, err := authService.RegisterUser(ctx, username, email, "")
+				if err != nil {
+					return User{}, err
+				}
+				slog.InfoContext(ctx, "getOrCreateUser", "user created", user)
+				return user, nil
+			}
+			return User{}, err
+		}
+		return user, nil
+	}
+
+	getUserExists := func(ctx context.Context, user User) bool {
+		return authService.UserExists(ctx, user.ID)
+	}
+
+	oidcController := authutils.NewOidcController(sessionManager, getOrCreateUser, oidcConfig)
 	router := httputils.NewRouter(
-		authutils.GetSessionMiddleware(sessionManager, authService.UserExists),
+		authutils.GetSessionMiddleware(sessionManager, getUserExists),
 	)
 	router.Use(
 		httputils.LoggingMiddleware,
@@ -364,7 +384,34 @@ func main() {
 	tenantController := NewTenantController(db)
 	tenantController.RegisterRoutes(router)
 	oidcController.RegisterRoutes(router)
+	router.AddAuthenticatedRoute("/api/invite", func(w http.ResponseWriter, r *http.Request) {
+		var inviteUserRequest struct {
+			UserName string `json:"userName"`
+			Email    string `json:"email"`
+		}
+
+		err := httputils.ReadJSON(w, r, &inviteUserRequest)
+		if err != nil {
+			httputils.BadRequestResponse(w, r, err)
+			return
+		}
+
+		user := authutils.ContextGetUser[User](r)
+
+		authService.InviteUser(r.Context(), user.TenantID, inviteUserRequest.UserName, inviteUserRequest.Email)
+
+		httputils.WriteJSON(w, http.StatusOK, map[string]string{"message": "User invited"}, nil)
+	})
+
 	router.AddStaticRoute("/static/", httputils.GetCORSMiddleware(allowedOrigins)(http.StripPrefix("/static", fileServer)))
+	router.AddAuthenticatedRoute("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// user := authutils.ContextGetUser[User](r)
+
+		err = htmlTemplateMap["index.go.tmpl"].ExecuteTemplate(w, "index.go.tmpl", nil)
+		if err != nil {
+			httputils.ServerErrorResponse(w, r, err)
+		}
+	}))
 
 	err = httputils.ServeHTTP(router.BuildHandler(), logger)
 

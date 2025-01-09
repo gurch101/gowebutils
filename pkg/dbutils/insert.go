@@ -2,7 +2,6 @@ package dbutils
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,7 +13,7 @@ var ErrNoFieldsToInsert = errors.New("no fields to insert")
 const insertTimeout = 3 * time.Second
 
 // Insert inserts a record into the database.
-func Insert(db *sql.DB, tableName string, fields map[string]any) (*int64, error) {
+func Insert(ctx context.Context, db DB, tableName string, fields map[string]any) (*int64, error) {
 	if len(fields) == 0 {
 		return nil, ErrNoFieldsToInsert
 	}
@@ -37,7 +36,7 @@ func Insert(db *sql.DB, tableName string, fields map[string]any) (*int64, error)
 		strings.Join(columns, ","),
 		strings.Join(placeholders, ","))
 
-	ctx, cancel := context.WithTimeout(context.Background(), insertTimeout)
+	ctx, cancel := context.WithTimeout(ctx, insertTimeout)
 	defer cancel()
 
 	var id int64

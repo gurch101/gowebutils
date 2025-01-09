@@ -2,7 +2,6 @@ package dbutils
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -11,7 +10,7 @@ import (
 const getTimeout = 3 * time.Second
 
 // GetByID gets a record from the database by its id.
-func GetByID(db *sql.DB, tableName string, id int64, fields map[string]any) error {
+func GetByID(ctx context.Context, db DB, tableName string, id int64, fields map[string]any) error {
 	if id < 0 {
 		return ErrRecordNotFound
 	}
@@ -27,7 +26,7 @@ func GetByID(db *sql.DB, tableName string, id int64, fields map[string]any) erro
 	// #nosec G201
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE id = $1", strings.Join(projection, ","), tableName)
 
-	ctx, cancel := context.WithTimeout(context.Background(), getTimeout)
+	ctx, cancel := context.WithTimeout(ctx, getTimeout)
 	defer cancel()
 
 	err := db.QueryRowContext(ctx, query, id).Scan(args...)
@@ -36,4 +35,25 @@ func GetByID(db *sql.DB, tableName string, id int64, fields map[string]any) erro
 	}
 
 	return nil
+}
+
+func Exists(ctx context.Context, db DB, tableName string, id int64) bool {
+	if id < 0 {
+		return false
+	}
+
+	// #nosec G201
+	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE id = $1)", tableName)
+
+	ctx, cancel := context.WithTimeout(ctx, getTimeout)
+	defer cancel()
+
+	var exists bool
+
+	err := db.QueryRowContext(ctx, query, id).Scan(&exists)
+	if err != nil {
+		return false
+	}
+
+	return exists
 }
