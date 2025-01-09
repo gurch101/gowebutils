@@ -34,6 +34,9 @@ func GetSessionMiddleware[T any](
 			}
 
 			r = ContextSetUser(r, user)
+
+			w.Header().Add("Cache-Control", "no-store")
+
 			next.ServeHTTP(w, r)
 		})
 	}

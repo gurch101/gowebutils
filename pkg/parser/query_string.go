@@ -55,7 +55,7 @@ const (
 )
 
 // ParseFilters parses the query string parameters and populates the Filters struct.
-func (f *Filters) ParseFilters(queryValues url.Values, v *validation.Validator, sortSafeList []string) {
+func (f *Filters) ParseQSFilters(queryValues url.Values, v *validation.Validator, sortSafeList []string) {
 	defaultPage := 1
 
 	defaultPageSize := 25
@@ -66,7 +66,7 @@ func (f *Filters) ParseFilters(queryValues url.Values, v *validation.Validator, 
 
 	var sort *string
 
-	page, err := ParseInt(queryValues, pageKey, &defaultPage)
+	page, err := ParseQSInt(queryValues, pageKey, &defaultPage)
 	if err != nil {
 		v.AddError(pageKey, "Invalid page")
 
@@ -75,7 +75,7 @@ func (f *Filters) ParseFilters(queryValues url.Values, v *validation.Validator, 
 
 	f.Page = *page
 
-	pageSize, err = ParseInt(queryValues, pageSizeKey, &defaultPageSize)
+	pageSize, err = ParseQSInt(queryValues, pageSizeKey, &defaultPageSize)
 	if err != nil {
 		v.AddError(pageSizeKey, "Invalid pageSize")
 
@@ -83,7 +83,7 @@ func (f *Filters) ParseFilters(queryValues url.Values, v *validation.Validator, 
 	}
 
 	f.PageSize = *pageSize
-	sort = ParseString(queryValues, sortKey, &defaultSort)
+	sort = ParseQSString(queryValues, sortKey, &defaultSort)
 	f.Sort = *sort
 	f.validate(v, sortSafeList)
 }
@@ -104,9 +104,9 @@ func (f *Filters) validate(v *validation.Validator, sortSafeList []string) {
 	v.In(f.Sort, sortSafeList, sortKey, "invalid sort value")
 }
 
-// ParseString returns a string value from the query string or the provided
+// ParseQSString returns a string value from the query string or the provided
 // default value if no matching key can be found.
-func ParseString(queryValues url.Values, key string, defaultValue *string) *string {
+func ParseQSString(queryValues url.Values, key string, defaultValue *string) *string {
 	val := queryValues.Get(key)
 
 	if val == "" {
@@ -118,9 +118,9 @@ func ParseString(queryValues url.Values, key string, defaultValue *string) *stri
 	return &val
 }
 
-// ParseInt returns an integer value from the query string or the provided
+// ParseQSInt returns an integer value from the query string or the provided
 // default value if no matching key can be found.
-func ParseInt(queryValues url.Values, key string, defaultValue *int) (*int, error) {
+func ParseQSInt(queryValues url.Values, key string, defaultValue *int) (*int, error) {
 	val := queryValues.Get(key)
 
 	if val == "" {
@@ -135,9 +135,9 @@ func ParseInt(queryValues url.Values, key string, defaultValue *int) (*int, erro
 	return &intVal, nil
 }
 
-// ParseBool returns a boolean value from the query string or the provided
+// ParseQSBool returns a boolean value from the query string or the provided
 // default value if no matching key can be found.
-func ParseBool(queryValues url.Values, key string, defaultValue *bool) *bool {
+func ParseQSBool(queryValues url.Values, key string, defaultValue *bool) *bool {
 	val := queryValues.Get(key)
 
 	if val == "" {

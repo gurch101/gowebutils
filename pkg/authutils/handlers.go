@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -24,6 +25,10 @@ var ErrInvalidState = errors.New("invalid state")
 // ErrTokenExchangeFailed is returned when the token exchange fails.
 var ErrTokenExchangeFailed = errors.New("token exchange failed")
 
+// ErrNoCode is returned when the code is not found in the request.
+var ErrNoCode = errors.New("no code")
+
+// ErrNoIDToken is returned when the id token is not found in the response.
 var ErrNoIDToken = errors.New("no id token")
 
 type OidcController[T any] struct {
@@ -35,6 +40,8 @@ type OidcController[T any] struct {
 type Oauth2Config struct {
 	verifier        *oidc.IDTokenVerifier
 	registrationURL string
+	logoutURL       string
+	postLogoutURL   string
 	config          *oauth2.Config
 }
 
@@ -46,6 +53,8 @@ func CreateOauthConfig(
 	clientSecret,
 	discoveryURL,
 	registrationURL,
+	logoutURL,
+	postLogoutURL,
 	redirectURL string,
 ) (*Oauth2Config, error) {
 	ctx := context.Background()
@@ -68,6 +77,8 @@ func CreateOauthConfig(
 	return &Oauth2Config{
 		verifier:        verifier,
 		registrationURL: registrationURL,
+		logoutURL:       logoutURL,
+		postLogoutURL:   postLogoutURL,
 		config: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
@@ -92,6 +103,7 @@ func (c *OidcController[T]) RegisterRoutes(router *httputils.Router) {
 	router.AddRoute("GET /login", c.loginHandler)
 	router.AddRoute("GET /register", c.registerHandler)
 	router.AddRoute("GET /auth/callback", c.authCallback)
+	router.AddRoute("GET /logout", c.logoutHandler)
 }
 
 func (c *OidcController[T]) RedirectToAuthURL(w http.ResponseWriter, r *http.Request, destURL string) {
@@ -101,13 +113,14 @@ func (c *OidcController[T]) RedirectToAuthURL(w http.ResponseWriter, r *http.Req
 		state = fmt.Sprintf("%s?dest=%s", state, url.QueryEscape(destURL))
 	}
 
-	// TODO: make secure
 	//nolint: exhaustruct
 	http.SetCookie(w, &http.Cookie{
 		Name:     "state",
 		Value:    state,
 		Quoted:   false,
 		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
 		// use lax since we are using a third-party for auth
 		SameSite: http.SameSiteLaxMode,
 	})
@@ -136,26 +149,29 @@ func (c *OidcController[T]) registerHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request) {
-	// TODO verify state
-	code := r.URL.Query().Get("code")
+	//nolint: exhaustruct
+	cookie := &http.Cookie{
+		Name:     "state",
+		Value:    "",
+		Quoted:   false,
+		Expires:  time.Now().Add(-1 * time.Hour),
+		Path:     "/",
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
 
-	rawToken, err := c.oauth2Config.config.Exchange(r.Context(), code)
+	http.SetCookie(w, cookie)
+
+	err := verifyState(r)
 	if err != nil {
-		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to exchange token: %w", err))
+		httputils.ServerErrorResponse(w, r, err)
 
 		return
 	}
 
-	rawIDToken, ok := rawToken.Extra("id_token").(string)
-	if !ok {
-		httputils.ServerErrorResponse(w, r, ErrNoIDToken)
-
-		return
-	}
-
-	idToken, err := c.oauth2Config.verifier.Verify(r.Context(), rawIDToken)
+	idToken, err := c.exchangeCodeForIDToken(r)
 	if err != nil {
-		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to verify id token: %w", err))
+		httputils.ServerErrorResponse(w, r, err)
 
 		return
 	}
@@ -187,8 +203,75 @@ func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	slog.InfoContext(r.Context(), "logged in", "user", user)
 	c.sessionManager.Put(r.Context(), "user", user)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func (c *OidcController[T]) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	err := c.sessionManager.RenewToken(r.Context())
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to renew session: %w", err))
+
+		return
+	}
+
+	// Remove the user from the session data so that the user is
+	// 'logged out'.
+	c.sessionManager.Remove(r.Context(), "user")
+
+	logoutURL, err := httputils.GetURL(c.oauth2Config.logoutURL, map[string]string{
+		"client_id":  c.oauth2Config.config.ClientID,
+		"logout_uri": c.oauth2Config.postLogoutURL,
+	})
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to get logout url: %w", err))
+
+		return
+	}
+
+	http.Redirect(w, r, logoutURL, http.StatusSeeOther)
+}
+
+func verifyState(r *http.Request) error {
+	state := r.URL.Query().Get("state")
+	if state == "" {
+		return fmt.Errorf("no state query param: %w", ErrInvalidState)
+	}
+
+	cookie, err := r.Cookie("state")
+	if err != nil {
+		return fmt.Errorf("failed to get state cookie: %w", err)
+	}
+
+	if state != cookie.Value {
+		return fmt.Errorf("state mismatch: %w", ErrInvalidState)
+	}
+
+	return nil
+}
+
+func (c *OidcController[T]) exchangeCodeForIDToken(r *http.Request) (*oidc.IDToken, error) {
+	code := r.URL.Query().Get("code")
+
+	if code == "" {
+		return nil, ErrNoCode
+	}
+
+	rawToken, err := c.oauth2Config.config.Exchange(r.Context(), code)
+	if err != nil {
+		return nil, fmt.Errorf("failed to exchange token: %w", err)
+	}
+
+	rawIDToken, ok := rawToken.Extra("id_token").(string)
+	if !ok {
+		return nil, ErrNoIDToken
+	}
+
+	idToken, err := c.oauth2Config.verifier.Verify(r.Context(), rawIDToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify id token: %w", err)
+	}
+
+	return idToken, nil
 }

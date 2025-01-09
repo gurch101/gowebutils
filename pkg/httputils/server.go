@@ -67,7 +67,7 @@ func ServeHTTP(handler http.Handler, logger *slog.Logger) error {
 
 	slog.Info("starting server", "port", port)
 
-	err = server.ListenAndServe()
+	err = server.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
 
 	if !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("server error %w", err)

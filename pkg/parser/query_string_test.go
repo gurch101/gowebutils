@@ -27,7 +27,7 @@ func TestParseString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := parser.ParseString(tt.qs, tt.key, &tt.defaultValue)
+			result := parser.ParseQSString(tt.qs, tt.key, &tt.defaultValue)
 			if *result != tt.expected {
 				t.Errorf("expected %s, got %s", tt.expected, *result)
 			}
@@ -56,7 +56,7 @@ func TestParseInt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result, err := parser.ParseInt(tt.qs, tt.key, &tt.defaultValue)
+			result, err := parser.ParseQSInt(tt.qs, tt.key, &tt.defaultValue)
 			if (err != nil) != tt.expectErr {
 				t.Errorf("expected error: %v, got: %v", tt.expectErr, err)
 			}
@@ -92,7 +92,7 @@ func TestFilters_ParseFilters(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseFilters(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSFilters(tt.qs, v, []string{"id", "name"})
 
 			if v.HasErrors() {
 				t.Errorf("unexpected error: %v", v.Errors)
@@ -124,7 +124,7 @@ func TestFilters_InvalidFilters(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseFilters(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSFilters(tt.qs, v, []string{"id", "name"})
 
 			if !v.HasErrors() {
 				t.Error("expected error, got nil")
@@ -161,7 +161,7 @@ func TestFilters_InvalidFilterValues(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseFilters(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSFilters(tt.qs, v, []string{"id", "name"})
 
 			if !v.HasErrors() {
 				t.Error("expected validation errors, got none")

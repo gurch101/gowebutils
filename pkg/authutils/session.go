@@ -14,6 +14,7 @@ func CreateSessionManager(db *sql.DB) *scs.SessionManager {
 	sessionManager := scs.New()
 	sessionManager.Store = sqlite3store.New(db)
 	sessionManager.Lifetime = sessionTimeout
+	sessionManager.Cookie.Secure = true
 
 	return sessionManager
 }

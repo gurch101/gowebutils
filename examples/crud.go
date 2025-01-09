@@ -218,11 +218,11 @@ func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.
 	v := validation.NewValidator()
 	qs := r.URL.Query()
 	searchTenantsRequest := &SearchTenantsRequest{}
-	searchTenantsRequest.TenantName = parser.ParseString(qs, tenantNameRequestKey, nil)
-	searchTenantsRequest.Plan = parser.ParseString(qs, planRequestKey, nil)
-	searchTenantsRequest.IsActive = parser.ParseBool(qs, "isActive", nil)
-	searchTenantsRequest.ContactEmail = parser.ParseString(qs, contactEmailRequestKey, nil)
-	searchTenantsRequest.ParseFilters(qs, v, []string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)})
+	searchTenantsRequest.TenantName = parser.ParseQSString(qs, tenantNameRequestKey, nil)
+	searchTenantsRequest.Plan = parser.ParseQSString(qs, planRequestKey, nil)
+	searchTenantsRequest.IsActive = parser.ParseQSBool(qs, "isActive", nil)
+	searchTenantsRequest.ContactEmail = parser.ParseQSString(qs, contactEmailRequestKey, nil)
+	searchTenantsRequest.ParseQSFilters(qs, v, []string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)})
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
 		return
@@ -337,6 +337,8 @@ func main() {
 		parser.ParseEnvStringPanic("OIDC_CLIENT_SECRET"),
 		parser.ParseEnvStringPanic("OIDC_DISCOVERY_URL"),
 		parser.ParseEnvStringPanic("REGISTRATION_URL"),
+		parser.ParseEnvStringPanic("LOGOUT_URL"),
+		parser.ParseEnvStringPanic("POST_LOGOUT_REDIRECT_URL"),
 		parser.ParseEnvStringPanic("OIDC_REDIRECT_URL"),
 	)
 
