@@ -41,3 +41,16 @@ func WithTransaction(ctx context.Context, db *sql.DB, callback func(tx *sql.Tx) 
 
 	return nil
 }
+
+func Open(filepath string) *sql.DB {
+	db, err := sql.Open(SqliteDriverName, filepath+"?_foreign_keys=1&_journal=WAL")
+	if err != nil {
+		panic(err)
+	}
+
+	if err = db.Ping(); err != nil {
+		panic(err)
+	}
+
+	return db
+}

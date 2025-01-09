@@ -299,14 +299,7 @@ var htmlTemplates embed.FS
 func main() {
 	logger := httputils.InitializeSlog(parser.ParseEnvString("LOG_LEVEL", "info"))
 
-	db, err := sql.Open(dbutils.SqliteDriverName, fmt.Sprintf("%s?_foreign_keys=1&_journal=WAL", parser.ParseEnvStringPanic("DB_FILEPATH")))
-
-	if err != nil {
-		panic(err)
-	}
-	if err = db.Ping(); err != nil {
-		panic(err)
-	}
+	db := dbutils.Open(parser.ParseEnvStringPanic("DB_FILEPATH"))
 
 	defer func() {
 		closeErr := db.Close()
@@ -314,6 +307,7 @@ func main() {
 			panic(closeErr)
 		}
 	}()
+
 	emailTemplateMap, err := templateutils.LoadTemplates(emailTemplates, "templates/email")
 	if err != nil {
 		panic(fmt.Sprintf("error loading email templates: %v", err))
