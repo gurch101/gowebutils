@@ -1,12 +1,15 @@
 package httputils
 
 import (
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -203,4 +206,42 @@ func GetCORSMiddleware(trustedOrigins []string) func(next http.Handler) http.Han
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+// Write writes the data to the gzip writer.
+func (w gzipResponseWriter) Write(b []byte) (int, error) {
+	n, err := w.Writer.Write(b)
+	if err != nil {
+		return 0, fmt.Errorf("failed to write gzip response: %w", err)
+	}
+
+	return n, nil
+}
+
+func GzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if the client supports gzip
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			// Create a gzip writer
+			gzipWriter := gzip.NewWriter(w)
+			defer gzipWriter.Close()
+
+			// Set the Content-Encoding header
+			w.Header().Set("Content-Encoding", "gzip")
+
+			// Wrap the response writer with the gzip writer
+			gzResponseWriter := gzipResponseWriter{Writer: gzipWriter, ResponseWriter: w}
+			next.ServeHTTP(gzResponseWriter, r)
+
+			return
+		}
+
+		// If the client doesn't support gzip, serve the response as-is
+		next.ServeHTTP(w, r)
+	})
 }

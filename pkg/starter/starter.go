@@ -47,6 +47,7 @@ func CreateAppServer[T any](authService AuthService[T], db *sql.DB, routables ..
 		httputils.LoggingMiddleware,
 		httputils.RecoveryMiddleware,
 		httputils.RateLimitMiddleware,
+		httputils.GzipMiddleware,
 		sessionManager.LoadAndSave,
 	)
 

@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// ErrInvalidPathParam is returned when the path parameter is invalid.
 var ErrInvalidPathParam = errors.New("invalid path param")
 
 // Retrieve the "id" URL parameter from the current request context, then convert it to

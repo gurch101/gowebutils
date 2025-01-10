@@ -39,5 +39,5 @@ commit:
 dev/run: check-env
 	rm ${DB_FILEPATH}
 	$(MAKE) migrate/up
-	go run ./cmd/seeddb
+	./scripts/seeddb.sh ${DB_FILEPATH}
 	go run ./examples
