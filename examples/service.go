@@ -134,18 +134,18 @@ func (a *AuthService) InviteUser(ctx context.Context, tenantID int64, username, 
 }
 
 func (a *AuthService) GetOrCreateUser(ctx context.Context, email string) (User, error) {
-		user, err := a.GetUserByEmail(ctx, email)
-		slog.InfoContext(ctx, "getOrCreateUser", "user exists?", err != nil)
-		if err != nil {
-			if errors.Is(err, dbutils.ErrRecordNotFound) {
-				user, err := a.RegisterUser(ctx, stringutils.NewUUID(), email, "")
-				if err != nil {
-					return User{}, err
-				}
-				slog.InfoContext(ctx, "getOrCreateUser", "user created", user)
-				return user, nil
+	user, err := a.GetUserByEmail(ctx, email)
+	slog.InfoContext(ctx, "getOrCreateUser", "user exists?", err != nil)
+	if err != nil {
+		if errors.Is(err, dbutils.ErrRecordNotFound) {
+			user, err := a.RegisterUser(ctx, stringutils.NewUUID(), email, "")
+			if err != nil {
+				return User{}, err
 			}
-			return User{}, err
+			slog.InfoContext(ctx, "getOrCreateUser", "user created", user)
+			return user, nil
 		}
-		return user, nil
+		return User{}, err
+	}
+	return user, nil
 }
