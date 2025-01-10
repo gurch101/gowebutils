@@ -164,7 +164,8 @@ func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request)
 
 	err := verifyState(r)
 	if err != nil {
-		httputils.ServerErrorResponse(w, r, err)
+		slog.Info("failed to verify state", "error", err)
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 
 		return
 	}
