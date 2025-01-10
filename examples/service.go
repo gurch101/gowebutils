@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
-	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/mailutils"
 	"github.com/gurch101/gowebutils/pkg/stringutils"
 )
@@ -30,8 +30,8 @@ func NewAuthService(db *sql.DB, mailer *mailutils.Mailer, hostName string) *Auth
 	return &AuthService{DB: db, mailer: mailer, hostName: hostName}
 }
 
-func (a *AuthService) UserExists(ctx context.Context, userid int64) bool {
-	return dbutils.Exists(ctx, a.DB, "users", userid)
+func (a *AuthService) GetUserExists(ctx context.Context, user User) bool {
+	return dbutils.Exists(ctx, a.DB, "users", user.ID)
 }
 
 func (a *AuthService) GetUser(ctx context.Context, userid int64) (User, error) {
@@ -126,15 +126,26 @@ func (a *AuthService) registerNewUser(ctx context.Context, username, email strin
 }
 
 func (a *AuthService) InviteUser(ctx context.Context, tenantID int64, username, email string) error {
-	httputils.Background(func() {
-		err := a.mailer.Send(email, "invite.go.tmpl", map[string]string{
-			"URL": fmt.Sprintf("%s/register?code=%s", a.hostName, stringutils.NewUUID()),
-		})
-
-		if err != nil {
-			slog.Error("failed to send invite email", "error", err)
-		}
+	a.mailer.Send(email, "invite.go.tmpl", map[string]string{
+		"URL": fmt.Sprintf("%s/register?code=%s", a.hostName, stringutils.NewUUID()),
 	})
 
 	return nil
+}
+
+func (a *AuthService) GetOrCreateUser(ctx context.Context, email string) (User, error) {
+		user, err := a.GetUserByEmail(ctx, email)
+		slog.InfoContext(ctx, "getOrCreateUser", "user exists?", err != nil)
+		if err != nil {
+			if errors.Is(err, dbutils.ErrRecordNotFound) {
+				user, err := a.RegisterUser(ctx, stringutils.NewUUID(), email, "")
+				if err != nil {
+					return User{}, err
+				}
+				slog.InfoContext(ctx, "getOrCreateUser", "user created", user)
+				return user, nil
+			}
+			return User{}, err
+		}
+		return user, nil
 }

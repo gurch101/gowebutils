@@ -1,14 +1,17 @@
 // The mailer package contains a Mailer struct and associated methods for sending
-// emails via a background Go routine.
+// emails
 package mailutils
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"text/template"
 	"time"
 
+	"github.com/gurch101/gowebutils/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/threads"
 	"gopkg.in/gomail.v2"
 )
 
@@ -44,8 +47,30 @@ func NewMailer(
 	return &Mailer{dialer: dialer, sender: sender, templates: templates}
 }
 
+// InitMailer initializes a new Mailer instance from SMTP_HOST, SMTP_PORT,
+// SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM environment variables.
+func InitMailer(templates map[string]*template.Template) *Mailer {
+	return NewMailer(
+		parser.ParseEnvStringPanic("SMTP_HOST"),
+		parser.ParseEnvIntPanic("SMTP_PORT"),
+		parser.ParseEnvStringPanic("SMTP_USERNAME"),
+		parser.ParseEnvStringPanic("SMTP_PASSWORD"),
+		parser.ParseEnvStringPanic("SMTP_FROM"),
+		templates,
+	)
+}
+
 // Send sends an email from a template using the provided data.
-func (m *Mailer) Send(recipient, templateName string, data map[string]string) error {
+func (m *Mailer) Send(recipient, templateName string, data map[string]string) {
+	threads.Background(func() {
+		err := m.sendInternal(recipient, templateName, data)
+		if err == nil {
+			slog.Error("failed to send invite email", "error", err)
+		}
+	})
+}
+
+func (m *Mailer) sendInternal(recipient, templateName string, data map[string]string) error {
 	var err error
 
 	tmpl, ok := m.templates[templateName]

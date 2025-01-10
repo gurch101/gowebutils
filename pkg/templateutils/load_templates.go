@@ -1,3 +1,4 @@
+// Package templateutils is a package that provides utility functions for loading and using templates.
 package templateutils
 
 import (
@@ -8,11 +9,11 @@ import (
 	"text/template"
 )
 
-var ErrReadTemplate = errors.New("failed to read template")
+var errReadTemplate = errors.New("failed to read template")
 
-var ErrReadTemplateFS = errors.New("failed to read template fs")
-
-func LoadTemplates(templateFS embed.FS, path string) (map[string]*template.Template, error) {
+// LoadTemplates loads all the templates from the given embed.FS and returns a map of templates.
+// Panics if any error occurs.
+func LoadTemplates(templateFS embed.FS, path string) map[string]*template.Template {
 	templates := make(map[string]*template.Template)
 
 	err := fs.WalkDir(templateFS, path, func(path string, entry fs.DirEntry, err error) error {
@@ -23,7 +24,7 @@ func LoadTemplates(templateFS embed.FS, path string) (map[string]*template.Templ
 		if !entry.IsDir() {
 			tmpl, err := template.ParseFS(templateFS, path)
 			if err != nil {
-				return ErrReadTemplate
+				return errReadTemplate
 			}
 			// Store file content in the map using the file name as the key
 			templates[entry.Name()] = tmpl
@@ -32,8 +33,8 @@ func LoadTemplates(templateFS embed.FS, path string) (map[string]*template.Templ
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrReadTemplateFS, err)
+		panic(fmt.Sprintf("error loading templates: %v", err))
 	}
 
-	return templates, nil
+	return templates
 }

@@ -89,7 +89,7 @@ func CreateOauthConfig(
 	}, nil
 }
 
-type GetOrCreateUser[T any] func(ctx context.Context, username, email string) (T, error)
+type GetOrCreateUser[T any] func(ctx context.Context, email string) (T, error)
 
 func NewOidcController[T any](
 	sessionManager *scs.SessionManager,
@@ -189,7 +189,7 @@ func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request)
 
 	slog.InfoContext(r.Context(), "claims", "claims", claims)
 
-	user, err := c.getOrCreateUserFn(r.Context(), uuid.New().String(), claims.Email)
+	user, err := c.getOrCreateUserFn(r.Context(), claims.Email)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to get or create user: %w", err))
 
