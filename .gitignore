@@ -2,3 +2,4 @@
 *.db*
 coverage.out
 tls
+.DS_Store

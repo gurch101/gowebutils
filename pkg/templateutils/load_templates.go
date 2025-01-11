@@ -5,8 +5,8 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/fs"
-	"text/template"
 )
 
 var errReadTemplate = errors.New("failed to read template")

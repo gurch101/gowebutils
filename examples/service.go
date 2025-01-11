@@ -133,19 +133,31 @@ func (a *AuthService) InviteUser(ctx context.Context, tenantID int64, username, 
 	return nil
 }
 
-func (a *AuthService) GetOrCreateUser(ctx context.Context, email string) (User, error) {
-	user, err := a.GetUserByEmail(ctx, email)
-	slog.InfoContext(ctx, "getOrCreateUser", "user exists?", err == nil)
-	if err != nil {
-		if errors.Is(err, dbutils.ErrRecordNotFound) {
-			user, err := a.RegisterUser(ctx, stringutils.NewUUID(), email, "")
-			if err != nil {
-				return User{}, err
-			}
-			slog.InfoContext(ctx, "getOrCreateUser", "user created", user)
-			return user, nil
+func (a *AuthService) GetOrCreateUser(ctx context.Context, email string, tokenPayload map[string]any) (User, error) {
+	if tokenPayload != nil {
+		tenantIDVal, ok := tokenPayload["tenant_id"].(float64)
+		if !ok {
+			return User{}, fmt.Errorf("invalid tenant_id in token payload")
 		}
-		return User{}, err
+		tenantID := int64(tenantIDVal)
+
+		fmt.Printf("tenantID: %v\n", tenantID)
+
+		return User{}, fmt.Errorf("TODO")
+	} else {
+		user, err := a.GetUserByEmail(ctx, email)
+		slog.InfoContext(ctx, "getOrCreateUser", "user exists?", err == nil)
+		if err != nil {
+			if errors.Is(err, dbutils.ErrRecordNotFound) {
+				user, err := a.RegisterUser(ctx, stringutils.NewUUID(), email, "")
+				if err != nil {
+					return User{}, err
+				}
+				slog.InfoContext(ctx, "getOrCreateUser", "user created", user)
+				return user, nil
+			}
+			return User{}, err
+		}
+		return user, nil
 	}
-	return user, nil
 }

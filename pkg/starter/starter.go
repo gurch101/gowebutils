@@ -17,7 +17,7 @@ type Routable interface {
 }
 
 type AuthService[T any] interface {
-	GetOrCreateUser(ctx context.Context, email string) (T, error)
+	GetOrCreateUser(ctx context.Context, email string, tokenPayload map[string]any) (T, error)
 	GetUserExists(ctx context.Context, user T) bool
 }
 

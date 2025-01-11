@@ -6,11 +6,13 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gurch101/gowebutils/pkg/authutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/mailutils"
@@ -27,11 +29,12 @@ type Controller interface {
 }
 
 type TenantController struct {
-	DB *sql.DB
+	DB              *sql.DB
+	htmlTemplateMap map[string]*template.Template
 }
 
-func NewTenantController(db *sql.DB) *TenantController {
-	return &TenantController{DB: db}
+func NewTenantController(db *sql.DB, htmlTemplateMap map[string]*template.Template) *TenantController {
+	return &TenantController{DB: db, htmlTemplateMap: htmlTemplateMap}
 }
 
 func (c *TenantController) RegisterRoutes(router *httputils.Router) {
@@ -40,6 +43,43 @@ func (c *TenantController) RegisterRoutes(router *httputils.Router) {
 	router.AddAuthenticatedRoute("GET /tenants", c.SearchTenantsHandler)
 	router.AddAuthenticatedRoute("PATCH /tenants/{id}", c.UpdateTenantHandler)
 	router.AddAuthenticatedRoute("DELETE /tenants/{id}", c.DeleteTenantHandler)
+	router.AddAuthenticatedRoute("POST /api/invite", c.InviteUser)
+	router.AddAuthenticatedRoute("/", c.Dashboard)
+}
+
+func (c *TenantController) InviteUser(w http.ResponseWriter, r *http.Request) {
+	var inviteUserRequest struct {
+		UserName string `json:"userName"`
+		Email    string `json:"email"`
+	}
+
+	err := httputils.ReadJSON(w, r, &inviteUserRequest)
+	if err != nil {
+		httputils.BadRequestResponse(w, r, err)
+		return
+	}
+
+	user := authutils.ContextGetUser[User](r)
+
+	payload := map[string]any{
+		"tenant_id": user.TenantID,
+	}
+
+	inviteToken, err := authutils.CreateInviteToken(payload)
+
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	httputils.WriteJSON(w, http.StatusOK, map[string]string{"token": inviteToken}, nil)
+}
+
+func (c *TenantController) Dashboard(w http.ResponseWriter, r *http.Request) {
+	err := c.htmlTemplateMap["index.go.tmpl"].ExecuteTemplate(w, "index.go.tmpl", nil)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
 }
 
 type TenantPlan string
@@ -307,45 +347,15 @@ func main() {
 
 	emailTemplateMap := templateutils.LoadTemplates(emailTemplates, "templates/email")
 
-	// htmlTemplateMap = templateutils.LoadTemplates(htmlTemplates, "templates/html")
-	// if err != nil {
-	// 	panic(fmt.Sprintf("error loading html templates: %v", err))
-	// }
+	htmlTemplateMap := templateutils.LoadTemplates(htmlTemplates, "templates/html")
+
 	mailer := mailutils.InitMailer(emailTemplateMap)
 
 	gob.Register(User{})
 
 	authService := NewAuthService(db, mailer, parser.ParseEnvStringPanic("HOST"))
-	tenantController := NewTenantController(db)
+	tenantController := NewTenantController(db, htmlTemplateMap)
 	err := starter.CreateAppServer[User](authService, db, tenantController)
-	// router.AddAuthenticatedRoute("/api/invite", func(w http.ResponseWriter, r *http.Request) {
-	// 	var inviteUserRequest struct {
-	// 		UserName string `json:"userName"`
-	// 		Email    string `json:"email"`
-	// 	}
-
-	// 	err := httputils.ReadJSON(w, r, &inviteUserRequest)
-	// 	if err != nil {
-	// 		httputils.BadRequestResponse(w, r, err)
-	// 		return
-	// 	}
-
-	// 	user := authutils.ContextGetUser[User](r)
-
-	// 	authService.InviteUser(r.Context(), user.TenantID, inviteUserRequest.UserName, inviteUserRequest.Email)
-
-	// 	httputils.WriteJSON(w, http.StatusOK, map[string]string{"message": "User invited"}, nil)
-	// })
-
-	// router.AddStaticRoute("/static/", httputils.GetCORSMiddleware(allowedOrigins)(http.StripPrefix("/static", fileServer)))
-	// router.AddAuthenticatedRoute("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 	// user := authutils.ContextGetUser[User](r)
-
-	// 	err = htmlTemplateMap["index.go.tmpl"].ExecuteTemplate(w, "index.go.tmpl", nil)
-	// 	if err != nil {
-	// 		httputils.ServerErrorResponse(w, r, err)
-	// 	}
-	// }))
 
 	if err != nil {
 		slog.Error(err.Error())

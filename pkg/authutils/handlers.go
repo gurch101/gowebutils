@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/parser"
 	"golang.org/x/oauth2"
 )
 
@@ -30,6 +30,9 @@ var ErrNoCode = errors.New("no code")
 
 // ErrNoIDToken is returned when the id token is not found in the response.
 var ErrNoIDToken = errors.New("no id token")
+
+// ErrInvalidInviteToken is returned when the invite token is invalid.
+var ErrInvalidInviteToken = errors.New("invalid invite token")
 
 type OidcController[T any] struct {
 	oauth2Config      *Oauth2Config
@@ -89,7 +92,7 @@ func CreateOauthConfig(
 	}, nil
 }
 
-type GetOrCreateUser[T any] func(ctx context.Context, email string) (T, error)
+type GetOrCreateUser[T any] func(ctx context.Context, email string, inviteTokenPayload map[string]any) (T, error)
 
 func NewOidcController[T any](
 	sessionManager *scs.SessionManager,
@@ -106,11 +109,16 @@ func (c *OidcController[T]) RegisterRoutes(router *httputils.Router) {
 	router.AddRoute("GET /logout", c.logoutHandler)
 }
 
-func (c *OidcController[T]) RedirectToAuthURL(w http.ResponseWriter, r *http.Request, destURL string) {
-	state := uuid.New().String()
+func (c *OidcController[T]) redirectToAuthURL(w http.ResponseWriter, r *http.Request, payload map[string]any) {
+	if payload == nil {
+		payload = map[string]any{}
+	}
 
-	if destURL != "" {
-		state = fmt.Sprintf("%s?dest=%s", state, url.QueryEscape(destURL))
+	payload["state"] = uuid.New().String()
+
+	state, err := Encrypt(payload)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to encrypt state: %w", err))
 	}
 
 	//nolint: exhaustruct
@@ -130,14 +138,49 @@ func (c *OidcController[T]) RedirectToAuthURL(w http.ResponseWriter, r *http.Req
 }
 
 func (c *OidcController[T]) loginHandler(w http.ResponseWriter, r *http.Request) {
-	c.RedirectToAuthURL(w, r, "")
+	c.redirectToAuthURL(w, r, nil)
 }
 
 func (c *OidcController[T]) registerHandler(w http.ResponseWriter, r *http.Request) {
+	payload := map[string]any{
+		"state": uuid.New().String(),
+	}
+
+	defaultInvite := ""
+
+	invite := parser.ParseQSString(r.URL.Query(), "invite", &defaultInvite)
+
+	if *invite != "" {
+		_, err := VerifyInviteToken(*invite)
+		if err != nil {
+			httputils.BadRequestResponse(w, r, ErrInvalidInviteToken)
+		}
+
+		payload["invite"] = invite
+	}
+
+	state, err := Encrypt(payload)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to encrypt state: %w", err))
+	}
+
+	//nolint: exhaustruct
+	http.SetCookie(w, &http.Cookie{
+		Name:     "state",
+		Value:    state,
+		Quoted:   false,
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+		// use lax since we are using a third-party for auth
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	registrationURL, err := httputils.GetURL(c.oauth2Config.registrationURL, map[string]string{
 		"client_id":     c.oauth2Config.config.ClientID,
 		"response_type": "code",
 		"redirect_uri":  c.oauth2Config.config.RedirectURL,
+		"state":         state,
 	})
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to get registration url: %w", err))
@@ -149,20 +192,7 @@ func (c *OidcController[T]) registerHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request) {
-	//nolint: exhaustruct
-	cookie := &http.Cookie{
-		Name:     "state",
-		Value:    "",
-		Quoted:   false,
-		Expires:  time.Now().Add(-1 * time.Hour),
-		Path:     "/",
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-
-	http.SetCookie(w, cookie)
-
-	err := verifyState(r)
+	state, err := verifyState(w, r)
 	if err != nil {
 		slog.Info("failed to verify state", "error", err)
 		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
@@ -188,9 +218,19 @@ func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	slog.InfoContext(r.Context(), "claims", "claims", claims)
+	var payload map[string]any
 
-	user, err := c.getOrCreateUserFn(r.Context(), claims.Email)
+	invite, ok := state["invite"].(string)
+	if ok {
+		payload, err = VerifyInviteToken(invite)
+		if err != nil {
+			httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to verify invite token: %w", err))
+
+			return
+		}
+	}
+
+	user, err := c.getOrCreateUserFn(r.Context(), claims.Email, payload)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to get or create user: %w", err))
 
@@ -234,22 +274,40 @@ func (c *OidcController[T]) logoutHandler(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, logoutURL, http.StatusSeeOther)
 }
 
-func verifyState(r *http.Request) error {
+func verifyState(w http.ResponseWriter, r *http.Request) (map[string]any, error) {
+	//nolint: exhaustruct
+	cookie := &http.Cookie{
+		Name:     "state",
+		Value:    "",
+		Quoted:   false,
+		Expires:  time.Now().Add(-1 * time.Hour),
+		Path:     "/",
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	}
+
+	http.SetCookie(w, cookie)
+
 	state := r.URL.Query().Get("state")
 	if state == "" {
-		return fmt.Errorf("no state query param: %w", ErrInvalidState)
+		return nil, fmt.Errorf("no state query param: %w", ErrInvalidState)
 	}
 
 	cookie, err := r.Cookie("state")
 	if err != nil {
-		return fmt.Errorf("failed to get state cookie: %w", err)
+		return nil, fmt.Errorf("failed to get state cookie: %w", err)
 	}
 
 	if state != cookie.Value {
-		return fmt.Errorf("state mismatch: %w", ErrInvalidState)
+		return nil, fmt.Errorf("state mismatch: %w", ErrInvalidState)
 	}
 
-	return nil
+	payload, err := Decrypt(state)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt state: %w", err)
+	}
+
+	return payload, nil
 }
 
 func (c *OidcController[T]) exchangeCodeForIDToken(r *http.Request) (*oidc.IDToken, error) {

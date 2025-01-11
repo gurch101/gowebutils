@@ -1,5 +1,9 @@
+export ENVIRONMENT="development"
 export SERVER_PORT=8080
 export HOST="http://localhost:${SERVER_PORT}"
+# Used to symetrically encrypt/decrypt things like invite tokens - should be 32 bytes
+# generate via openssl rand -hex 16
+export ENCRYPTION_KEY=
 # The sqlite3 database file path
 export DB_FILEPATH="./app.db"
 # defaults to info. Possible values: debug, info, warn, error

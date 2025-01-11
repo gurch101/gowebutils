@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"log/slog"
-	"text/template"
 	"time"
 
 	"github.com/gurch101/gowebutils/pkg/parser"

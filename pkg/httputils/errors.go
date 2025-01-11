@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"runtime/debug"
 	"strings"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
@@ -11,7 +12,13 @@ import (
 )
 
 func logError(r *http.Request, err error) {
-	slog.ErrorContext(r.Context(), err.Error(), "request_method", r.Method, "request_url", r.URL.String())
+	slog.ErrorContext(
+		r.Context(),
+		err.Error(),
+		"request_method", r.Method,
+		"request_url", r.URL.String(),
+		"stack", debug.Stack(),
+	)
 }
 
 func errorResponse(w http.ResponseWriter, r *http.Request, status int, message interface{}) {
