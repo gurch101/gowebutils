@@ -211,6 +211,7 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 	updateTenantRequest, err := httputils.ReadJSON[UpdateTenantRequest](w, r)
 	if err != nil {
 		httputils.UnprocessableEntityResponse(w, r, err)
+
 		return
 	}
 
@@ -226,12 +227,14 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
+
 		return
 	}
 
-	err = UpdateTenant(tc.DB, tenant)
+	err = UpdateTenant(r.Context(), tc.DB, tenant)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
+
 		return
 	}
 
@@ -246,12 +249,14 @@ func (tc *TenantController) DeleteTenantHandler(w http.ResponseWriter, r *http.R
 
 	if err != nil {
 		httputils.NotFoundResponse(w, r)
+
 		return
 	}
 
 	err = DeleteTenantById(tc.DB, id)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
+
 		return
 	}
 

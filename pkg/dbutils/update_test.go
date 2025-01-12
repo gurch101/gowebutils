@@ -25,7 +25,7 @@ func TestUpdateByID(t *testing.T) {
 		"email":     "jane@example.com",
 	}
 
-	err := dbutils.UpdateByID(db, "users", 1, 1, fields)
+	err := dbutils.UpdateByID(context.Background(), db, "users", 1, 1, fields)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -138,7 +138,7 @@ func TestUpdateByID_ErrorHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := dbutils.UpdateByID(db, tt.table, tt.id, tt.version, tt.fields)
+			err := dbutils.UpdateByID(context.Background(), db, tt.table, tt.id, tt.version, tt.fields)
 			if !errors.Is(err, tt.expected) {
 				t.Errorf("Expected %v, got %v", tt.expected, err)
 			}

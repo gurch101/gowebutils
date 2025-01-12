@@ -18,7 +18,14 @@ var ErrNoFieldsToUpdate = errors.New("no fields to update")
 const updateTimeout = 3 * time.Second
 
 // UpdateByID updates a record in the database by its id and version.
-func UpdateByID(db *sql.DB, tableName string, id int64, version int32, fields map[string]any) error {
+func UpdateByID(
+	ctx context.Context,
+	db DB,
+	tableName string,
+	id int64,
+	version int32,
+	fields map[string]any,
+) error {
 	if id < 0 || version < 0 {
 		return ErrRecordNotFound
 	}
@@ -35,29 +42,17 @@ func UpdateByID(db *sql.DB, tableName string, id int64, version int32, fields ma
 		return ErrNoFieldsToUpdate
 	}
 
-	setClause := make([]string, 0, len(fields))
-	args := make([]any, 0, len(fields))
-
-	i := 1
-	for field, value := range fields {
-		setClause = append(setClause, fmt.Sprintf("%s = $%d", field, i))
-		args = append(args, value)
-		i++
-	}
-
-	setClause = append(setClause, "version = version + 1")
-	args = append(args, id, version)
-
+	setClause, args := makeSetClause(fields)
 	// #nosec G201
 	query := fmt.Sprintf(
 		"UPDATE %s SET %s WHERE id = %d AND version = %d RETURNING version",
 		tableName,
-		strings.Join(setClause, ", "),
+		setClause,
 		id,
 		version,
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), updateTimeout)
+	ctx, cancel := context.WithTimeout(ctx, updateTimeout)
 	defer cancel()
 
 	var newVersion int32
@@ -73,4 +68,20 @@ func UpdateByID(db *sql.DB, tableName string, id int64, version int32, fields ma
 	}
 
 	return nil
+}
+
+func makeSetClause(fields map[string]any) (string, []any) {
+	setClause := make([]string, 0, len(fields))
+	args := make([]any, 0, len(fields))
+
+	i := 1
+	for field, value := range fields {
+		setClause = append(setClause, fmt.Sprintf("%s = $%d", field, i))
+		args = append(args, value)
+		i++
+	}
+
+	setClause = append(setClause, "version = version + 1")
+
+	return strings.Join(setClause, ", "), args
 }

@@ -70,8 +70,8 @@ func DeleteTenantById(db *sql.DB, tenantId int64) error {
 	return dbutils.DeleteByID(context.Background(), db, tenantResourceKey, tenantId)
 }
 
-func UpdateTenant(db *sql.DB, tenant *tenantModel) error {
-	return dbutils.UpdateByID(db, tenantResourceKey, tenant.ID, tenant.Version, map[string]any{
+func UpdateTenant(ctx context.Context, db *sql.DB, tenant *tenantModel) error {
+	return dbutils.UpdateByID(ctx, db, tenantResourceKey, tenant.ID, tenant.Version, map[string]any{
 		tenantNameDbFieldName:   tenant.TenantName,
 		contactEmailDbFieldName: tenant.ContactEmail,
 		planDbFieldName:         tenant.Plan,
