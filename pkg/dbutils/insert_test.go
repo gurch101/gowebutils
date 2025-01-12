@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
 func TestInsert(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()
@@ -37,7 +38,7 @@ func TestInsert(t *testing.T) {
 
 func TestInsert_ErrorHandling(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()

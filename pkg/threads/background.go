@@ -5,7 +5,7 @@ import (
 	"log/slog"
 )
 
-// Launch a background goroutine.
+// Launch a background goroutine and recover/log any panics.
 func Background(callback func()) {
 	go func() {
 		// Recover any panic.

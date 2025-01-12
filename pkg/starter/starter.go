@@ -30,19 +30,6 @@ type AuthService[T any] interface {
 func CreateAppServer[T any](authService AuthService[T], db *sql.DB, routables ...Routable) error {
 	logger := httputils.InitializeSlog(parser.ParseEnvString("LOG_LEVEL", "info"))
 
-	oidcConfig, err := authutils.CreateOauthConfig(
-		parser.ParseEnvStringPanic("OIDC_CLIENT_ID"),
-		parser.ParseEnvStringPanic("OIDC_CLIENT_SECRET"),
-		parser.ParseEnvStringPanic("OIDC_DISCOVERY_URL"),
-		parser.ParseEnvStringPanic("REGISTRATION_URL"),
-		parser.ParseEnvStringPanic("LOGOUT_URL"),
-		parser.ParseEnvStringPanic("POST_LOGOUT_REDIRECT_URL"),
-		parser.ParseEnvStringPanic("OIDC_REDIRECT_URL"),
-	)
-	if err != nil {
-		panic(err)
-	}
-
 	sessionManager := authutils.CreateSessionManager(db)
 	sessionMiddleware := authutils.GetSessionMiddleware(sessionManager, authService.GetUserExists)
 	router := chi.NewRouter()
@@ -59,6 +46,7 @@ func CreateAppServer[T any](authService AuthService[T], db *sql.DB, routables ..
 	}
 
 	router.Group(func(r chi.Router) {
+		r.Use(middleware.NoCache)
 		r.Use(sessionMiddleware)
 
 		for _, routable := range routables {
@@ -66,14 +54,14 @@ func CreateAppServer[T any](authService AuthService[T], db *sql.DB, routables ..
 		}
 	})
 
-	oidcController := authutils.NewOidcController(sessionManager, authService.GetOrCreateUser, oidcConfig)
+	oidcController := authutils.CreateOidcController(sessionManager, authService.GetOrCreateUser)
 	oidcController.PublicRoutes(router)
 	oidcController.ProtectedRoutes(router)
 
 	fileServer := http.FileServer(http.Dir("./web/static/"))
 	router.Handle("/static/*", http.StripPrefix("/static", fileServer))
 
-	err = httputils.ServeHTTP(router, logger)
+	err := httputils.ServeHTTP(router, logger)
 	if err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}

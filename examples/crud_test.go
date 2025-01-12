@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -21,7 +20,7 @@ func doTenantRequest(controller *TenantController, req *http.Request) *httptest.
 
 func TestCreateTenant(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -67,7 +66,7 @@ func TestCreateTenant(t *testing.T) {
 
 func TestCreateTenantInvalidPlan(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -104,7 +103,7 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 
 func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -149,7 +148,7 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 
 func TestGetTenantHandler(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -193,7 +192,7 @@ func TestGetTenantHandler(t *testing.T) {
 
 func TestGetTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -214,7 +213,7 @@ func TestGetTenantHandler_InvalidID(t *testing.T) {
 
 func TestGetTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -235,7 +234,7 @@ func TestGetTenantHandler_NotFound(t *testing.T) {
 
 func TestDeleteTenantHandler(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -266,7 +265,7 @@ func TestDeleteTenantHandler(t *testing.T) {
 
 func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -284,7 +283,7 @@ func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 
 func TestDeleteTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -302,7 +301,7 @@ func TestDeleteTenantHandler_NotFound(t *testing.T) {
 
 func TestUpdateTenantHandler(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -369,7 +368,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 
 func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -387,7 +386,7 @@ func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 
 func TestUpdateTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {
@@ -405,7 +404,7 @@ func TestUpdateTenantHandler_NotFound(t *testing.T) {
 
 func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {

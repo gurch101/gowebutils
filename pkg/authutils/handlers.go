@@ -10,7 +10,6 @@ import (
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/parser"
@@ -36,12 +35,12 @@ var ErrNoIDToken = errors.New("no id token")
 var ErrInvalidInviteToken = errors.New("invalid invite token")
 
 type OidcController[T any] struct {
-	oauth2Config      *Oauth2Config
+	oauth2Config      *oauth2Config
 	getOrCreateUserFn GetOrCreateUser[T]
 	sessionManager    *scs.SessionManager
 }
 
-type Oauth2Config struct {
+type oauth2Config struct {
 	verifier        *oidc.IDTokenVerifier
 	registrationURL string
 	logoutURL       string
@@ -49,10 +48,10 @@ type Oauth2Config struct {
 	config          *oauth2.Config
 }
 
-// CreateOauthConfig creates an oauth2.Config object for the given idp URL.
+// createOauthConfig creates an oauth2.Config object for the given idp URL.
 // discoveryURL is the base URL that exposes /.well-known/openid-configuration
 // spURL should be the host URL of your app.
-func CreateOauthConfig(
+func createOauthConfig(
 	clientID,
 	clientSecret,
 	discoveryURL,
@@ -60,7 +59,7 @@ func CreateOauthConfig(
 	logoutURL,
 	postLogoutURL,
 	redirectURL string,
-) (*Oauth2Config, error) {
+) (*oauth2Config, error) {
 	ctx := context.Background()
 
 	provider, err := oidc.NewProvider(ctx, discoveryURL)
@@ -78,7 +77,7 @@ func CreateOauthConfig(
 		SupportedSigningAlgs:       []string{"RS256"},
 	})
 
-	return &Oauth2Config{
+	return &oauth2Config{
 		verifier:        verifier,
 		registrationURL: registrationURL,
 		logoutURL:       logoutURL,
@@ -95,21 +94,42 @@ func CreateOauthConfig(
 
 type GetOrCreateUser[T any] func(ctx context.Context, email string, inviteTokenPayload map[string]any) (T, error)
 
+func CreateOidcController[T any](
+	sessionManager *scs.SessionManager,
+	getOrCreateUserFn GetOrCreateUser[T],
+) *OidcController[T] {
+	config, err := createOauthConfig(
+		parser.ParseEnvStringPanic("OIDC_CLIENT_ID"),
+		parser.ParseEnvStringPanic("OIDC_CLIENT_SECRET"),
+		parser.ParseEnvStringPanic("OIDC_DISCOVERY_URL"),
+		parser.ParseEnvStringPanic("REGISTRATION_URL"),
+		parser.ParseEnvStringPanic("LOGOUT_URL"),
+		parser.ParseEnvStringPanic("POST_LOGOUT_REDIRECT_URL"),
+		parser.ParseEnvStringPanic("OIDC_REDIRECT_URL"),
+	)
+	if err != nil {
+		slog.Error("failed to create oauth config", "error", err)
+		panic(err)
+	}
+
+	return &OidcController[T]{sessionManager: sessionManager, getOrCreateUserFn: getOrCreateUserFn, oauth2Config: config}
+}
+
 func NewOidcController[T any](
 	sessionManager *scs.SessionManager,
 	fn GetOrCreateUser[T],
-	config *Oauth2Config,
+	config *oauth2Config,
 ) *OidcController[T] {
 	return &OidcController[T]{sessionManager: sessionManager, getOrCreateUserFn: fn, oauth2Config: config}
 }
 
-func (c *OidcController[T]) PublicRoutes(r chi.Router) {
+func (c *OidcController[T]) PublicRoutes(r httputils.Router) {
 	r.Get("/login", c.loginHandler)
 	r.Get("/register", c.registerHandler)
 	r.Get("/auth/callback", c.authCallback)
 }
 
-func (c *OidcController[T]) ProtectedRoutes(r chi.Router) {
+func (c *OidcController[T]) ProtectedRoutes(r httputils.Router) {
 	r.Get("/logout", c.logoutHandler)
 }
 

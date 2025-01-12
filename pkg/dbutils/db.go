@@ -42,6 +42,7 @@ func WithTransaction(ctx context.Context, db *sql.DB, callback func(tx *sql.Tx) 
 	return nil
 }
 
+// Open opens a SQLite database file.
 func Open(filepath string) *sql.DB {
 	db, err := sql.Open(SqliteDriverName, filepath+"?_foreign_keys=1&_journal=WAL")
 	if err != nil {

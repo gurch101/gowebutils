@@ -67,16 +67,24 @@ func NotFoundResponse(w http.ResponseWriter, r *http.Request) {
 	errorResponse(w, r, http.StatusNotFound, message)
 }
 
+// EditConflictResponse method is used to send a 409 Conflict status code. This can occur
+// when we try to create a new record in the database and another user has updated the same record concurrently.
 func EditConflictResponse(w http.ResponseWriter, r *http.Request) {
 	message := "unable to update the record due to an edit conflict, please try again"
 	errorResponse(w, r, http.StatusConflict, message)
 }
 
+// RateLimitExceededResponse method is used to send a 429 Too Many Requests status code.
+// The rate limit middleware will return this status code if a request exceeds the rate limit.
 func RateLimitExceededResponse(w http.ResponseWriter, r *http.Request) {
 	message := "rate limit exceeded"
 	errorResponse(w, r, http.StatusTooManyRequests, message)
 }
 
+// UnauthorizedResponse method is used to send a 401 Unauthorized status code.
+// This can occur if a user tries to access a protected resource without supplying valid credentials.
+// If the request is made to an api endpoint, we will return a JSON response. Otherwise, we will redirect
+// the user to the login page.
 func UnauthorizedResponse(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(r.URL.Path, "/api") {
 		message := "You must be authenticated to access this resource"
@@ -86,6 +94,8 @@ func UnauthorizedResponse(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HandleErrorResponse method is a utility function that will return the appropriate
+// error from the service layer of our application.
 func HandleErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
 	var validationErr validation.Error
 

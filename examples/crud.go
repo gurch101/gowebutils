@@ -20,6 +20,9 @@ import (
 	"github.com/gurch101/gowebutils/pkg/starter"
 	"github.com/gurch101/gowebutils/pkg/templateutils"
 	"github.com/gurch101/gowebutils/pkg/validation"
+
+	// needed for sqlite3 driver.
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type envelope map[string]interface{}

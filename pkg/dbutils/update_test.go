@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
 func TestUpdateByID(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()
@@ -52,7 +53,7 @@ func TestUpdateByID(t *testing.T) {
 
 func TestUpdateByID_ErrorHandling(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()

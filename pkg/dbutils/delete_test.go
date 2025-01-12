@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
 func TestDeleteByID(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()
@@ -63,7 +64,7 @@ func TestDelete_ErrorHandling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			db := dbutils.SetupTestDB(t)
+			db := testutils.SetupTestDB(t)
 
 			defer func() {
 				closeErr := db.Close()

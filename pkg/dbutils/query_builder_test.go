@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
 func TestQueryBuilder_SimpleSelect(t *testing.T) {
@@ -218,7 +219,7 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 	var users []User
 
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()
@@ -252,7 +253,7 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 func TestQueryBuilder_QueryRow(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()
@@ -276,7 +277,7 @@ func TestQueryBuilder_QueryRow(t *testing.T) {
 func TestQueryBuilder_QueryRowNoRow(t *testing.T) {
 	t.Parallel()
 
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 	defer func() {
 		closeErr := db.Close()
 		if closeErr != nil {

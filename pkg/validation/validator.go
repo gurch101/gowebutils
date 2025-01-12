@@ -1,3 +1,4 @@
+// Package validation provides a validator for validating user input.
 package validation
 
 import "regexp"

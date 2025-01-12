@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
 func TestGetByID(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()
@@ -76,7 +77,7 @@ func TestGetByID(t *testing.T) {
 
 func TestExists(t *testing.T) {
 	t.Parallel()
-	db := dbutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
 	defer func() {
 		closeErr := db.Close()
