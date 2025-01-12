@@ -10,6 +10,7 @@ import (
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/parser"
@@ -102,11 +103,14 @@ func NewOidcController[T any](
 	return &OidcController[T]{sessionManager: sessionManager, getOrCreateUserFn: fn, oauth2Config: config}
 }
 
-func (c *OidcController[T]) RegisterRoutes(router *httputils.Router) {
-	router.AddRoute("GET /login", c.loginHandler)
-	router.AddRoute("GET /register", c.registerHandler)
-	router.AddRoute("GET /auth/callback", c.authCallback)
-	router.AddRoute("GET /logout", c.logoutHandler)
+func (c *OidcController[T]) PublicRoutes(r chi.Router) {
+	r.Get("/login", c.loginHandler)
+	r.Get("/register", c.registerHandler)
+	r.Get("/auth/callback", c.authCallback)
+}
+
+func (c *OidcController[T]) ProtectedRoutes(r chi.Router) {
+	r.Get("/logout", c.logoutHandler)
 }
 
 func (c *OidcController[T]) redirectToAuthURL(w http.ResponseWriter, r *http.Request, payload map[string]any) {

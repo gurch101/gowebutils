@@ -53,7 +53,7 @@ func UnprocessableEntityResponse(w http.ResponseWriter, r *http.Request, err err
 
 // BadRequestResponse sends a JSON-formatted error message with 400 Bad Request status code.
 func BadRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
-	errorResponse(w, r, http.StatusBadRequest, err)
+	errorResponse(w, r, http.StatusBadRequest, err.Error())
 }
 
 // FailedValidationResponse sends JSON-formatted error message to client with 400 Bad Request status code.

@@ -6,16 +6,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
-	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
 func doTenantRequest(controller *TenantController, req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
-	router := httputils.NewRouter(testutils.StubAuthMiddleware)
-	controller.RegisterRoutes(router)
-	router.BuildHandler().ServeHTTP(rr, req)
+	router := chi.NewRouter()
+	controller.ProtectedRoutes(router)
+	router.ServeHTTP(rr, req)
 	return rr
 }
 

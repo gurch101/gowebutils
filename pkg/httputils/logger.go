@@ -5,16 +5,18 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type contextKey string
 
 const (
-	LogRequestIDKey = contextKey("request_id")
-	LogUserIDKey    = contextKey("user_id")
+	LogUserIDKey = contextKey("user_id")
 )
 
 type idHandler struct {
@@ -22,7 +24,7 @@ type idHandler struct {
 }
 
 func (h *idHandler) Handle(ctx context.Context, record slog.Record) error {
-	id, ok := ctx.Value(LogRequestIDKey).(string)
+	id, ok := ctx.Value(middleware.RequestIDKey).(string)
 	if ok {
 		record.AddAttrs(slog.String("request_id", id))
 	}
@@ -95,4 +97,49 @@ func InitializeSlog(level string) *slog.Logger {
 	slog.SetDefault(logger)
 
 	return logger
+}
+
+type SlogLogFormatter struct {
+	Logger *slog.Logger
+}
+
+// NewSlogLogFormatter creates a new SlogLogFormatter.
+func NewSlogLogFormatter(logger *slog.Logger) *SlogLogFormatter {
+	return &SlogLogFormatter{Logger: logger}
+}
+
+// NewLogEntry creates a new LogEntry for the request.
+func (f *SlogLogFormatter) NewLogEntry(r *http.Request) middleware.LogEntry { //nolint:ireturn
+	return &SlogLogEntry{
+		logger:  f.Logger,
+		request: r,
+	}
+}
+
+type SlogLogEntry struct {
+	logger  *slog.Logger
+	request *http.Request
+}
+
+// Write logs the request completion details.
+func (e *SlogLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, _ interface{}) {
+	e.logger.InfoContext(e.request.Context(), "request completed",
+		slog.String("method", e.request.Method),
+		slog.String("path", e.request.URL.Path),
+		slog.Int("status", status),
+		slog.Int("bytes", bytes),
+		slog.Duration("elapsed", elapsed),
+		slog.String("ip", e.request.RemoteAddr),
+	)
+}
+
+// Panic logs a panic with its stack trace.
+func (e *SlogLogEntry) Panic(v interface{}, stack []byte) {
+	e.logger.ErrorContext(e.request.Context(), "request panicked",
+		slog.String("method", e.request.Method),
+		slog.String("path", e.request.URL.Path),
+		slog.String("ip", e.request.RemoteAddr),
+		slog.Any("panic", v),
+		slog.String("stack", string(stack)),
+	)
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/gurch101/gowebutils/pkg/authutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
@@ -37,14 +38,18 @@ func NewTenantController(db *sql.DB, htmlTemplateMap map[string]*template.Templa
 	return &TenantController{DB: db, htmlTemplateMap: htmlTemplateMap}
 }
 
-func (c *TenantController) RegisterRoutes(router *httputils.Router) {
-	router.AddAuthenticatedRoute("POST /tenants", c.CreateTenantHandler)
-	router.AddAuthenticatedRoute("GET /tenants/{id}", c.GetTenantHandler)
-	router.AddAuthenticatedRoute("GET /tenants", c.SearchTenantsHandler)
-	router.AddAuthenticatedRoute("PATCH /tenants/{id}", c.UpdateTenantHandler)
-	router.AddAuthenticatedRoute("DELETE /tenants/{id}", c.DeleteTenantHandler)
-	router.AddAuthenticatedRoute("POST /api/invite", c.InviteUser)
-	router.AddAuthenticatedRoute("/", c.Dashboard)
+func (c *TenantController) PublicRoutes(r chi.Router) {
+
+}
+
+func (c *TenantController) ProtectedRoutes(r chi.Router) {
+	r.Post("/tenants", c.CreateTenantHandler)
+	r.Get("/tenants/{id}", c.GetTenantHandler)
+	r.Get("/tenants", c.SearchTenantsHandler)
+	r.Patch("/tenants/{id}", c.UpdateTenantHandler)
+	r.Delete("/tenants/{id}", c.DeleteTenantHandler)
+	r.Post("/api/invite", c.InviteUser)
+	r.Get("/", c.Dashboard)
 }
 
 func (c *TenantController) InviteUser(w http.ResponseWriter, r *http.Request) {

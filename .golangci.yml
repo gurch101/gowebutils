@@ -156,6 +156,7 @@ linters-settings:
           - github.com/alexedwards/scs/v2
           - github.com/gurch101/gowebutils/pkg
           - gopkg.in/gomail.v2
+          - github.com/go-chi/chi/v5
 
   ireturn:
     allow:

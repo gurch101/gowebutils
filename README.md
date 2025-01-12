@@ -5,18 +5,18 @@
 ##### HTTP
 
 - structured logging
-- middleware for logging, panic recovery, cors, session management, and rate limiting
+- middleware for logging, panic recovery, cors, session management, rate limiting, and gzip
 - error response handling
 - sensible defaults for http server with graceful shutdown
 - utilities for handling JSON requests/responses, query string and url path parameter parsing
-- TODO: http/2 out of the box
+- https and http/2 out-of-the-box
 
 ##### Security
 
 - Support for oauth2 authentication code flow. Tested with AWS Cognito.
+- invite user flow support
 - TODO: session and bearer token authentication
 - TODO: Role-based access control
-- TODO: add invite user flow
 
 ##### Email
 

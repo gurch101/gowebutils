@@ -17,9 +17,10 @@ func GetSessionMiddleware[T any](
 ) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			slog.InfoContext(r.Context(), "getting user from session", "route", r.URL.Path)
+
 			user, ok := sessionManager.Get(r.Context(), "user").(T)
 			if !ok {
-				slog.ErrorContext(r.Context(), "failed to get user from session")
 				httputils.UnauthorizedResponse(w, r)
 
 				return

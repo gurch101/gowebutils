@@ -65,7 +65,7 @@ func ServeHTTP(handler http.Handler, logger *slog.Logger) error {
 		shutdownError <- server.Shutdown(ctx)
 	}()
 
-	slog.Info("starting server", "port", port)
+	slog.Info("server started", "port", port)
 
 	err = server.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
 

@@ -5,15 +5,21 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gurch101/gowebutils/pkg/authutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/parser"
 )
 
+const compressionLevel = 5
+
 type Routable interface {
-	RegisterRoutes(router *httputils.Router)
+	PublicRoutes(r chi.Router)
+	ProtectedRoutes(r chi.Router)
 }
 
 type AuthService[T any] interface {
@@ -38,29 +44,36 @@ func CreateAppServer[T any](authService AuthService[T], db *sql.DB, routables ..
 	}
 
 	sessionManager := authutils.CreateSessionManager(db)
-
-	oidcController := authutils.NewOidcController(sessionManager, authService.GetOrCreateUser, oidcConfig)
-	router := httputils.NewRouter(
-		authutils.GetSessionMiddleware(sessionManager, authService.GetUserExists),
-	)
-	router.Use(
-		httputils.LoggingMiddleware,
-		httputils.RecoveryMiddleware,
-		httputils.RateLimitMiddleware,
-		httputils.GzipMiddleware,
-		sessionManager.LoadAndSave,
-	)
-
-	oidcController.RegisterRoutes(router)
+	sessionMiddleware := authutils.GetSessionMiddleware(sessionManager, authService.GetUserExists)
+	router := chi.NewRouter()
+	router.Use(middleware.RealIP)
+	router.Use(middleware.RequestID)
+	router.Use(httputils.RateLimitMiddleware)
+	router.Use(middleware.RequestLogger(httputils.NewSlogLogFormatter(slog.Default())))
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.Compress(compressionLevel))
+	router.Use(sessionManager.LoadAndSave)
 
 	for _, routable := range routables {
-		routable.RegisterRoutes(router)
+		routable.PublicRoutes(router)
 	}
 
-	fileServer := http.FileServer(http.Dir("./web/static/"))
-	router.AddStaticRoute("/static/", http.StripPrefix("/static", fileServer))
+	router.Group(func(r chi.Router) {
+		r.Use(sessionMiddleware)
 
-	err = httputils.ServeHTTP(router.BuildHandler(), logger)
+		for _, routable := range routables {
+			routable.ProtectedRoutes(r)
+		}
+	})
+
+	oidcController := authutils.NewOidcController(sessionManager, authService.GetOrCreateUser, oidcConfig)
+	oidcController.PublicRoutes(router)
+	oidcController.ProtectedRoutes(router)
+
+	fileServer := http.FileServer(http.Dir("./web/static/"))
+	router.Handle("/static/*", http.StripPrefix("/static", fileServer))
+
+	err = httputils.ServeHTTP(router, logger)
 	if err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}

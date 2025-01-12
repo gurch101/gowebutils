@@ -1,70 +1,16 @@
 package httputils
 
 import (
-	"compress/gzip"
-	"context"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gurch101/gowebutils/pkg/parser"
 	"golang.org/x/time/rate"
 )
-
-var ErrPanic = errors.New("panic")
-
-// LoggingMiddleware logs the request and response details.
-func LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-
-		RequestID := r.Header.Get("X-Request-ID")
-		ctx := r.Context()
-
-		if RequestID != "" {
-			ctx = context.WithValue(ctx, LogRequestIDKey, "ext-"+RequestID)
-		} else {
-			id := uuid.New()
-			ctx = context.WithValue(ctx, LogRequestIDKey, id.String())
-		}
-
-		slog.InfoContext(ctx, "request started")
-		r = r.WithContext(ctx)
-
-		next.ServeHTTP(w, r)
-
-		duration := time.Since(start)
-
-		slog.InfoContext(
-			ctx,
-			"request completed",
-			"request_method", r.Method,
-			"request_url", r.URL.String(),
-			"duration", duration.Milliseconds(),
-		)
-	})
-}
-
-// RecoveryMiddleware recovers from panics and sends a 500 Internal Server Error response.
-func RecoveryMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				w.Header().Set("Connection", "close")
-				ServerErrorResponse(w, r, fmt.Errorf("%w: %s", ErrPanic, err))
-			}
-		}()
-
-		next.ServeHTTP(w, r)
-	})
-}
 
 type RateLimitConfig struct {
 	enabled bool
@@ -168,16 +114,6 @@ func RateLimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-type UnauthorizedRedirector func(w http.ResponseWriter, r *http.Request, destURL string)
-
-func GetStateAwareAuthenticationMiddleware(_ UnauthorizedRedirector) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 func GetCORSMiddleware(trustedOrigins []string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -206,42 +142,4 @@ func GetCORSMiddleware(trustedOrigins []string) func(next http.Handler) http.Han
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-type gzipResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
-}
-
-// Write writes the data to the gzip writer.
-func (w gzipResponseWriter) Write(b []byte) (int, error) {
-	n, err := w.Writer.Write(b)
-	if err != nil {
-		return 0, fmt.Errorf("failed to write gzip response: %w", err)
-	}
-
-	return n, nil
-}
-
-func GzipMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check if the client supports gzip
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			// Create a gzip writer
-			gzipWriter := gzip.NewWriter(w)
-			defer gzipWriter.Close()
-
-			// Set the Content-Encoding header
-			w.Header().Set("Content-Encoding", "gzip")
-
-			// Wrap the response writer with the gzip writer
-			gzResponseWriter := gzipResponseWriter{Writer: gzipWriter, ResponseWriter: w}
-			next.ServeHTTP(gzResponseWriter, r)
-
-			return
-		}
-
-		// If the client doesn't support gzip, serve the response as-is
-		next.ServeHTTP(w, r)
-	})
 }
