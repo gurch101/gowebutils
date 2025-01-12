@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 )
 
@@ -67,4 +68,8 @@ func AssertError(t *testing.T, resp map[string]interface{}, expectedErrorField s
 	if !ok || errorMessage != expectedErrorMessage {
 		t.Errorf("expected error message %s; got %v", expectedErrorMessage, resp)
 	}
+}
+
+func NewRouter() *chi.Mux {
+	return chi.NewRouter()
 }
