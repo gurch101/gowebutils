@@ -22,11 +22,11 @@ type User struct {
 
 type AuthService struct {
 	DB       *sql.DB
-	mailer   *mailutils.Mailer
+	mailer   mailutils.Mailer
 	hostName string
 }
 
-func NewAuthService(db *sql.DB, mailer *mailutils.Mailer, hostName string) *AuthService {
+func NewAuthService(db *sql.DB, mailer mailutils.Mailer, hostName string) *AuthService {
 	return &AuthService{DB: db, mailer: mailer, hostName: hostName}
 }
 

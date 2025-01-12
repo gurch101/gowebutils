@@ -28,8 +28,12 @@ type MailSender interface {
 	Send(recipient, templateName string, data map[string]string) error
 }
 
+type Mailer interface {
+	Send(recipient, templateName string, data map[string]string)
+}
+
 // Mailer is a struct for sending emails.
-type Mailer struct {
+type Emailer struct {
 	dialer    *gomail.Dialer
 	sender    string
 	templates map[string]*template.Template
@@ -41,15 +45,15 @@ func NewMailer(
 	port int,
 	username, password, sender string,
 	templates map[string]*template.Template,
-) *Mailer {
+) *Emailer {
 	dialer := gomail.NewDialer(host, port, username, password)
 
-	return &Mailer{dialer: dialer, sender: sender, templates: templates}
+	return &Emailer{dialer: dialer, sender: sender, templates: templates}
 }
 
 // InitMailer initializes a new Mailer instance from SMTP_HOST, SMTP_PORT,
 // SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM environment variables.
-func InitMailer(templates map[string]*template.Template) *Mailer {
+func InitMailer(templates map[string]*template.Template) *Emailer {
 	return NewMailer(
 		parser.ParseEnvStringPanic("SMTP_HOST"),
 		parser.ParseEnvIntPanic("SMTP_PORT"),
@@ -61,7 +65,7 @@ func InitMailer(templates map[string]*template.Template) *Mailer {
 }
 
 // Send sends an email from a template using the provided data.
-func (m *Mailer) Send(recipient, templateName string, data map[string]string) {
+func (m *Emailer) Send(recipient, templateName string, data map[string]string) {
 	threads.Background(func() {
 		err := m.sendInternal(recipient, templateName, data)
 		if err == nil {
@@ -70,7 +74,7 @@ func (m *Mailer) Send(recipient, templateName string, data map[string]string) {
 	})
 }
 
-func (m *Mailer) sendInternal(recipient, templateName string, data map[string]string) error {
+func (m *Emailer) sendInternal(recipient, templateName string, data map[string]string) error {
 	var err error
 
 	tmpl, ok := m.templates[templateName]
