@@ -273,9 +273,9 @@ func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.
 	v := validation.NewValidator()
 	queryString := r.URL.Query()
 	searchTenantsRequest := &SearchTenantsRequest{
-		TenantName: parser.ParseQSString(queryString, tenantNameRequestKey, nil),
-		Plan: parser.ParseQSString(queryString, planRequestKey, nil),
-		IsActive: parser.ParseQSBool(queryString, "isActive", nil),
+		TenantName:   parser.ParseQSString(queryString, tenantNameRequestKey, nil),
+		Plan:         parser.ParseQSString(queryString, planRequestKey, nil),
+		IsActive:     parser.ParseQSBool(queryString, "isActive", nil),
 		ContactEmail: parser.ParseQSString(queryString, contactEmailRequestKey, nil),
 	}
 
