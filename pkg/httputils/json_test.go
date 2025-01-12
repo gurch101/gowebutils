@@ -36,11 +36,11 @@ func TestReadJSON(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			// Define a destination struct
-			var dst struct {
+			type Dest struct {
 				Name string `json:"name"`
 			}
 
-			err := httputils.ReadJSON(rr, r, &dst)
+			_, err := httputils.ReadJSON[Dest](rr, r)
 
 			// Check the error message
 			if tt.expectedError == "" && err != nil {
@@ -49,25 +49,6 @@ func TestReadJSON(t *testing.T) {
 				t.Errorf("expected error %q, got %v", tt.expectedError, err)
 			}
 		})
-	}
-}
-
-func TestReadJSON_InvalidUnmarshalError(t *testing.T) {
-	t.Parallel()
-
-	r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"name":"John"}`))
-	rr := httptest.NewRecorder()
-
-	// Pass a non-pointer to ReadJSON to trigger json.InvalidUnmarshalError
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("expected panic, got none")
-		}
-	}()
-
-	err := httputils.ReadJSON(rr, r, struct{}{})
-	if err != nil {
-		t.Errorf("expected panic, got %v", err)
 	}
 }
 

@@ -18,8 +18,8 @@ import (
 const compressionLevel = 5
 
 type Routable interface {
-	PublicRoutes(r chi.Router)
-	ProtectedRoutes(r chi.Router)
+	PublicRoutes(r httputils.Router)
+	ProtectedRoutes(r httputils.Router)
 }
 
 type AuthService[T any] interface {

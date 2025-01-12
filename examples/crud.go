@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/gurch101/gowebutils/pkg/authutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
@@ -38,29 +37,30 @@ func NewTenantController(db *sql.DB, htmlTemplateMap map[string]*template.Templa
 	return &TenantController{DB: db, htmlTemplateMap: htmlTemplateMap}
 }
 
-func (c *TenantController) PublicRoutes(r chi.Router) {
+func (c *TenantController) PublicRoutes(_ httputils.Router) {
 
 }
 
-func (c *TenantController) ProtectedRoutes(r chi.Router) {
-	r.Post("/tenants", c.CreateTenantHandler)
-	r.Get("/tenants/{id}", c.GetTenantHandler)
-	r.Get("/tenants", c.SearchTenantsHandler)
-	r.Patch("/tenants/{id}", c.UpdateTenantHandler)
-	r.Delete("/tenants/{id}", c.DeleteTenantHandler)
-	r.Post("/api/invite", c.InviteUser)
-	r.Get("/", c.Dashboard)
+func (c *TenantController) ProtectedRoutes(router httputils.Router) {
+	router.Post("/tenants", c.CreateTenantHandler)
+	router.Get("/tenants/{id}", c.GetTenantHandler)
+	router.Get("/tenants", c.SearchTenantsHandler)
+	router.Patch("/tenants/{id}", c.UpdateTenantHandler)
+	router.Delete("/tenants/{id}", c.DeleteTenantHandler)
+	router.Post("/api/invite", c.InviteUser)
+	router.Get("/", c.Dashboard)
+}
+
+type InviteUserRequest struct {
+	UserName string `json:"userName"`
+	Email    string `json:"email"`
 }
 
 func (c *TenantController) InviteUser(w http.ResponseWriter, r *http.Request) {
-	var inviteUserRequest struct {
-		UserName string `json:"userName"`
-		Email    string `json:"email"`
-	}
-
-	err := httputils.ReadJSON(w, r, &inviteUserRequest)
+	inviteUserRequest, err := httputils.ReadJSON[InviteUserRequest](w, r)
 	if err != nil {
 		httputils.BadRequestResponse(w, r, err)
+
 		return
 	}
 
@@ -68,12 +68,14 @@ func (c *TenantController) InviteUser(w http.ResponseWriter, r *http.Request) {
 
 	payload := map[string]any{
 		"tenant_id": user.TenantID,
+		"email":     inviteUserRequest.Email,
 	}
 
 	inviteToken, err := authutils.CreateInviteToken(payload)
 
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
+
 		return
 	}
 
@@ -99,6 +101,7 @@ func IsValidTenantPlan(plan TenantPlan) bool {
 	case Free, Paid:
 		return true
 	}
+
 	return false
 }
 
@@ -116,10 +119,10 @@ type CreateTenantRequest struct {
 }
 
 func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.Request) {
-	createTenantRequest := &CreateTenantRequest{}
-	err := httputils.ReadJSON(w, r, createTenantRequest)
+	createTenantRequest, err := httputils.ReadJSON[CreateTenantRequest](w, r)
 	if err != nil {
 		httputils.UnprocessableEntityResponse(w, r, err)
+
 		return
 	}
 
@@ -130,18 +133,21 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
+
 		return
 	}
 
-	tenantId, err := CreateTenant(tc.DB, createTenantRequest)
+	tenantID, err := CreateTenant(tc.DB, &createTenantRequest)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
+
 		return
 	}
 
 	headers := make(http.Header)
-	headers.Set("Location", fmt.Sprintf("/tenants/%d", tenantId))
-	err = httputils.WriteJSON(w, http.StatusCreated, envelope{"id": tenantId}, headers)
+	headers.Set("Location", fmt.Sprintf("/tenants/%d", tenantID))
+
+	err = httputils.WriteJSON(w, http.StatusCreated, envelope{"id": tenantID}, headers)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
@@ -188,21 +194,23 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 
 	if err != nil {
 		httputils.NotFoundResponse(w, r)
+
 		return
 	}
 
 	tenant, err := GetTenantById(tc.DB, id)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
+
 		return
 	}
 
-	updateTenantRequest := &UpdateTenantRequest{}
-	err = httputils.ReadJSON(w, r, updateTenantRequest)
+	updateTenantRequest, err := httputils.ReadJSON[UpdateTenantRequest](w, r)
 	if err != nil {
 		httputils.UnprocessableEntityResponse(w, r, err)
 		return
 	}
+
 	tenant.TenantName = validation.Coalesce(updateTenantRequest.TenantName, tenant.TenantName)
 	tenant.ContactEmail = validation.Coalesce(updateTenantRequest.ContactEmail, tenant.ContactEmail)
 	tenant.Plan = validation.Coalesce(updateTenantRequest.Plan, tenant.Plan)
@@ -260,13 +268,15 @@ type SearchTenantsRequest struct {
 
 func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.Request) {
 	v := validation.NewValidator()
-	qs := r.URL.Query()
-	searchTenantsRequest := &SearchTenantsRequest{}
-	searchTenantsRequest.TenantName = parser.ParseQSString(qs, tenantNameRequestKey, nil)
-	searchTenantsRequest.Plan = parser.ParseQSString(qs, planRequestKey, nil)
-	searchTenantsRequest.IsActive = parser.ParseQSBool(qs, "isActive", nil)
-	searchTenantsRequest.ContactEmail = parser.ParseQSString(qs, contactEmailRequestKey, nil)
-	searchTenantsRequest.ParseQSFilters(qs, v, []string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)})
+	queryString := r.URL.Query()
+	searchTenantsRequest := &SearchTenantsRequest{
+		TenantName: parser.ParseQSString(queryString, tenantNameRequestKey, nil),
+		Plan: parser.ParseQSString(queryString, planRequestKey, nil),
+		IsActive: parser.ParseQSBool(queryString, "isActive", nil),
+		ContactEmail: parser.ParseQSString(queryString, contactEmailRequestKey, nil),
+	}
+
+	searchTenantsRequest.ParseQSFilters(queryString, v, []string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)})
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
 		return

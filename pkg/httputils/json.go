@@ -14,7 +14,8 @@ var ErrInvalidJSON = errors.New("invalid JSON")
 
 // ReadJSON decodes request Body into corresponding Go type. It triages for any potential errors
 // and returns corresponding appropriate errors.
-func ReadJSON(w http.ResponseWriter, r *http.Request, dst interface{}) error {
+func ReadJSON[T any](w http.ResponseWriter, r *http.Request) (T, error) {
+	var dst T
 	// Use http.MaxBytesReader() to limit the size of the request body to 1MB to prevent
 	// any potential nefarious DoS attacks.
 	maxBytes := 1_048_576
@@ -28,15 +29,15 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, dst interface{}) error {
 	dec.DisallowUnknownFields()
 
 	// Decode the request body into the destination.
-	if err := dec.Decode(dst); err != nil {
-		return handleDecodeError(err, maxBytes)
+	if err := dec.Decode(&dst); err != nil {
+		return dst, handleDecodeError(err, maxBytes)
 	}
 
 	if err := ensureSingleJSONValue(dec); err != nil {
-		return err
+		return dst, err
 	}
 
-	return nil
+	return dst, nil
 }
 
 // handleDecodeError handles errors returned by json.Decoder.Decode and returns custom errors.
