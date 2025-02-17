@@ -14,6 +14,7 @@ import (
 
 	"github.com/gurch101/gowebutils/pkg/authutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/fsutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/mailutils"
 	"github.com/gurch101/gowebutils/pkg/parser"
@@ -34,10 +35,11 @@ type Controller interface {
 type TenantController struct {
 	DB              *sql.DB
 	htmlTemplateMap map[string]*template.Template
+	fileService     *fsutils.Service
 }
 
-func NewTenantController(db *sql.DB, htmlTemplateMap map[string]*template.Template) *TenantController {
-	return &TenantController{DB: db, htmlTemplateMap: htmlTemplateMap}
+func NewTenantController(db *sql.DB, htmlTemplateMap map[string]*template.Template, fileService *fsutils.Service) *TenantController {
+	return &TenantController{DB: db, htmlTemplateMap: htmlTemplateMap, fileService: fileService}
 }
 
 func (c *TenantController) PublicRoutes(_ httputils.Router) {
@@ -52,11 +54,64 @@ func (c *TenantController) ProtectedRoutes(router httputils.Router) {
 	router.Delete("/tenants/{id}", c.DeleteTenantHandler)
 	router.Post("/api/invite", c.InviteUser)
 	router.Get("/", c.Dashboard)
+	router.Post("/api/upload", c.UploadFile)
+	router.Get("/api/download/{filename}", c.DownloadFile)
+	router.Delete("/api/delete/{filename}", c.DeleteFile)
 }
 
 type InviteUserRequest struct {
 	UserName string `json:"userName"`
 	Email    string `json:"email"`
+}
+
+func (c *TenantController) UploadFile(w http.ResponseWriter, r *http.Request) {
+	// Parse the multipart form, 10 << 20 specifies a maximum upload of 10 MB files.
+	r.ParseMultipartForm(10 << 20)
+
+	// Retrieve the file from the form data
+	file, handler, err := r.FormFile("file")
+	if err != nil {
+		fmt.Println("Error Retrieving the File")
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+
+	location, err := c.fileService.UploadFile(handler.Filename, file)
+	if err != nil {
+		fmt.Println("Error uploading file:", err)
+		return
+	}
+
+	slog.Info("upload file", "location", location)
+}
+
+func (c *TenantController) DownloadFile(w http.ResponseWriter, r *http.Request) {
+	contents, err := c.fileService.DownloadFile("1.pdf")
+	if err != nil {
+		fmt.Println("Error downloading file:", err)
+		return
+	}
+	w.Header().Set("Content-Disposition", "attachment; filename=1.pdf")
+	w.Header().Set("Content-Type", "application/pdf")
+	_, err = w.Write(contents)
+	if err != nil {
+		fmt.Println("Error writing file:", err)
+		return
+	}
+}
+
+func (c *TenantController) DeleteFile(w http.ResponseWriter, r *http.Request) {
+
+	err := c.fileService.DeleteFile("1.pdf")
+	if err != nil {
+		fmt.Println("Error deleting file:", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	slog.Info("delete file")
 }
 
 func (c *TenantController) InviteUser(w http.ResponseWriter, r *http.Request) {
@@ -377,7 +432,8 @@ func main() {
 	gob.Register(User{})
 
 	authService := NewAuthService(db, mailer, parser.ParseEnvStringPanic("HOST"))
-	tenantController := NewTenantController(db, htmlTemplateMap)
+	fileService := fsutils.NewService(parser.ParseEnvStringPanic("AWS_S3_REGION"), parser.ParseEnvStringPanic("AWS_S3_BUCKET_NAME"), parser.ParseEnvStringPanic("AWS_ACCESS_KEY_ID"), parser.ParseEnvStringPanic("AWS_SECRET_ACCESS_KEY"))
+	tenantController := NewTenantController(db, htmlTemplateMap, fileService)
 	err := starter.CreateAppServer[User](authService, db, tenantController)
 
 	if err != nil {

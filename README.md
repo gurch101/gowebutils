@@ -15,7 +15,8 @@
 
 - Support for oauth2 authentication code flow. Tested with AWS Cognito.
 - invite user flow support
-- TODO: session and bearer token authentication
+- session management
+- TODO: bearer token authentication
 - TODO: Role-based access control
 
 ##### Email
@@ -24,7 +25,7 @@
 
 ##### File Storage
 
-- TODO: add file storage service
+- download/upload/delete files from s3
 
 ##### Payments
 

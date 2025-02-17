@@ -157,6 +157,7 @@ linters-settings:
           - github.com/gurch101/gowebutils/pkg
           - gopkg.in/gomail.v2
           - github.com/go-chi/chi/v5
+          - github.com/aws/aws-sdk-go
 
   ireturn:
     allow:

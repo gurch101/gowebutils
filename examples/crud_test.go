@@ -27,7 +27,7 @@ func TestCreateTenant(t *testing.T) {
 		}
 	}()
 	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -73,7 +73,7 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 		}
 	}()
 	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -110,7 +110,7 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 		}
 	}()
 	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -155,7 +155,7 @@ func TestGetTenantHandler(t *testing.T) {
 		}
 	}()
 	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 
 	req := testutils.CreateGetRequest("/tenants/1")
 	rr := doTenantRequest(tenantController, req)
@@ -199,7 +199,7 @@ func TestGetTenantHandler_InvalidID(t *testing.T) {
 		}
 	}()
 	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 
 	req := testutils.CreateGetRequest("/tenants/invalid")
 	rr := doTenantRequest(tenantController, req)
@@ -220,7 +220,7 @@ func TestGetTenantHandler_NotFound(t *testing.T) {
 		}
 	}()
 	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 
 	req := testutils.CreateGetRequest("/tenants/9999")
 	rr := doTenantRequest(tenantController, req)
@@ -241,7 +241,7 @@ func TestDeleteTenantHandler(t *testing.T) {
 		}
 	}()
 	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 
 	req := testutils.CreateDeleteRequest("/tenants/1")
 	rr := doTenantRequest(tenantController, req)
@@ -271,7 +271,7 @@ func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
 	}()
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 	req := testutils.CreateDeleteRequest("/tenants/invalid")
 	rr := doTenantRequest(tenantController, req)
 
@@ -289,7 +289,7 @@ func TestDeleteTenantHandler_NotFound(t *testing.T) {
 			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
 	}()
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 	req := testutils.CreateDeleteRequest("/tenants/9999")
 	rr := doTenantRequest(tenantController, req)
 
@@ -308,7 +308,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 		}
 	}()
 	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 
 	// Define the input JSON for the update request
 	updateTenantRequest := map[string]interface{}{
@@ -374,7 +374,7 @@ func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
 	}()
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 	req := testutils.CreatePatchRequest(t, "/tenants/invalid", map[string]interface{}{})
 	rr := doTenantRequest(tenantController, req)
 
@@ -392,7 +392,7 @@ func TestUpdateTenantHandler_NotFound(t *testing.T) {
 			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
 	}()
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 	req := testutils.CreatePatchRequest(t, "/tenants/9999", map[string]interface{}{})
 	rr := doTenantRequest(tenantController, req)
 
@@ -410,7 +410,7 @@ func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
 			t.Fatalf("Failed to close database connection: %v", closeErr)
 		}
 	}()
-	tenantController := NewTenantController(db, nil)
+	tenantController := NewTenantController(db, nil, nil)
 	req := testutils.CreatePatchRequest(t, "/tenants/1", map[string]interface{}{
 		"tenantName":   "UpdatedTenant",
 		"contactEmail": "updated@example.com",

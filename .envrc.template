@@ -36,3 +36,8 @@ export SMTP_PORT=""
 export SMTP_USERNAME=""
 export SMTP_PASSWORD=""
 export SMTP_FROM=""
+
+export AWS_S3_BUCKET_NAME=""
+export AWS_S3_REGION=""
+export AWS_ACCESS_KEY_ID=""
+export AWS_SECRET_ACCESS_KEY=""

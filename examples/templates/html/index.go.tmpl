@@ -44,6 +44,12 @@
             alert('There was an error submitting the form.');
           });
       });
+
+      document.getElementById('delete-file').addEventListener('click', function () {
+        fetch('/api/delete/1.pdf', {
+          method: 'DELETE'
+        })
+      });
     });
 </script>
 </head>
@@ -58,6 +64,14 @@
   <input type="text" name="email" />
   <input type="submit" value="Send" />
 </form>
+
+<a href="/api/download/1.pdf">Download PDF</a>
+<h3>Upload File</h3>
+<form action="/api/upload" method="post" enctype="multipart/form-data">
+  <input type="file" name="file" />
+  <input type="submit" value="Upload" />
+</form>
+<button id="delete-file">Delete File</button>
 </main>
 </body>
 </html>
