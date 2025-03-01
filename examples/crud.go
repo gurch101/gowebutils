@@ -391,6 +391,7 @@ func SearchTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]*S
 	if err != nil {
 		return nil, pagination, err
 	}
+
 	tenantResponses := make([]*SearchTenantResponse, 0)
 
 	for _, tenant := range tenants {
@@ -414,14 +415,9 @@ var emailTemplates embed.FS
 var htmlTemplates embed.FS
 
 func main() {
-	db := dbutils.Open(parser.ParseEnvStringPanic("DB_FILEPATH"))
+	db, closer := dbutils.Open(parser.ParseEnvStringPanic("DB_FILEPATH"))
 
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			panic(closeErr)
-		}
-	}()
+	defer closer()
 
 	emailTemplateMap := templateutils.LoadTemplates(emailTemplates, "templates/email")
 
@@ -432,9 +428,14 @@ func main() {
 	gob.Register(User{})
 
 	authService := NewAuthService(db, mailer, parser.ParseEnvStringPanic("HOST"))
-	fileService := fsutils.NewService(parser.ParseEnvStringPanic("AWS_S3_REGION"), parser.ParseEnvStringPanic("AWS_S3_BUCKET_NAME"), parser.ParseEnvStringPanic("AWS_ACCESS_KEY_ID"), parser.ParseEnvStringPanic("AWS_SECRET_ACCESS_KEY"))
+	fileService := fsutils.NewService(
+		parser.ParseEnvStringPanic("AWS_S3_REGION"),
+		parser.ParseEnvStringPanic("AWS_S3_BUCKET_NAME"),
+		parser.ParseEnvStringPanic("AWS_ACCESS_KEY_ID"),
+		parser.ParseEnvStringPanic("AWS_SECRET_ACCESS_KEY"),
+	)
 	tenantController := NewTenantController(db, htmlTemplateMap, fileService)
-	err := starter.CreateAppServer[User](authService, db, tenantController)
+	err := starter.CreateAppServer(db, authService, tenantController)
 
 	if err != nil {
 		slog.Error(err.Error())

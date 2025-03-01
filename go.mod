@@ -5,6 +5,7 @@ go 1.23.2
 require (
 	github.com/alexedwards/scs/sqlite3store v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/v2 v2.8.0
+	github.com/aws/aws-sdk-go v1.55.6
 	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/google/uuid v1.6.0
@@ -15,7 +16,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go v1.55.6 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect

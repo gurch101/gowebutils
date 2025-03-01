@@ -27,7 +27,7 @@ type AuthService[T any] interface {
 	GetUserExists(ctx context.Context, user T) bool
 }
 
-func CreateAppServer[T any](authService AuthService[T], db *sql.DB, routables ...Routable) error {
+func CreateAppServer[T any](db *sql.DB, authService AuthService[T], routables ...Routable) error {
 	logger := httputils.InitializeSlog(parser.ParseEnvString("LOG_LEVEL", "info"))
 
 	sessionManager := authutils.CreateSessionManager(db)
