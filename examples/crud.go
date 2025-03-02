@@ -339,7 +339,7 @@ func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.
 		ContactEmail: parser.ParseQSString(queryString, contactEmailRequestKey, nil),
 	}
 
-	searchTenantsRequest.ParseQSFilters(queryString, v, []string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)})
+	searchTenantsRequest.ParseQSMetadata(queryString, v, []string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)})
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
 		return

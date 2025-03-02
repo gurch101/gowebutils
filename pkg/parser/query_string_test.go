@@ -92,7 +92,7 @@ func TestFilters_ParseFilters(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseQSFilters(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"})
 
 			if v.HasErrors() {
 				t.Errorf("unexpected error: %v", v.Errors)
@@ -124,7 +124,7 @@ func TestFilters_InvalidFilters(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseQSFilters(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"})
 
 			if !v.HasErrors() {
 				t.Error("expected error, got nil")
@@ -161,7 +161,7 @@ func TestFilters_InvalidFilterValues(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseQSFilters(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"})
 
 			if !v.HasErrors() {
 				t.Error("expected validation errors, got none")

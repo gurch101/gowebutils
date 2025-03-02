@@ -54,8 +54,8 @@ const (
 	pageSizeKey = "pageSize"
 )
 
-// ParseFilters parses the query string parameters and populates the Filters struct.
-func (f *Filters) ParseQSFilters(queryValues url.Values, v *validation.Validator, sortSafeList []string) {
+// ParseQSMetadata parses the query string sort, page, and page size and populates the Filters struct.
+func (f *Filters) ParseQSMetadata(queryValues url.Values, v *validation.Validator, sortSafeList []string) {
 	defaultPage := 1
 
 	defaultPageSize := 25

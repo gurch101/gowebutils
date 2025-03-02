@@ -230,7 +230,7 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 	qb := dbutils.NewQueryBuilder(db).Select("id", "user_name").From("users")
 
-	err := qb.Execute(func(rows *sql.Rows) error {
+	err := qb.Exec(func(rows *sql.Rows) error {
 		var user User
 
 		err := rows.Scan(&user.ID, &user.Name)

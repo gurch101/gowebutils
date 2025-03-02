@@ -23,7 +23,7 @@ type QueryBuilder struct {
 	orderBy      []string
 	limit        int
 	offset       int
-	db           *sql.DB
+	db           DB
 }
 
 type QueryOperator string
@@ -34,7 +34,7 @@ const (
 	OpEndsWith   QueryOperator = "ends_with"
 )
 
-func NewQueryBuilder(db *sql.DB) *QueryBuilder {
+func NewQueryBuilder(db DB) *QueryBuilder {
 	return &QueryBuilder{
 		selectFields: []string{},
 		table:        "",
@@ -49,24 +49,30 @@ func NewQueryBuilder(db *sql.DB) *QueryBuilder {
 	}
 }
 
+// Select sets the fields to be selected in the query.
 func (qb *QueryBuilder) Select(fields ...string) *QueryBuilder {
 	qb.selectFields = append(qb.selectFields, fields...)
 
 	return qb
 }
 
+// From sets the table to be queried.
 func (qb *QueryBuilder) From(table string) *QueryBuilder {
 	qb.table = table
 
 	return qb
 }
 
+// Join adds a JOIN clause to the query.
 func (qb *QueryBuilder) Join(joinType, table, onCondition string) *QueryBuilder {
 	qb.joins = append(qb.joins, fmt.Sprintf("%s JOIN %s ON %s", joinType, table, onCondition))
 
 	return qb
 }
 
+// Where adds a WHERE clause to the query.
+// condition should be in the format of "field = ?" or "field IN (?, ?, ?)"
+// and args should be the values to be bound to the condition.
 func (qb *QueryBuilder) Where(condition string, args ...any) *QueryBuilder {
 	if len(args) > 0 && !isNilValue(args[0]) {
 		qb.conditions = append(qb.conditions, parenthesize(condition))
@@ -76,33 +82,7 @@ func (qb *QueryBuilder) Where(condition string, args ...any) *QueryBuilder {
 	return qb
 }
 
-func generateLikePattern(patternType QueryOperator, value string) string {
-	switch patternType {
-	case OpStartsWith:
-		return value + "%" // e.g., "abc%"
-	case OpEndsWith:
-		return "%" + value // e.g., "%abc"
-	case OpContains:
-		return fmt.Sprintf("%%%s%%", value) // e.g., "%abc%"
-	default:
-		panic("Invalid pattern type: use 'starts_with', 'ends_with', or 'contains'")
-	}
-}
-
-func (qb *QueryBuilder) addLikeCondition(condition, conjunction string) {
-	qb.addCondition(condition+" LIKE ?", conjunction)
-}
-
-func (qb *QueryBuilder) addCondition(condition, conjunction string) {
-	if len(qb.conditions) > 0 {
-		lastConditionIndex := len(qb.conditions) - 1
-		formattedCondition := fmt.Sprintf("%s %s (%s)", qb.conditions[lastConditionIndex], conjunction, condition)
-		qb.conditions[lastConditionIndex] = formattedCondition
-	} else {
-		qb.conditions = append(qb.conditions, parenthesize(condition))
-	}
-}
-
+// WhereLike adds a WHERE clause to the query with a LIKE pattern.
 func (qb *QueryBuilder) WhereLike(condition string, patternType QueryOperator, value *string) *QueryBuilder {
 	if value == nil {
 		return qb
@@ -116,6 +96,7 @@ func (qb *QueryBuilder) WhereLike(condition string, patternType QueryOperator, v
 	return qb
 }
 
+// AndWhere adds a WHERE clause to the query with an AND conjunction.
 func (qb *QueryBuilder) AndWhere(condition string, args ...interface{}) *QueryBuilder {
 	if len(args) > 0 && !isNilValue(args[0]) {
 		qb.addCondition(condition, "AND")
@@ -125,6 +106,7 @@ func (qb *QueryBuilder) AndWhere(condition string, args ...interface{}) *QueryBu
 	return qb
 }
 
+// AndWhereLike adds a WHERE clause to the query with an AND conjunction and a LIKE pattern.
 func (qb *QueryBuilder) AndWhereLike(condition string, patternType QueryOperator, value *string) *QueryBuilder {
 	if value == nil {
 		return qb
@@ -138,6 +120,7 @@ func (qb *QueryBuilder) AndWhereLike(condition string, patternType QueryOperator
 	return qb
 }
 
+// OrWhere adds a WHERE clause to the query with an OR conjunction.
 func (qb *QueryBuilder) OrWhere(condition string, args ...interface{}) *QueryBuilder {
 	if len(args) > 0 && !isNilValue(args[0]) {
 		qb.addCondition(condition, "OR")
@@ -147,6 +130,7 @@ func (qb *QueryBuilder) OrWhere(condition string, args ...interface{}) *QueryBui
 	return qb
 }
 
+// OrWhereLike adds a WHERE clause to the query with an OR conjunction and a LIKE pattern.
 func (qb *QueryBuilder) OrWhereLike(condition string, patternType QueryOperator, value *string) *QueryBuilder {
 	if value == nil {
 		return qb
@@ -160,12 +144,14 @@ func (qb *QueryBuilder) OrWhereLike(condition string, patternType QueryOperator,
 	return qb
 }
 
+// GroupBy adds a GROUP BY clause to the query.
 func (qb *QueryBuilder) GroupBy(fields ...string) *QueryBuilder {
 	qb.groupBy = append(qb.groupBy, fields...)
 
 	return qb
 }
 
+// fields will be -<name> for descending order and <name> for ascending order.
 func (qb *QueryBuilder) OrderBy(fields ...string) *QueryBuilder {
 	// fields will be -<name> for descending order and <name> for ascending order
 	// e.g. "name", "-age"
@@ -182,18 +168,21 @@ func (qb *QueryBuilder) OrderBy(fields ...string) *QueryBuilder {
 	return qb
 }
 
+// Limit sets the maximum number of rows to return.
 func (qb *QueryBuilder) Limit(limit int) *QueryBuilder {
 	qb.limit = limit
 
 	return qb
 }
 
+// Offset sets the number of rows to skip before returning results.
 func (qb *QueryBuilder) Offset(offset int) *QueryBuilder {
 	qb.offset = offset
 
 	return qb
 }
 
+// Page sets the page number and page size for pagination.
 func (qb *QueryBuilder) Page(page, pageSize int) *QueryBuilder {
 	qb.offset = (page - 1) * pageSize
 	qb.limit = pageSize
@@ -201,6 +190,7 @@ func (qb *QueryBuilder) Page(page, pageSize int) *QueryBuilder {
 	return qb
 }
 
+// Build generates the SQL query and returns it along with the arguments.
 func (qb *QueryBuilder) Build() (string, []interface{}) {
 	if qb.table == "" {
 		panic("Table not specified")
@@ -256,11 +246,17 @@ func (qb *QueryBuilder) Build() (string, []interface{}) {
 	return query.String(), qb.args
 }
 
-func (qb *QueryBuilder) Execute(callback func(*sql.Rows) error) error {
-	query, args := qb.Build()
-
+// Exec executes the query and calls the callback function for each row.
+func (qb *QueryBuilder) Exec(callback func(*sql.Rows) error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
 	defer cancel()
+
+	return qb.ExecContext(ctx, callback)
+}
+
+// ExecContext executes the query with the given context and calls the callback function for each row.
+func (qb *QueryBuilder) ExecContext(ctx context.Context, callback func(*sql.Rows) error) error {
+	query, args := qb.Build()
 
 	rows, err := qb.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -294,11 +290,17 @@ func (qb *QueryBuilder) Execute(callback func(*sql.Rows) error) error {
 	return nil
 }
 
+// Query executes the query and binds the results to the provided destination.
 func (qb *QueryBuilder) QueryRow(dest ...any) error {
-	query, args := qb.Build()
-
 	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
 	defer cancel()
+
+	return qb.QueryRowContext(ctx, dest...)
+}
+
+// QueryRowContext executes the query with the given context and binds the results to the provided destination.
+func (qb *QueryBuilder) QueryRowContext(ctx context.Context, dest ...any) error {
+	query, args := qb.Build()
 
 	err := qb.db.QueryRowContext(ctx, query, args...).Scan(dest...)
 	if err != nil {
@@ -335,4 +337,31 @@ func isNilValue(v any) bool {
 
 func parenthesize(s string) string {
 	return fmt.Sprintf("(%s)", s)
+}
+
+func generateLikePattern(patternType QueryOperator, value string) string {
+	switch patternType {
+	case OpStartsWith:
+		return value + "%" // e.g., "abc%"
+	case OpEndsWith:
+		return "%" + value // e.g., "%abc"
+	case OpContains:
+		return fmt.Sprintf("%%%s%%", value) // e.g., "%abc%"
+	default:
+		panic("Invalid pattern type: use 'starts_with', 'ends_with', or 'contains'")
+	}
+}
+
+func (qb *QueryBuilder) addLikeCondition(condition, conjunction string) {
+	qb.addCondition(condition+" LIKE ?", conjunction)
+}
+
+func (qb *QueryBuilder) addCondition(condition, conjunction string) {
+	if len(qb.conditions) > 0 {
+		lastConditionIndex := len(qb.conditions) - 1
+		formattedCondition := fmt.Sprintf("%s %s (%s)", qb.conditions[lastConditionIndex], conjunction, condition)
+		qb.conditions[lastConditionIndex] = formattedCondition
+	} else {
+		qb.conditions = append(qb.conditions, parenthesize(condition))
+	}
 }

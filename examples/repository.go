@@ -91,7 +91,7 @@ func FindTenants(db *sql.DB, searchTenantsRequest *SearchTenantsRequest) ([]tena
 		AndWhereLike(contactEmailDbFieldName, dbutils.OpContains, searchTenantsRequest.ContactEmail).
 		OrderBy(searchTenantsRequest.Sort).
 		Page(searchTenantsRequest.Page, searchTenantsRequest.PageSize).
-		Execute(func(rows *sql.Rows) error {
+		Exec(func(rows *sql.Rows) error {
 			var tenant tenantModel
 			err := rows.Scan(&totalRecords, &tenant.ID, &tenant.TenantName, &tenant.ContactEmail, &tenant.Plan, &tenant.IsActive, &tenant.CreatedAt, &tenant.Version)
 			if err != nil {
