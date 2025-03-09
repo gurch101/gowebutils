@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/mailutils"
+	"github.com/gurch101/gowebutils/pkg/starter"
 	"github.com/gurch101/gowebutils/pkg/stringutils"
 )
 
@@ -26,8 +28,10 @@ type AuthService struct {
 	hostName string
 }
 
-func NewAuthService(db *sql.DB, mailer mailutils.Mailer, hostName string) *AuthService {
-	return &AuthService{DB: db, mailer: mailer, hostName: hostName}
+func NewAuthService(appserver *starter.AppServer[User]) starter.AuthService[User] {
+	gob.Register(User{})
+
+	return &AuthService{DB: appserver.DB, mailer: appserver.Mailer, hostName: appserver.GetStringConfig("HOST")}
 }
 
 func (a *AuthService) GetUserExists(ctx context.Context, user User) bool {

@@ -61,13 +61,10 @@ func getProjectRoot() string {
 	}
 }
 
-func SetupTestDB(t *testing.T) *sql.DB {
+func SetupTestDB(t *testing.T) (*sql.DB, func()) {
 	t.Helper()
 
-	db, err := sql.Open(dbutils.SqliteDriverName, ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
+	db, closer := dbutils.Open(":memory:")
 
 	// Apply all migrations
 	projectRoot := getProjectRoot()
@@ -102,5 +99,5 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to seed database: %v", err)
 	}
 
-	return db
+	return db, closer
 }
