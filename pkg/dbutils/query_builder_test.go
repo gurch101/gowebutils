@@ -219,14 +219,9 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 	var users []User
 
-	db := testutils.SetupTestDB(t)
+	db, closer := testutils.SetupTestDB(t)
 
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			t.Fatalf("Failed to close database connection: %v", closeErr)
-		}
-	}()
+	defer closer()
 
 	qb := dbutils.NewQueryBuilder(db).Select("id", "user_name").From("users")
 
@@ -253,14 +248,9 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 func TestQueryBuilder_QueryRow(t *testing.T) {
 	t.Parallel()
-	db := testutils.SetupTestDB(t)
+	db, closer := testutils.SetupTestDB(t)
 
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			t.Fatalf("Failed to close database connection: %v", closeErr)
-		}
-	}()
+	defer closer()
 
 	var id int64
 
@@ -277,13 +267,9 @@ func TestQueryBuilder_QueryRow(t *testing.T) {
 func TestQueryBuilder_QueryRowNoRow(t *testing.T) {
 	t.Parallel()
 
-	db := testutils.SetupTestDB(t)
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			t.Fatalf("Failed to close database connection: %v", closeErr)
-		}
-	}()
+	db, closer := testutils.SetupTestDB(t)
+
+	defer closer()
 
 	var id int64
 

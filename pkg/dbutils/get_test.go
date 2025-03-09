@@ -11,14 +11,9 @@ import (
 
 func TestGetByID(t *testing.T) {
 	t.Parallel()
-	db := testutils.SetupTestDB(t)
+	db, closer := testutils.SetupTestDB(t)
 
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			t.Fatalf("Failed to close database connection: %v", closeErr)
-		}
-	}()
+	defer closer()
 
 	t.Run("successful retrieval", func(t *testing.T) {
 		var name, email string
@@ -77,14 +72,9 @@ func TestGetByID(t *testing.T) {
 
 func TestExists(t *testing.T) {
 	t.Parallel()
-	db := testutils.SetupTestDB(t)
+	db, closer := testutils.SetupTestDB(t)
 
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			t.Fatalf("Failed to close database connection: %v", closeErr)
-		}
-	}()
+	defer closer()
 
 	t.Run("existing record", func(t *testing.T) {
 		exists := dbutils.Exists(context.Background(), db, "users", 1)

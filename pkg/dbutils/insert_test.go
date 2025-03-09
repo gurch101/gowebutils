@@ -10,14 +10,9 @@ import (
 
 func TestInsert(t *testing.T) {
 	t.Parallel()
-	db := testutils.SetupTestDB(t)
+	db, closer := testutils.SetupTestDB(t)
 
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			t.Fatalf("Failed to close database connection: %v", closeErr)
-		}
-	}()
+	defer closer()
 
 	fields := map[string]any{
 		"tenant_name":   "Test Tenant",
@@ -38,14 +33,9 @@ func TestInsert(t *testing.T) {
 
 func TestInsert_ErrorHandling(t *testing.T) {
 	t.Parallel()
-	db := testutils.SetupTestDB(t)
+	db, closer := testutils.SetupTestDB(t)
 
-	defer func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			t.Fatalf("Failed to close database connection: %v", closeErr)
-		}
-	}()
+	defer closer()
 
 	tests := []struct {
 		name   string

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/authutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/fsutils"
@@ -415,10 +416,6 @@ var emailTemplates embed.FS
 var htmlTemplates embed.FS
 
 func main() {
-	db, closer := dbutils.Open(parser.ParseEnvStringPanic("DB_FILEPATH"))
-
-	defer closer()
-
 	emailTemplateMap := templateutils.LoadTemplates(emailTemplates, "templates/email")
 
 	htmlTemplateMap := templateutils.LoadTemplates(htmlTemplates, "templates/html")
@@ -427,15 +424,19 @@ func main() {
 
 	gob.Register(User{})
 
-	authService := NewAuthService(db, mailer, parser.ParseEnvStringPanic("HOST"))
+	app := app.NewApp()
+
+	defer app.Close()
+
+	authService := NewAuthService(app.DB, mailer, parser.ParseEnvStringPanic("HOST"))
 	fileService := fsutils.NewService(
 		parser.ParseEnvStringPanic("AWS_S3_REGION"),
 		parser.ParseEnvStringPanic("AWS_S3_BUCKET_NAME"),
 		parser.ParseEnvStringPanic("AWS_ACCESS_KEY_ID"),
 		parser.ParseEnvStringPanic("AWS_SECRET_ACCESS_KEY"),
 	)
-	tenantController := NewTenantController(db, htmlTemplateMap, fileService)
-	err := starter.CreateAppServer(db, authService, tenantController)
+	tenantController := NewTenantController(app.DB, htmlTemplateMap, fileService)
+	err := starter.CreateAppServer(app.DB, authService, tenantController)
 
 	if err != nil {
 		slog.Error(err.Error())
