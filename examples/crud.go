@@ -6,7 +6,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"html/template"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -15,12 +14,9 @@ import (
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/authutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
-	"github.com/gurch101/gowebutils/pkg/fsutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
-	"github.com/gurch101/gowebutils/pkg/mailutils"
 	"github.com/gurch101/gowebutils/pkg/parser"
 	"github.com/gurch101/gowebutils/pkg/starter"
-	"github.com/gurch101/gowebutils/pkg/templateutils"
 	"github.com/gurch101/gowebutils/pkg/validation"
 
 	// needed for sqlite3 driver.
@@ -34,13 +30,11 @@ type Controller interface {
 }
 
 type TenantController struct {
-	DB              *sql.DB
-	htmlTemplateMap map[string]*template.Template
-	fileService     *fsutils.Service
+	app *app.App
 }
 
-func NewTenantController(db *sql.DB, htmlTemplateMap map[string]*template.Template, fileService *fsutils.Service) *TenantController {
-	return &TenantController{DB: db, htmlTemplateMap: htmlTemplateMap, fileService: fileService}
+func NewTenantController(app *app.App) *TenantController {
+	return &TenantController{app: app}
 }
 
 func (c *TenantController) PublicRoutes(_ httputils.Router) {
@@ -78,7 +72,7 @@ func (c *TenantController) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	location, err := c.fileService.UploadFile(handler.Filename, file)
+	location, err := c.app.FileService.UploadFile(handler.Filename, file)
 	if err != nil {
 		fmt.Println("Error uploading file:", err)
 		return
@@ -88,7 +82,7 @@ func (c *TenantController) UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *TenantController) DownloadFile(w http.ResponseWriter, r *http.Request) {
-	contents, err := c.fileService.DownloadFile("1.pdf")
+	contents, err := c.app.FileService.DownloadFile("1.pdf")
 	if err != nil {
 		fmt.Println("Error downloading file:", err)
 		return
@@ -104,7 +98,7 @@ func (c *TenantController) DownloadFile(w http.ResponseWriter, r *http.Request) 
 
 func (c *TenantController) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
-	err := c.fileService.DeleteFile("1.pdf")
+	err := c.app.FileService.DeleteFile("1.pdf")
 	if err != nil {
 		fmt.Println("Error deleting file:", err)
 		return
@@ -142,7 +136,8 @@ func (c *TenantController) InviteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *TenantController) Dashboard(w http.ResponseWriter, r *http.Request) {
-	err := c.htmlTemplateMap["index.go.tmpl"].ExecuteTemplate(w, "index.go.tmpl", nil)
+	err := c.app.RenderTemplate(w, "index.go.tmpl", nil)
+
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
@@ -196,7 +191,7 @@ func (tc *TenantController) CreateTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	tenantID, err := CreateTenant(tc.DB, &createTenantRequest)
+	tenantID, err := CreateTenant(tc.app.DB, &createTenantRequest)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 
@@ -228,7 +223,7 @@ func (tc *TenantController) GetTenantHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	tenant, err := GetTenantById(tc.DB, id)
+	tenant, err := GetTenantById(tc.app.DB, id)
 
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
@@ -257,7 +252,7 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	tenant, err := GetTenantById(tc.DB, id)
+	tenant, err := GetTenantById(tc.app.DB, id)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 
@@ -287,7 +282,7 @@ func (tc *TenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	err = UpdateTenant(r.Context(), tc.DB, tenant)
+	err = UpdateTenant(r.Context(), tc.app.DB, tenant)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 
@@ -309,7 +304,7 @@ func (tc *TenantController) DeleteTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	err = DeleteTenantById(tc.DB, id)
+	err = DeleteTenantById(tc.app.DB, id)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 
@@ -346,7 +341,7 @@ func (tc *TenantController) SearchTenantsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	tenants, pagination, err := SearchTenants(tc.DB, searchTenantsRequest)
+	tenants, pagination, err := SearchTenants(tc.app.DB, searchTenantsRequest)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 		return
@@ -416,27 +411,24 @@ var emailTemplates embed.FS
 var htmlTemplates embed.FS
 
 func main() {
-	emailTemplateMap := templateutils.LoadTemplates(emailTemplates, "templates/email")
-
-	htmlTemplateMap := templateutils.LoadTemplates(htmlTemplates, "templates/html")
-
-	mailer := mailutils.InitMailer(emailTemplateMap)
-
 	gob.Register(User{})
 
-	app := app.NewApp()
+	app, err := app.NewApp(
+		app.WithEmailTemplates(emailTemplates, "templates/email"),
+		app.WithHTMLTemplates(htmlTemplates, "templates/html"),
+	)
+
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
 
 	defer app.Close()
 
-	authService := NewAuthService(app.DB, mailer, parser.ParseEnvStringPanic("HOST"))
-	fileService := fsutils.NewService(
-		parser.ParseEnvStringPanic("AWS_S3_REGION"),
-		parser.ParseEnvStringPanic("AWS_S3_BUCKET_NAME"),
-		parser.ParseEnvStringPanic("AWS_ACCESS_KEY_ID"),
-		parser.ParseEnvStringPanic("AWS_SECRET_ACCESS_KEY"),
-	)
-	tenantController := NewTenantController(app.DB, htmlTemplateMap, fileService)
-	err := starter.CreateAppServer(app.DB, authService, tenantController)
+	authService := NewAuthService(app.DB, app.Mailer, parser.ParseEnvStringPanic("HOST"))
+
+	tenantController := NewTenantController(app)
+	err = starter.CreateAppServer(app.DB, authService, tenantController)
 
 	if err != nil {
 		slog.Error(err.Error())

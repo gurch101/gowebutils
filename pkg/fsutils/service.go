@@ -11,6 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
+type FileService interface {
+	UploadFile(fileName string, file io.Reader) (string, error)
+	DownloadFile(fileName string) ([]byte, error)
+	DeleteFile(fileName string) error
+	DeleteFiles(fileNames []string) error
+}
+
 type Service struct {
 	bucket     string
 	client     *s3.S3

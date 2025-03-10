@@ -19,11 +19,10 @@ func doTenantRequest(controller *TenantController, req *http.Request) *httptest.
 
 func TestCreateTenant(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -53,7 +52,7 @@ func TestCreateTenant(t *testing.T) {
 	}
 
 	var tenantID int64
-	err = db.QueryRow("SELECT id FROM tenants WHERE tenant_name = ?", "TestTenant").Scan(&tenantID)
+	err = app.DB.QueryRow("SELECT id FROM tenants WHERE tenant_name = ?", "TestTenant").Scan(&tenantID)
 	if err != nil {
 		t.Fatalf("Failed to query tenant: %v", err)
 	}
@@ -61,11 +60,10 @@ func TestCreateTenant(t *testing.T) {
 
 func TestCreateTenantInvalidPlan(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -94,11 +92,10 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 
 func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -135,11 +132,10 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 
 func TestGetTenantHandler(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 
 	req := testutils.CreateGetRequest("/tenants/1")
 	rr := doTenantRequest(tenantController, req)
@@ -175,11 +171,10 @@ func TestGetTenantHandler(t *testing.T) {
 
 func TestGetTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 
 	req := testutils.CreateGetRequest("/tenants/invalid")
 	rr := doTenantRequest(tenantController, req)
@@ -192,11 +187,10 @@ func TestGetTenantHandler_InvalidID(t *testing.T) {
 
 func TestGetTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 
 	req := testutils.CreateGetRequest("/tenants/9999")
 	rr := doTenantRequest(tenantController, req)
@@ -209,11 +203,10 @@ func TestGetTenantHandler_NotFound(t *testing.T) {
 
 func TestDeleteTenantHandler(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 
 	req := testutils.CreateDeleteRequest("/tenants/1")
 	rr := doTenantRequest(tenantController, req)
@@ -225,7 +218,7 @@ func TestDeleteTenantHandler(t *testing.T) {
 
 	// Verify that the tenant has been deleted
 	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM tenants WHERE id = 1").Scan(&count)
+	err := app.DB.QueryRow("SELECT COUNT(*) FROM tenants WHERE id = 1").Scan(&count)
 	if err != nil {
 		t.Fatalf("Failed to query tenant: %v", err)
 	}
@@ -236,10 +229,10 @@ func TestDeleteTenantHandler(t *testing.T) {
 
 func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 	req := testutils.CreateDeleteRequest("/tenants/invalid")
 	rr := doTenantRequest(tenantController, req)
 
@@ -250,10 +243,10 @@ func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 
 func TestDeleteTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 	req := testutils.CreateDeleteRequest("/tenants/9999")
 	rr := doTenantRequest(tenantController, req)
 
@@ -264,11 +257,10 @@ func TestDeleteTenantHandler_NotFound(t *testing.T) {
 
 func TestUpdateTenantHandler(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	// Create the TenantController instance with the test database
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 
 	// Define the input JSON for the update request
 	updateTenantRequest := map[string]interface{}{
@@ -305,7 +297,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 		Plan         string
 		IsActive     bool
 	}
-	err = db.QueryRow(`SELECT tenant_name, contact_email, plan, is_active FROM tenants WHERE id = 1`).
+	err = app.DB.QueryRow(`SELECT tenant_name, contact_email, plan, is_active FROM tenants WHERE id = 1`).
 		Scan(&updatedTenant.TenantName, &updatedTenant.ContactEmail, &updatedTenant.Plan, &updatedTenant.IsActive)
 	if err != nil {
 		t.Fatalf("Failed to query updated tenant: %v", err)
@@ -327,10 +319,10 @@ func TestUpdateTenantHandler(t *testing.T) {
 
 func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 	req := testutils.CreatePatchRequest(t, "/tenants/invalid", map[string]interface{}{})
 	rr := doTenantRequest(tenantController, req)
 
@@ -341,10 +333,10 @@ func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 
 func TestUpdateTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 	req := testutils.CreatePatchRequest(t, "/tenants/9999", map[string]interface{}{})
 	rr := doTenantRequest(tenantController, req)
 
@@ -355,10 +347,10 @@ func TestUpdateTenantHandler_NotFound(t *testing.T) {
 
 func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	app := testutils.NewTestApp(t)
+	defer app.Close()
 
-	defer closer()
-	tenantController := NewTenantController(db, nil, nil)
+	tenantController := NewTenantController(app)
 	req := testutils.CreatePatchRequest(t, "/tenants/1", map[string]interface{}{
 		"tenantName":   "UpdatedTenant",
 		"contactEmail": "updated@example.com",
