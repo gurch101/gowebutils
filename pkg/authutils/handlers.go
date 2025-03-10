@@ -34,9 +34,9 @@ var ErrNoIDToken = errors.New("no id token")
 // ErrInvalidInviteToken is returned when the invite token is invalid.
 var ErrInvalidInviteToken = errors.New("invalid invite token")
 
-type OidcController[T any] struct {
+type OidcController struct {
 	oauth2Config      *oauth2Config
-	getOrCreateUserFn GetOrCreateUser[T]
+	getOrCreateUserFn GetOrCreateUser
 	sessionManager    *scs.SessionManager
 }
 
@@ -92,12 +92,12 @@ func createOauthConfig(
 	}, nil
 }
 
-type GetOrCreateUser[T any] func(ctx context.Context, email string, inviteTokenPayload map[string]any) (T, error)
+type GetOrCreateUser func(ctx context.Context, email string, inviteTokenPayload map[string]any) (User, error)
 
-func CreateOidcController[T any](
+func CreateOidcController(
 	sessionManager *scs.SessionManager,
-	getOrCreateUserFn GetOrCreateUser[T],
-) *OidcController[T] {
+	getOrCreateUserFn GetOrCreateUser,
+) *OidcController {
 	config, err := createOauthConfig(
 		parser.ParseEnvStringPanic("OIDC_CLIENT_ID"),
 		parser.ParseEnvStringPanic("OIDC_CLIENT_SECRET"),
@@ -112,28 +112,25 @@ func CreateOidcController[T any](
 		panic(err)
 	}
 
-	return &OidcController[T]{sessionManager: sessionManager, getOrCreateUserFn: getOrCreateUserFn, oauth2Config: config}
+	return &OidcController{sessionManager: sessionManager, getOrCreateUserFn: getOrCreateUserFn, oauth2Config: config}
 }
 
-func NewOidcController[T any](
+func NewOidcController(
 	sessionManager *scs.SessionManager,
-	fn GetOrCreateUser[T],
+	fn GetOrCreateUser,
 	config *oauth2Config,
-) *OidcController[T] {
-	return &OidcController[T]{sessionManager: sessionManager, getOrCreateUserFn: fn, oauth2Config: config}
+) *OidcController {
+	return &OidcController{sessionManager: sessionManager, getOrCreateUserFn: fn, oauth2Config: config}
 }
 
-func (c *OidcController[T]) PublicRoutes(r httputils.Router) {
-	r.Get("/login", c.loginHandler)
-	r.Get("/register", c.registerHandler)
-	r.Get("/auth/callback", c.authCallback)
-}
+// func (c *OidcController) AddRoutes(app *app.App) {
+// 	app.AddPublicRoute("GET", "/login", c.loginHandler)
+// 	app.AddPublicRoute("GET", "/register", c.registerHandler)
+// 	app.AddPublicRoute("GET", "/auth/callback", c.authCallback)
+// 	app.AddProtectedRoute("GET", "/logout", c.logoutHandler)
+// }
 
-func (c *OidcController[T]) ProtectedRoutes(r httputils.Router) {
-	r.Get("/logout", c.logoutHandler)
-}
-
-func (c *OidcController[T]) redirectToAuthURL(w http.ResponseWriter, r *http.Request, payload map[string]any) {
+func (c *OidcController) redirectToAuthURL(w http.ResponseWriter, r *http.Request, payload map[string]any) {
 	if payload == nil {
 		payload = map[string]any{}
 	}
@@ -161,11 +158,11 @@ func (c *OidcController[T]) redirectToAuthURL(w http.ResponseWriter, r *http.Req
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func (c *OidcController[T]) loginHandler(w http.ResponseWriter, r *http.Request) {
+func (c *OidcController) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	c.redirectToAuthURL(w, r, nil)
 }
 
-func (c *OidcController[T]) registerHandler(w http.ResponseWriter, r *http.Request) {
+func (c *OidcController) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	payload := map[string]any{
 		"state": uuid.New().String(),
 	}
@@ -215,7 +212,7 @@ func (c *OidcController[T]) registerHandler(w http.ResponseWriter, r *http.Reque
 	http.Redirect(w, r, registrationURL, http.StatusTemporaryRedirect)
 }
 
-func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request) {
+func (c *OidcController) AuthCallback(w http.ResponseWriter, r *http.Request) {
 	state, err := verifyState(w, r)
 	if err != nil {
 		slog.Info("failed to verify state", "error", err)
@@ -273,7 +270,7 @@ func (c *OidcController[T]) authCallback(w http.ResponseWriter, r *http.Request)
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-func (c *OidcController[T]) logoutHandler(w http.ResponseWriter, r *http.Request) {
+func (c *OidcController) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	err := c.sessionManager.RenewToken(r.Context())
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to renew session: %w", err))
@@ -334,7 +331,7 @@ func verifyState(w http.ResponseWriter, r *http.Request) (map[string]any, error)
 	return payload, nil
 }
 
-func (c *OidcController[T]) exchangeCodeForIDToken(r *http.Request) (*oidc.IDToken, error) {
+func (c *OidcController) exchangeCodeForIDToken(r *http.Request) (*oidc.IDToken, error) {
 	code := r.URL.Query().Get("code")
 
 	if code == "" {

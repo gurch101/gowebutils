@@ -1,1 +1,7 @@
 why does favicon request lead to login?
+
+- make this work with postgresql
+
+- make this work with multiple read connections and 1 write connection
+
+- add docusaurus

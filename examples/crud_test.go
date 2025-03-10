@@ -3,26 +3,20 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
-
-func doTenantRequest(controller *TenantController, req *http.Request) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	router := testutils.NewRouter()
-	controller.ProtectedRoutes(router)
-	router.ServeHTTP(rr, req)
-	return rr
-}
 
 func TestCreateTenant(t *testing.T) {
 	t.Parallel()
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	createTenantController := NewCreateTenantController(app.App)
+	app.TestRouter.Post("/tenants", createTenantController.CreateTenantHandler)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -31,9 +25,8 @@ func TestCreateTenant(t *testing.T) {
 		"plan":         "free",
 	}
 
-	// Create a new HTTP request
 	req := testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusCreated {
@@ -63,7 +56,8 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	createTenantController := NewCreateTenantController(app.App)
+	app.TestRouter.Post("/tenants", createTenantController.CreateTenantHandler)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -73,7 +67,7 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 	}
 
 	req := testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusBadRequest {
@@ -95,7 +89,8 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	createTenantController := NewCreateTenantController(app.App)
+	app.TestRouter.Post("/tenants", createTenantController.CreateTenantHandler)
 
 	// Define the input JSON for the request
 	createTenantRequest := map[string]interface{}{
@@ -105,7 +100,7 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	}
 
 	req := testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusCreated {
@@ -113,7 +108,7 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	}
 
 	req = testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
-	rr = doTenantRequest(tenantController, req)
+	rr = app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusBadRequest {
@@ -135,10 +130,11 @@ func TestGetTenantHandler(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	getTenantController := NewGetTenantController(app.App)
+	app.TestRouter.Get("/tenants/{id}", getTenantController.GetTenantHandler)
 
 	req := testutils.CreateGetRequest("/tenants/1")
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusOK {
@@ -174,10 +170,11 @@ func TestGetTenantHandler_InvalidID(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	getTenantController := NewGetTenantController(app.App)
+	app.TestRouter.Get("/tenants/{id}", getTenantController.GetTenantHandler)
 
 	req := testutils.CreateGetRequest("/tenants/invalid")
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusNotFound {
@@ -190,10 +187,11 @@ func TestGetTenantHandler_NotFound(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	getTenantController := NewGetTenantController(app.App)
+	app.TestRouter.Get("/tenants/{id}", getTenantController.GetTenantHandler)
 
 	req := testutils.CreateGetRequest("/tenants/9999")
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusNotFound {
@@ -206,10 +204,11 @@ func TestDeleteTenantHandler(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	deleteTenantController := NewDeleteTenantController(app.App)
+	app.TestRouter.Delete("/tenants/{id}", deleteTenantController.DeleteTenantHandler)
 
 	req := testutils.CreateDeleteRequest("/tenants/1")
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusOK {
@@ -232,9 +231,11 @@ func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	deleteTenantController := NewDeleteTenantController(app.App)
+	app.TestRouter.Delete("/tenants/{id}", deleteTenantController.DeleteTenantHandler)
+
 	req := testutils.CreateDeleteRequest("/tenants/invalid")
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", rr.Code)
@@ -246,9 +247,11 @@ func TestDeleteTenantHandler_NotFound(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	deleteTenantController := NewDeleteTenantController(app.App)
+	app.TestRouter.Delete("/tenants/{id}", deleteTenantController.DeleteTenantHandler)
+
 	req := testutils.CreateDeleteRequest("/tenants/9999")
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", rr.Code)
@@ -260,7 +263,8 @@ func TestUpdateTenantHandler(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	updateTenantController := NewUpdateTenantController(app.App)
+	app.TestRouter.Patch("/tenants/{id}", updateTenantController.UpdateTenantHandler)
 
 	// Define the input JSON for the update request
 	updateTenantRequest := map[string]interface{}{
@@ -272,7 +276,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 
 	// Create a new HTTP request for the update
 	req := testutils.CreatePatchRequest(t, "/tenants/1", updateTenantRequest)
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	// Check the response status code
 	if rr.Code != http.StatusOK {
@@ -322,9 +326,11 @@ func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	updateTenantController := NewUpdateTenantController(app.App)
+	app.TestRouter.Patch("/tenants/{id}", updateTenantController.UpdateTenantHandler)
+
 	req := testutils.CreatePatchRequest(t, "/tenants/invalid", map[string]interface{}{})
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", rr.Code)
@@ -336,9 +342,11 @@ func TestUpdateTenantHandler_NotFound(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	updateTenantController := NewUpdateTenantController(app.App)
+	app.TestRouter.Patch("/tenants/{id}", updateTenantController.UpdateTenantHandler)
+
 	req := testutils.CreatePatchRequest(t, "/tenants/9999", map[string]interface{}{})
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	if rr.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, got %d", rr.Code)
@@ -350,16 +358,203 @@ func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
-	tenantController := NewTenantController(app)
+	updateTenantController := NewUpdateTenantController(app.App)
+	app.TestRouter.Patch("/tenants/{id}", updateTenantController.UpdateTenantHandler)
+
 	req := testutils.CreatePatchRequest(t, "/tenants/1", map[string]interface{}{
 		"tenantName":   "UpdatedTenant",
 		"contactEmail": "updated@example.com",
 		"plan":         "invalid_plan",
 		"isActive":     true,
 	})
-	rr := doTenantRequest(tenantController, req)
+	rr := app.MakeRequest(req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", rr.Code)
+	}
+}
+
+func TestSearchTenantsHandler(t *testing.T) {
+	t.Parallel()
+	app := testutils.NewTestApp(t)
+	defer app.Close()
+
+	searchTenantsController := NewSearchTenantController(app.App)
+	app.TestRouter.Get("/tenants", searchTenantsController.SearchTenantsHandler)
+
+	// Test cases
+	testCases := []struct {
+		name           string
+		queryString    string
+		expectedStatus int
+		expectedCount  int
+		checkResults   func(t *testing.T, response map[string]interface{})
+	}{
+		{
+			name:           "Search all tenants",
+			queryString:    "/tenants",
+			expectedStatus: http.StatusOK,
+			expectedCount:  2,
+			checkResults:   nil,
+		},
+		{
+			name:           "Search by tenant name",
+			queryString:    "/tenants?tenantName=Acme",
+			expectedStatus: http.StatusOK,
+			expectedCount:  1,
+			checkResults: func(t *testing.T, response map[string]interface{}) {
+				tenants := response["tenants"].([]interface{})
+				for _, tenant := range tenants {
+					tenantObj := tenant.(map[string]interface{})
+					if !strings.Contains(tenantObj["tenantName"].(string), "Acme") {
+						t.Errorf("Expected tenant name to contain 'Acme', got %s", tenantObj["tenantName"])
+					}
+				}
+			},
+		},
+		{
+			name:           "Search by plan",
+			queryString:    "/tenants?plan=paid",
+			expectedStatus: http.StatusOK,
+			expectedCount:  1,
+			checkResults: func(t *testing.T, response map[string]interface{}) {
+				tenants := response["tenants"].([]interface{})
+				tenant := tenants[0].(map[string]interface{})
+				if tenant["plan"] != "paid" {
+					t.Errorf("Expected plan to be 'paid', got %s", tenant["plan"])
+				}
+			},
+		},
+		{
+			name:           "Search by active status",
+			queryString:    "/tenants?isActive=false",
+			expectedStatus: http.StatusOK,
+			expectedCount:  0,
+			checkResults: func(t *testing.T, response map[string]interface{}) {
+				tenants := response["tenants"].([]interface{})
+				if len(tenants) != 0 {
+					t.Errorf("Expected 0 tenants, got %d", len(tenants))
+				}
+			},
+		},
+		{
+			name:           "Search by email",
+			queryString:    "/tenants?contactEmail=admin@a",
+			expectedStatus: http.StatusOK,
+			expectedCount:  1,
+			checkResults: func(t *testing.T, response map[string]interface{}) {
+				tenants := response["tenants"].([]interface{})
+				for _, tenant := range tenants {
+					tenantObj := tenant.(map[string]interface{})
+					if !strings.Contains(tenantObj["contactEmail"].(string), "admin") {
+						t.Errorf("Expected email to contain 'admin', got %s", tenantObj["contactEmail"])
+					}
+				}
+			},
+		},
+		{
+			name:           "Pagination - page 1, size 2",
+			queryString:    "/tenants?page=1&pageSize=2",
+			expectedStatus: http.StatusOK,
+			expectedCount:  2,
+			checkResults: func(t *testing.T, response map[string]interface{}) {
+				metadata := response["metadata"].(map[string]interface{})
+				if metadata["currentPage"].(float64) != 1 {
+					t.Errorf("Expected currentPage to be 1, got %v", metadata["currentPage"])
+				}
+				if metadata["pageSize"].(float64) != 2 {
+					t.Errorf("Expected pageSize to be 2, got %v", metadata["pageSize"])
+				}
+			},
+		},
+		{
+			name:           "Sorting - by tenant name ascending",
+			queryString:    "/tenants?sort=tenantName",
+			expectedStatus: http.StatusOK,
+			expectedCount:  2,
+			checkResults: func(t *testing.T, response map[string]interface{}) {
+				tenants := response["tenants"].([]interface{})
+				// Check if sorted
+				var names []string
+				for _, tenant := range tenants {
+					tenantObj := tenant.(map[string]interface{})
+					names = append(names, tenantObj["tenantName"].(string))
+				}
+
+				sortedNames := make([]string, len(names))
+				copy(sortedNames, names)
+				sort.Strings(sortedNames)
+
+				for i := range names {
+					if names[i] != sortedNames[i] {
+						t.Errorf("Expected sorted names, got unsorted")
+						break
+					}
+				}
+			},
+		},
+		{
+			name:           "Sorting - by tenant name descending",
+			queryString:    "/tenants?sort=-tenantName",
+			expectedStatus: http.StatusOK,
+			expectedCount:  2,
+			checkResults: func(t *testing.T, response map[string]interface{}) {
+				tenants := response["tenants"].([]interface{})
+				// Check if sorted in descending order
+				var names []string
+				for _, tenant := range tenants {
+					tenantObj := tenant.(map[string]interface{})
+					names = append(names, tenantObj["tenantName"].(string))
+				}
+
+				sortedNames := make([]string, len(names))
+				copy(sortedNames, names)
+				sort.Sort(sort.Reverse(sort.StringSlice(sortedNames)))
+
+				for i := range names {
+					if names[i] != sortedNames[i] {
+						t.Errorf("Expected reverse sorted names, got unsorted")
+						break
+					}
+				}
+			},
+		},
+		{
+			name:           "Invalid sort field",
+			queryString:    "/tenants?sort=invalidField",
+			expectedStatus: http.StatusBadRequest,
+			expectedCount:  0,
+			checkResults:   nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := testutils.CreateGetRequest(tc.queryString)
+			rr := app.MakeRequest(req)
+
+			// Check status code
+			if rr.Code != tc.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tc.expectedStatus, rr.Code)
+			}
+
+			// For successful requests, check the response content
+			if tc.expectedStatus == http.StatusOK {
+				var response map[string]interface{}
+				err := json.Unmarshal(rr.Body.Bytes(), &response)
+				if err != nil {
+					t.Fatalf("Failed to unmarshal response: %v", err)
+				}
+
+				tenants := response["tenants"].([]interface{})
+				if len(tenants) != tc.expectedCount {
+					t.Errorf("Expected %d tenants, got %d", tc.expectedCount, len(tenants))
+				}
+
+				if tc.checkResults != nil {
+					tc.checkResults(t, response)
+				}
+			}
+		})
 	}
 }

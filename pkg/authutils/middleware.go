@@ -2,28 +2,31 @@ package authutils
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 
 	"github.com/alexedwards/scs/v2"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 )
 
-type getUserExistsFn[T any] func(ctx context.Context, user T) bool
+type getUserExistsFn func(ctx context.Context, db dbutils.DB, user User) bool
 
-func GetSessionMiddleware[T any](
+func GetSessionMiddleware(
 	sessionManager *scs.SessionManager,
-	userExistsFn getUserExistsFn[T],
+	userExistsFn getUserExistsFn,
+	db *sql.DB,
 ) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, ok := sessionManager.Get(r.Context(), "user").(T)
+			user, ok := sessionManager.Get(r.Context(), "user").(User)
 			if !ok {
 				httputils.UnauthorizedResponse(w, r)
 
 				return
 			}
 
-			exists := userExistsFn(r.Context(), user)
+			exists := userExistsFn(r.Context(), db, user)
 			if !exists {
 				httputils.UnauthorizedResponse(w, r)
 
