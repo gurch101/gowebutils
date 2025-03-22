@@ -219,9 +219,9 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 	var users []User
 
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	qb := dbutils.NewQueryBuilder(db).Select("id", "user_name").From("users")
 
@@ -248,9 +248,9 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 func TestQueryBuilder_QueryRow(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	var id int64
 
@@ -267,9 +267,9 @@ func TestQueryBuilder_QueryRow(t *testing.T) {
 func TestQueryBuilder_QueryRowNoRow(t *testing.T) {
 	t.Parallel()
 
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	var id int64
 

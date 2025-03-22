@@ -11,9 +11,9 @@ import (
 
 func TestUpdateByID(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	fields := map[string]any{
 		"user_name": "Jane Doe",
@@ -48,9 +48,9 @@ func TestUpdateByID(t *testing.T) {
 
 func TestUpdateByID_ErrorHandling(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	tests := []struct {
 		name     string

@@ -10,9 +10,9 @@ import (
 
 func TestInsert(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	fields := map[string]any{
 		"tenant_name":   "Test Tenant",
@@ -33,9 +33,9 @@ func TestInsert(t *testing.T) {
 
 func TestInsert_ErrorHandling(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	tests := []struct {
 		name   string

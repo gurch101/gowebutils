@@ -35,7 +35,7 @@ func (tc *UpdateTenantController) UpdateTenantHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	tenant, err := GetTenantByID(r.Context(), tc.app.DB, id)
+	tenant, err := GetTenantByID(r.Context(), tc.app.DB(), id)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 
@@ -65,7 +65,7 @@ func (tc *UpdateTenantController) UpdateTenantHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	err = UpdateTenant(r.Context(), tc.app.DB, tenant)
+	err = UpdateTenant(r.Context(), tc.app.DB(), tenant)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 

@@ -27,7 +27,7 @@ func (tc *DeleteTenantController) DeleteTenantHandler(w http.ResponseWriter, r *
 		return
 	}
 
-	err = DeleteTenantByID(r.Context(), tc.app.DB, id)
+	err = DeleteTenantByID(r.Context(), tc.app.DB(), id)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 

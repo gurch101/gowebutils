@@ -122,6 +122,7 @@ linters-settings:
       - i
       - n
       - ok
+      - db
     ignore-decls:
       - db *sql.DB
       - db DB

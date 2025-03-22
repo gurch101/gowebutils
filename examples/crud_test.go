@@ -45,7 +45,7 @@ func TestCreateTenant(t *testing.T) {
 	}
 
 	var tenantID int64
-	err = app.DB.QueryRow("SELECT id FROM tenants WHERE tenant_name = ?", "TestTenant").Scan(&tenantID)
+	err = app.DB().QueryRow("SELECT id FROM tenants WHERE tenant_name = ?", "TestTenant").Scan(&tenantID)
 	if err != nil {
 		t.Fatalf("Failed to query tenant: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestDeleteTenantHandler(t *testing.T) {
 
 	// Verify that the tenant has been deleted
 	var count int
-	err := app.DB.QueryRow("SELECT COUNT(*) FROM tenants WHERE id = 1").Scan(&count)
+	err := app.DB().QueryRow("SELECT COUNT(*) FROM tenants WHERE id = 1").Scan(&count)
 	if err != nil {
 		t.Fatalf("Failed to query tenant: %v", err)
 	}
@@ -301,7 +301,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 		Plan         string
 		IsActive     bool
 	}
-	err = app.DB.QueryRow(`SELECT tenant_name, contact_email, plan, is_active FROM tenants WHERE id = 1`).
+	err = app.DB().QueryRow(`SELECT tenant_name, contact_email, plan, is_active FROM tenants WHERE id = 1`).
 		Scan(&updatedTenant.TenantName, &updatedTenant.ContactEmail, &updatedTenant.Plan, &updatedTenant.IsActive)
 	if err != nil {
 		t.Fatalf("Failed to query updated tenant: %v", err)

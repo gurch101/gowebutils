@@ -19,12 +19,12 @@ type TestApp struct {
 
 func NewTestApp(t *testing.T) TestApp {
 	t.Helper()
-	db, closer := SetupTestDB(t)
+	db := SetupTestDB(t)
 	mailer := NewMockMailer()
 	fileService := NewMockFileService()
 
 	app, err := app.NewApp(
-		app.WithDB(db, closer),
+		app.WithDB(db),
 		app.WithMailer(mailer),
 		app.WithFileService(fileService),
 		app.WithGetUserExistsFn(getUserExists),

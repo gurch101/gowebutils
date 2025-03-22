@@ -45,7 +45,7 @@ func (tc *SearchTenantController) SearchTenantsHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	tenants, pagination, err := SearchTenants(tc.app.DB, searchTenantsRequest)
+	tenants, pagination, err := SearchTenants(tc.app.DB(), searchTenantsRequest)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 		return

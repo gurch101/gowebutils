@@ -11,9 +11,9 @@ import (
 
 func TestGetByID(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	t.Run("successful retrieval", func(t *testing.T) {
 		var name, email string
@@ -72,9 +72,9 @@ func TestGetByID(t *testing.T) {
 
 func TestExists(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	t.Run("existing record", func(t *testing.T) {
 		exists := dbutils.Exists(context.Background(), db, "users", 1)

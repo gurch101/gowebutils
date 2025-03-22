@@ -35,11 +35,10 @@ var (
 
 // App is the main application struct.
 type App struct {
-	DB                *sql.DB
+	db                *dbutils.DBPool
 	FileService       fsutils.FileService
 	Mailer            mailutils.Mailer
 	htmlTemplateMap   map[string]*template.Template
-	dbCloser          func()
 	getUserExistsFn   func(ctx context.Context, db dbutils.DB, user authutils.User) bool
 	getOrCreateUserFn func(
 		ctx context.Context,
@@ -76,8 +75,7 @@ func (c *config) getEnvVarString(key string) string {
 }
 
 type options struct {
-	db                *sql.DB
-	dbCloser          func()
+	db                *dbutils.DBPool
 	mailer            mailutils.Mailer
 	emailTemplateMap  map[string]*template.Template
 	htmlTemplateMap   map[string]*template.Template
@@ -93,10 +91,9 @@ type options struct {
 
 type Option func(options *options) error
 
-func WithDB(db *sql.DB, closer func()) Option {
+func WithDB(db *sql.DB) Option {
 	return func(options *options) error {
-		options.db = db
-		options.dbCloser = closer
+		options.db = dbutils.FromDB(db)
 
 		return nil
 	}
@@ -193,9 +190,8 @@ func NewApp(opts ...Option) (*App, error) {
 	}
 
 	if options.db == nil {
-		db, closer := dbutils.Open(parser.ParseEnvStringPanic("DB_FILEPATH"))
+		db := dbutils.OpenDBPool(parser.ParseEnvStringPanic("DB_FILEPATH"))
 		options.db = db
-		options.dbCloser = closer
 	}
 
 	if options.fileService == nil {
@@ -217,7 +213,7 @@ func NewApp(opts ...Option) (*App, error) {
 		options.mailer = mailer
 	}
 
-	sessionManager := authutils.CreateSessionManager(options.db)
+	sessionManager := authutils.CreateSessionManager(options.db.WriteDB())
 	sessionMiddleware := authutils.GetSessionMiddleware(sessionManager, options.getUserExistsFn, options.db)
 
 	if options.router == nil {
@@ -228,11 +224,10 @@ func NewApp(opts ...Option) (*App, error) {
 	options.router.Handle("/static/*", http.StripPrefix("/static", fileServer))
 
 	return &App{
-		DB:                options.db,
+		db:                options.db,
 		FileService:       options.fileService,
 		Mailer:            options.mailer,
 		htmlTemplateMap:   options.htmlTemplateMap,
-		dbCloser:          options.dbCloser,
 		getUserExistsFn:   options.getUserExistsFn,
 		getOrCreateUserFn: options.getOrCreateUserFn,
 		router:            options.router,
@@ -259,7 +254,7 @@ func (a *App) GetEnvVarString(key string) string {
 
 // Close closes any resources used by the App.
 func (a *App) Close() {
-	a.dbCloser()
+	a.db.Close()
 }
 
 // RenderTemplate renders an HTML template with the given name and data.
@@ -272,6 +267,10 @@ func (a *App) RenderTemplate(wr io.Writer, name string, data any) error {
 	return nil
 }
 
+func (a *App) DB() *dbutils.DBPool {
+	return a.db
+}
+
 func (a *App) Start() error {
 	logger := httputils.InitializeSlog(parser.ParseEnvString("LOG_LEVEL", "info"))
 
@@ -279,7 +278,7 @@ func (a *App) Start() error {
 		func(ctx context.Context, email string, inviteTokenPayload map[string]any) (
 			authutils.User, error,
 		) {
-			return a.getOrCreateUserFn(ctx, a.DB, email, inviteTokenPayload)
+			return a.getOrCreateUserFn(ctx, a.DB(), email, inviteTokenPayload)
 		})
 	a.AddPublicRoute("GET", "/login", oidcController.LoginHandler)
 	a.AddPublicRoute("GET", "/register", oidcController.RegisterHandler)

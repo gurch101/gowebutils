@@ -61,10 +61,10 @@ func getProjectRoot() string {
 	}
 }
 
-func SetupTestDB(t *testing.T) (*sql.DB, func()) {
+func SetupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
-	db, closer := dbutils.Open(":memory:")
+	db := dbutils.Open(":memory:")
 
 	// Apply all migrations
 	projectRoot := getProjectRoot()
@@ -99,5 +99,5 @@ func SetupTestDB(t *testing.T) (*sql.DB, func()) {
 		t.Fatalf("Failed to seed database: %v", err)
 	}
 
-	return db, closer
+	return db
 }

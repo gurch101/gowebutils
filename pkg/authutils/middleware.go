@@ -2,7 +2,6 @@ package authutils
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 
 	"github.com/alexedwards/scs/v2"
@@ -15,7 +14,7 @@ type getUserExistsFn func(ctx context.Context, db dbutils.DB, user User) bool
 func GetSessionMiddleware(
 	sessionManager *scs.SessionManager,
 	userExistsFn getUserExistsFn,
-	db *sql.DB,
+	db dbutils.DB,
 ) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

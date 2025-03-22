@@ -34,7 +34,7 @@ func (tc *GetTenantController) GetTenantHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	tenant, err := GetTenantByID(r.Context(), tc.app.DB, id)
+	tenant, err := GetTenantByID(r.Context(), tc.app.DB(), id)
 
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)

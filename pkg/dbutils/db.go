@@ -21,6 +21,7 @@ type DB interface {
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
 // WithTransaction manages transactions and supports nesting using savepoints.
@@ -123,9 +124,8 @@ func setTransactionDepth(ctx context.Context, depth int) context.Context {
 	return context.WithValue(ctx, transactionDepthKey, depth)
 }
 
-// Open opens a SQLite database file.
-func Open(filepath string) (*sql.DB, func()) {
-	db, err := sql.Open(SqliteDriverName, filepath+"?_foreign_keys=1&_journal=WAL")
+func openDB(dsn string) *sql.DB {
+	db, err := sql.Open(SqliteDriverName, dsn)
 	if err != nil {
 		panic(err)
 	}
@@ -134,12 +134,15 @@ func Open(filepath string) (*sql.DB, func()) {
 		panic(err)
 	}
 
-	closer := func() {
-		closeErr := db.Close()
-		if closeErr != nil {
-			panic(closeErr)
-		}
-	}
+	return db
+}
 
-	return db, closer
+// Open opens a SQLite database file.
+func Open(filepath string) *sql.DB {
+	return openDB(filepath + "?_foreign_keys=1&_journal=WAL")
+}
+
+// OpenWithMode opens a SQLite database file with a specific mode.
+func OpenWithMode(filepath string, mode string) *sql.DB {
+	return openDB(filepath + "?_foreign_keys=1&_journal=WAL&mode=" + mode)
 }

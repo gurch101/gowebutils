@@ -11,9 +11,9 @@ import (
 
 func TestDeleteByID(t *testing.T) {
 	t.Parallel()
-	db, closer := testutils.SetupTestDB(t)
+	db := testutils.SetupTestDB(t)
 
-	defer closer()
+	defer db.Close()
 
 	err := dbutils.DeleteByID(context.Background(), db, "users", 1)
 	if err != nil {
@@ -59,9 +59,9 @@ func TestDelete_ErrorHandling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			db, closer := testutils.SetupTestDB(t)
+			db := testutils.SetupTestDB(t)
 
-			defer closer()
+			defer db.Close()
 
 			err := dbutils.DeleteByID(context.Background(), db, tt.table, tt.id)
 

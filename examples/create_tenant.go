@@ -51,7 +51,7 @@ func (c *CreateTenantController) CreateTenantHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	tenantID, err := CreateTenant(r.Context(), c.app.DB, &createTenantRequest)
+	tenantID, err := CreateTenant(r.Context(), c.app.DB(), &createTenantRequest)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 
