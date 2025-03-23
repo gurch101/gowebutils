@@ -2,6 +2,21 @@ why does favicon request lead to login?
 
 - make this work with postgresql
 
-- make this work with multiple read connections and 1 write connection
+- multiple tenanted sqlite dbs
 
-- add docusaurus
+- web sockets for long-running reports and alerts
+
+- email notifications for failed requests
+
+- email notifications for failed background jobs?
+
+- update delete test error check to use errors.Is
+
+- update query_builder to use QueryContext and QueryRowContext
+
+mailer:
+- see if I can get LoadTemplates to work without passing a path
+
+- add tests for mailer where I test the actual template itself
+
+- what happens to mails in progress when the server is shutdown?

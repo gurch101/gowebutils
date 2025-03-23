@@ -23,11 +23,7 @@ var ErrTemplateExecution = errors.New("error executing mail template")
 
 const retryInterval = 500 * time.Millisecond
 
-// MailSender is an interface for sending emails.
-type MailSender interface {
-	Send(recipient, templateName string, data map[string]string) error
-}
-
+// Mailer is an interface for sending emails.
 type Mailer interface {
 	Send(recipient, templateName string, data map[string]string)
 }
@@ -39,8 +35,7 @@ type Emailer struct {
 	templates map[string]*template.Template
 }
 
-// New initializes a new Mailer instance.
-func NewMailer(
+func newMailer(
 	host string,
 	port int,
 	username, password, sender string,
@@ -54,7 +49,7 @@ func NewMailer(
 // InitMailer initializes a new Mailer instance from SMTP_HOST, SMTP_PORT,
 // SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM environment variables.
 func InitMailer(templates map[string]*template.Template) *Emailer {
-	return NewMailer(
+	return newMailer(
 		parser.ParseEnvStringPanic("SMTP_HOST"),
 		parser.ParseEnvIntPanic("SMTP_PORT"),
 		parser.ParseEnvStringPanic("SMTP_USERNAME"),

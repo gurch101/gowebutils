@@ -1,3 +1,5 @@
+// The fsutils package provides utilities for managing files in an S3 bucket,
+// including uploading, downloading, and deleting objects.
 package fsutils
 
 import (
