@@ -9,14 +9,15 @@ import (
 	"io/fs"
 )
 
-var errReadTemplate = errors.New("failed to read template")
+// ErrParseTemplate is an error that occurs when template parsing fails.
+var ErrParseTemplate = errors.New("failed to parse template")
 
 // LoadTemplates loads all the templates from the given embed.FS and returns a map of templates.
 // Panics if any error occurs.
-func LoadTemplates(templateFS embed.FS, path string) map[string]*template.Template {
+func LoadTemplates(templateFS embed.FS) map[string]*template.Template {
 	templates := make(map[string]*template.Template)
 
-	err := fs.WalkDir(templateFS, path, func(path string, entry fs.DirEntry, err error) error {
+	err := fs.WalkDir(templateFS, ".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -24,7 +25,7 @@ func LoadTemplates(templateFS embed.FS, path string) map[string]*template.Templa
 		if !entry.IsDir() {
 			tmpl, err := template.ParseFS(templateFS, path)
 			if err != nil {
-				return errReadTemplate
+				return ErrParseTemplate
 			}
 			// Store file content in the map using the file name as the key
 			templates[entry.Name()] = tmpl

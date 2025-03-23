@@ -26,6 +26,10 @@ type DB interface {
 
 // WithTransaction manages transactions and supports nesting using savepoints.
 func WithTransaction(ctx context.Context, db DB, callback func(tx DB) error) error {
+	if dbpool, ok := db.(*DBPool); ok {
+		return WithTransaction(ctx, dbpool.WriteDB(), callback)
+	}
+
 	depth := getTransactionDepth(ctx)
 
 	// Check if we're already in a transaction

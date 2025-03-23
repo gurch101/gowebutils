@@ -107,17 +107,17 @@ func WithMailer(mailer mailutils.Mailer) Option {
 	}
 }
 
-func WithEmailTemplates(emailTemplates embed.FS, path string) Option {
+func WithEmailTemplates(emailTemplates embed.FS) Option {
 	return func(options *options) error {
-		options.emailTemplateMap = templateutils.LoadTemplates(emailTemplates, path)
+		options.emailTemplateMap = templateutils.LoadTemplates(emailTemplates)
 
 		return nil
 	}
 }
 
-func WithHTMLTemplates(htmlTemplates embed.FS, path string) Option {
+func WithHTMLTemplates(htmlTemplates embed.FS) Option {
 	return func(options *options) error {
-		options.htmlTemplateMap = templateutils.LoadTemplates(htmlTemplates, path)
+		options.htmlTemplateMap = templateutils.LoadTemplates(htmlTemplates)
 
 		return nil
 	}

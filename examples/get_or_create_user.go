@@ -23,7 +23,7 @@ func GetOrCreateUser(ctx context.Context, db dbutils.DB, email string, tokenPayl
 	} else {
 		user, err := GetUserByEmail(ctx, db, email)
 		if err != nil {
-			if errors.Is(err, dbutils.ErrRecordNotFound) {
+			if errors.Is(err, ErrUserNotFound) {
 				user, err := RegisterUser(ctx, db, stringutils.NewUUID(), email, "")
 				if err != nil {
 					return authutils.User{}, err

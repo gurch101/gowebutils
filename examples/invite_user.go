@@ -19,6 +19,11 @@ func NewInviteUserController(app *app.App) *InviteUserController {
 	return &InviteUserController{app: app}
 }
 
+type InviteUserRequest struct {
+	UserName string `json:"userName"`
+	Email    string `json:"email"`
+}
+
 func (c *InviteUserController) InviteUser(w http.ResponseWriter, r *http.Request) {
 	inviteUserRequest, err := httputils.ReadJSON[InviteUserRequest](w, r)
 	if err != nil {
@@ -50,7 +55,13 @@ func (c *InviteUserController) InviteUser(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func InviteUser(_ context.Context, mailer mailutils.Mailer, hostName string, tenantID int64, username, email string) error {
+func InviteUser(
+	_ context.Context,
+	mailer mailutils.Mailer,
+	hostName string,
+	tenantID int64,
+	username, email string,
+) error {
 	payload := map[string]any{
 		"tenant_id": tenantID,
 		"email":     email,

@@ -2,6 +2,7 @@ package authutils
 
 import (
 	"context"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -98,6 +99,9 @@ func CreateOidcController(
 	sessionManager *scs.SessionManager,
 	getOrCreateUserFn GetOrCreateUser,
 ) *OidcController {
+	///nolint: exhaustruct
+	gob.Register(User{})
+
 	config, err := createOauthConfig(
 		parser.ParseEnvStringPanic("OIDC_CLIENT_ID"),
 		parser.ParseEnvStringPanic("OIDC_CLIENT_SECRET"),

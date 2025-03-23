@@ -16,7 +16,7 @@ var emailTemplates embed.FS
 
 func main() {
   app, err := app.NewApp(
-    app.WithEmailTemplates(emailTemplates, "templates/email"),
+    app.WithEmailTemplates(emailTemplates),
   )
   if err != nil {
     log.Fatal("Failed to initialize app:", err)

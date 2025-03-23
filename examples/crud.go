@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"log/slog"
-	"net/http"
 
 	"github.com/gurch101/gowebutils/pkg/app"
 
@@ -12,15 +11,6 @@ import (
 )
 
 type envelope map[string]interface{}
-
-type Controller interface {
-	GetMux() *http.ServeMux
-}
-
-type InviteUserRequest struct {
-	UserName string `json:"userName"`
-	Email    string `json:"email"`
-}
 
 /*
 func (c *TenantController) UploadFile(w http.ResponseWriter, r *http.Request) {
@@ -72,14 +62,6 @@ func (c *TenantController) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("delete file")
 }
-
-func (c *TenantController) Dashboard(w http.ResponseWriter, r *http.Request) {
-	err := c.app.RenderTemplate(w, "index.go.tmpl", nil)
-
-	if err != nil {
-		httputils.ServerErrorResponse(w, r, err)
-	}
-}
 */
 
 //go:embed templates/email
@@ -90,33 +72,34 @@ var htmlTemplates embed.FS
 
 func main() {
 	app, err := app.NewApp(
-		app.WithEmailTemplates(emailTemplates, "templates/email"),
-		app.WithHTMLTemplates(htmlTemplates, "templates/html"),
+		app.WithEmailTemplates(emailTemplates),
+		app.WithHTMLTemplates(htmlTemplates),
 		app.WithGetUserExistsFn(GetUserExists),
 		app.WithGetOrCreateUserFn(GetOrCreateUser),
 	)
 
 	if err != nil {
 		slog.Error(err.Error())
+
 		return
 	}
 
 	defer app.Close()
 
 	createTenantController := NewCreateTenantController(app)
-	app.AddProtectedRoute("POST", "/tenants", createTenantController.CreateTenantHandler)
+	app.AddProtectedRoute("POST", "/api/tenants", createTenantController.CreateTenantHandler)
 	getTenantController := NewGetTenantController(app)
-	app.AddProtectedRoute("GET", "/tenants/:id", getTenantController.GetTenantHandler)
+	app.AddProtectedRoute("GET", "/api/tenants/:id", getTenantController.GetTenantHandler)
 	deleteTenantController := NewDeleteTenantController(app)
-	app.AddProtectedRoute("DELETE", "/tenants/:id", deleteTenantController.DeleteTenantHandler)
+	app.AddProtectedRoute("DELETE", "/api/tenants/:id", deleteTenantController.DeleteTenantHandler)
 	updateTenantController := NewUpdateTenantController(app)
-	app.AddProtectedRoute("PUT", "/tenants/:id", updateTenantController.UpdateTenantHandler)
+	app.AddProtectedRoute("PUT", "/api/tenants/:id", updateTenantController.UpdateTenantHandler)
 	searchTenantController := NewSearchTenantController(app)
-	app.AddProtectedRoute("GET", "/tenants", searchTenantController.SearchTenantsHandler)
-
-	if err != nil {
-		slog.Error(err.Error())
-	}
+	app.AddProtectedRoute("GET", "/api/tenants", searchTenantController.SearchTenantsHandler)
+	dashboardController := NewDashboardController(app)
+	app.AddProtectedRoute("GET", "/", dashboardController.Dashboard)
+	inviteUserController := NewInviteUserController(app)
+	app.AddProtectedRoute("POST", "/api/invite", inviteUserController.InviteUser)
 
 	err = app.Start()
 	if err != nil {
