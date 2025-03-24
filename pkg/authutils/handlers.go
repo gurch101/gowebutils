@@ -109,7 +109,7 @@ func CreateOidcController(
 		parser.ParseEnvStringPanic("REGISTRATION_URL"),
 		parser.ParseEnvStringPanic("LOGOUT_URL"),
 		parser.ParseEnvStringPanic("POST_LOGOUT_REDIRECT_URL"),
-		parser.ParseEnvStringPanic("OIDC_REDIRECT_URL"),
+		parser.ParseEnvStringPanic("HOST")+"/auth/callback",
 	)
 	if err != nil {
 		slog.Error("failed to create oauth config", "error", err)

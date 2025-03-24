@@ -16,6 +16,7 @@ The `Insert` function inserts a single record into a table. It takes a context, 
 
 ```go
 type User struct {
+  ID      int64
   Name   string
   Email  string
   Version int64
@@ -35,15 +36,57 @@ There are a few ways to read a record from the database.
 
 #### Get By ID
 
-The `GetByID` function retrieves a single record from a table by its ID. It takes a context, a database connection, a table name, and an id. It returns a pointer to the record and an error, if any.
+The `GetByID` function retrieves a single record from a table by its ID. It takes a context, a database connection, a table name, and an id. It returns a pointer to the record and an error, if any. If no record is found, a `dbutils.ErrRecordNotFound` error is returned.
+
+```go
+func GetUserByID(ctx context.Context, db dbutils.DB, userid int64) (authutils.User, error) {
+  var user User
+  err := dbutils.GetByID(ctx, db, "users", userid, map[string]any{
+    "id":        &user.ID,
+    "name":      &user.Name,
+    "email":     &user.Email,
+  })
+
+  if err != nil {
+    return authutils.User{}, fmt.Errorf("get user query failed: %w", err)
+  }
+
+  return user, nil
+}
+```
 
 #### Get By
 
-The `GetBy` function retrieves a single record from a table by a where clause. It takes a context, a database connection, a table name, and a where clause. It returns a pointer to the record and an error, if any.
+The `GetBy` function retrieves a single record from a table by a where clause. It takes a context, a database connection, a table name, an id, and a map of fields to return. It returns an error, if any. If no record is found, a `dbutils.ErrRecordNotFound` error is returned. If more than on record is found, only the first record is scanned.
+
+```go
+func GetUserByEmail(ctx context.Context, db dbutils.DB, email string) (authutils.User, error) {
+  var user User
+  err := dbutils.GetBy(ctx, db, "users", userid, map[string]any{
+    "id":        &user.ID,
+    "name":      &user.Name,
+    "email":     &user.Email,
+  }, map[string]any {
+    "email": email,
+  })
+
+  if err != nil {
+    return authutils.User{}, fmt.Errorf("get user query failed: %w", err)
+  }
+
+  return user, nil
+}
+```
 
 #### Exists
 
-The `Exists` function checks if a record exists in a table by a where clause. It takes a context, a database connection, a table name, and a where clause. It returns a boolean and an error, if any.
+The `Exists` function checks if a record exists in a table by id. It takes a context, a database connection, a table name, and an id. It returns a boolean.
+
+```go
+func GetUserExists(ctx context.Context, db dbutils.DB, id int64) bool {
+  return dbutils.Exists(ctx, db, "users", id)
+}
+```
 
 ### Update
 

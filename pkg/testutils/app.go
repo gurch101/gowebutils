@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"context"
+	"embed"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/authutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/mailutils"
 )
 
 type TestApp struct {
@@ -17,10 +19,33 @@ type TestApp struct {
 	TestRouter *chi.Mux
 }
 
-func NewTestApp(t *testing.T) TestApp {
+type Option func(options *options) error
+
+type options struct {
+	emailTemplates *embed.FS
+}
+
+func WithEmailTemplates(emailTemplates *embed.FS) Option {
+	return func(options *options) error {
+		options.emailTemplates = emailTemplates
+
+		return nil
+	}
+}
+
+func NewTestApp(t *testing.T, opts ...Option) TestApp {
 	t.Helper()
+
+	var options options
+	for _, opt := range opts {
+		err := opt(&options)
+		if err != nil {
+			t.Fatalf("Failed to apply option: %v", err)
+		}
+	}
+
 	db := SetupTestDB(t)
-	mailer := NewMockMailer()
+	mailer := mailutils.NewMockMailer(mailutils.WithEmailTemplates(options.emailTemplates))
 	fileService := NewMockFileService()
 
 	app, err := app.NewApp(

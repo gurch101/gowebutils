@@ -22,7 +22,7 @@ func GetByID(ctx context.Context, db DB, tableName string, id int64, fields map[
 	return GetBy(ctx, db, tableName, fields, map[string]any{"id": id})
 }
 
-// GetBy gets a record from the database by the provided filters.
+// GetBy gets a record from the database with the provided filters.
 func GetBy(ctx context.Context, db DB, tableName string, fields map[string]any, filters map[string]any) error {
 	if len(filters) == 0 {
 		return ErrNoGetFilters

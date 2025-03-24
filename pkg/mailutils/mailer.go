@@ -28,9 +28,13 @@ type Mailer interface {
 	Send(recipient, templateName string, data map[string]string)
 }
 
+type Dialer interface {
+	DialAndSend(message ...*gomail.Message) error
+}
+
 // Mailer is a struct for sending emails.
 type Emailer struct {
-	dialer    *gomail.Dialer
+	dialer    Dialer
 	sender    string
 	templates map[string]*template.Template
 }
@@ -57,6 +61,14 @@ func InitMailer(templates map[string]*template.Template) *Emailer {
 		parser.ParseEnvStringPanic("SMTP_FROM"),
 		templates,
 	)
+}
+
+func InitMailerWithDialer(dialer Dialer, sender string, templates map[string]*template.Template) *Emailer {
+	return &Emailer{
+		dialer:    dialer,
+		sender:    sender,
+		templates: templates,
+	}
 }
 
 // Send sends an email from a template using the provided data.

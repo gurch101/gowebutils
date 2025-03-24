@@ -15,6 +15,5 @@ why does favicon request lead to login?
 - update query_builder to use QueryContext and QueryRowContext
 
 mailer:
-- add tests for mailer where I test the actual template itself
 
 - what happens to mails in progress when the server is shutdown?
