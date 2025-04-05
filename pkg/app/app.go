@@ -74,6 +74,34 @@ func (c *config) getEnvVarString(key string) string {
 	return strVal
 }
 
+func (c *config) getEnvVarInt(key string) int {
+	val, exists := c.envVars[key]
+	if !exists {
+		c.envVars[key] = parser.ParseEnvIntPanic(key)
+		val = c.envVars[key]
+	}
+
+	intVal, ok := val.(int)
+	if !ok {
+		panic(fmt.Sprintf("expected int value for key %s, but got %T", key, val))
+	}
+
+	return intVal
+}
+
+func (c *config) hasEnvVar(key string) bool {
+	_, exists := c.envVars[key]
+	if exists {
+		return true
+	}
+
+	if parser.ParseEnvString(key, "")	!= "" {
+		return true
+	}
+
+	return false
+}
+
 type options struct {
 	db                *dbutils.DBPool
 	mailer            mailutils.Mailer
@@ -248,8 +276,20 @@ func (a *App) AddPublicRoute(method, path string, handler http.HandlerFunc) {
 }
 
 // GetEnvVarString returns the value of the environment variable with the given key.
+// If the environment variable is not set, the app will panic.
 func (a *App) GetEnvVarString(key string) string {
 	return a.config.getEnvVarString(key)
+}
+
+// GetEnvVarInt returns the value of the environment variable with the given key as an integer.
+// If the environment variable is not set, the app will panic.
+func (a *App) GetEnvVarInt(key string) int {
+	return a.config.getEnvVarInt(key)
+}
+
+// HasEnvVar returns true if the environment variable with the given key is set.
+func (a *App) HasEnvVar(key string) bool {
+	return a.config.hasEnvVar(key)
 }
 
 // Close closes any resources used by the App.

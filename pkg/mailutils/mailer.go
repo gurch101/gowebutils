@@ -1,5 +1,4 @@
-// The mailer package contains a Mailer struct and associated methods for sending
-// emails
+// The mailer package enables sending emails using templates.
 package mailutils
 
 import (

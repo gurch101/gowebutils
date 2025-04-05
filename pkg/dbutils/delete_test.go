@@ -37,21 +37,25 @@ func TestDelete_ErrorHandling(t *testing.T) {
 		name  string
 		table string
 		id    int64
+		error error
 	}{
 		{
 			name:  "negative ID",
 			table: "users",
 			id:    -1,
+			error: dbutils.ErrRecordNotFound,
 		},
 		{
 			name:  "non-existent record",
 			table: "users",
 			id:    999,
+			error: dbutils.ErrRecordNotFound,
 		},
 		{
 			name:  "invalid table name",
 			table: "nonexistent_table",
 			id:    1,
+			error: dbutils.ErrNoSuchTable,
 		},
 	}
 
@@ -65,7 +69,7 @@ func TestDelete_ErrorHandling(t *testing.T) {
 
 			err := dbutils.DeleteByID(context.Background(), db, tt.table, tt.id)
 
-			if err == nil {
+			if !errors.Is(err, tt.error) {
 				t.Error("Expected error, got nil")
 			}
 		})

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -45,7 +46,7 @@ func (tc *SearchTenantController) SearchTenantsHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	tenants, pagination, err := SearchTenants(tc.app.DB(), searchTenantsRequest)
+	tenants, pagination, err := SearchTenants(r.Context(), tc.app.DB(), searchTenantsRequest)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 		return
@@ -65,8 +66,12 @@ type SearchTenantResponse struct {
 	CreatedAt    time.Time  `json:"createdAt"`
 }
 
-func SearchTenants(db dbutils.DB, searchTenantsRequest *SearchTenantsRequest) ([]*SearchTenantResponse, parser.PaginationMetadata, error) {
-	tenants, pagination, err := findTenants(db, searchTenantsRequest)
+func SearchTenants(
+	ctx context.Context,
+	db dbutils.DB,
+	searchTenantsRequest *SearchTenantsRequest,
+) ([]*SearchTenantResponse, parser.PaginationMetadata, error) {
+	tenants, pagination, err := findTenants(ctx, db, searchTenantsRequest)
 	if err != nil {
 		return nil, pagination, err
 	}
@@ -88,6 +93,7 @@ func SearchTenants(db dbutils.DB, searchTenantsRequest *SearchTenantsRequest) ([
 }
 
 func findTenants(
+	ctx context.Context,
 	db dbutils.DB,
 	searchTenantsRequest *SearchTenantsRequest) ([]tenantModel, parser.PaginationMetadata, error) {
 	var tenants []tenantModel
@@ -110,7 +116,7 @@ func findTenants(
 		AndWhereLike(contactEmailDBFieldName, dbutils.OpContains, searchTenantsRequest.ContactEmail).
 		OrderBy(searchTenantsRequest.Sort).
 		Page(searchTenantsRequest.Page, searchTenantsRequest.PageSize).
-		Exec(func(rows *sql.Rows) error {
+		QueryContext(ctx, func(rows *sql.Rows) error {
 			var tenant tenantModel
 			err := rows.Scan(
 				&totalRecords,

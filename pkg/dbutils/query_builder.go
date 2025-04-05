@@ -34,6 +34,7 @@ const (
 	OpEndsWith   QueryOperator = "ends_with"
 )
 
+// NewQueryBuilder creates a new QueryBuilder instance which can be used to build and execute SQL queries.
 func NewQueryBuilder(db DB) *QueryBuilder {
 	return &QueryBuilder{
 		selectFields: []string{},
@@ -246,16 +247,16 @@ func (qb *QueryBuilder) Build() (string, []interface{}) {
 	return query.String(), qb.args
 }
 
-// Exec executes the query and calls the callback function for each row.
-func (qb *QueryBuilder) Exec(callback func(*sql.Rows) error) error {
+// Query executes the query and calls the callback function for each row.
+func (qb *QueryBuilder) Query(callback func(*sql.Rows) error) error {
 	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
 	defer cancel()
 
-	return qb.ExecContext(ctx, callback)
+	return qb.QueryContext(ctx, callback)
 }
 
-// ExecContext executes the query with the given context and calls the callback function for each row.
-func (qb *QueryBuilder) ExecContext(ctx context.Context, callback func(*sql.Rows) error) error {
+// QueryContext executes the query with the given context and calls the callback function for each row.
+func (qb *QueryBuilder) QueryContext(ctx context.Context, callback func(*sql.Rows) error) error {
 	query, args := qb.Build()
 
 	rows, err := qb.db.QueryContext(ctx, query, args...)

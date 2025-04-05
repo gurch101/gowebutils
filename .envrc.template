@@ -16,9 +16,6 @@ export RATE_LIMIT_RPS=
 # defaults to 20
 export RATE_LIMIT_BURST=
 
-# space separatedd list of origins
-export CORS_ALLOWED_ORIGINS=
-
 export OIDC_CLIENT_ID=
 export OIDC_CLIENT_SECRET=
 # The base path for the /.well-known/openid-configuration endpoint
@@ -28,7 +25,7 @@ export REGISTRATION_URL=
 # The IDP user logout URL
 export LOGOUT_URL=
 # Needs to be added as allowed callback URL in the IDP
-export POST_LOGOUT_REDIRECT_URL="http://localhost:8080/static/bye.html"
+export POST_LOGOUT_REDIRECT_URL="${HOST}/static/bye.html"
 
 export SMTP_HOST=""
 export SMTP_PORT=""

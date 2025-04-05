@@ -180,13 +180,15 @@ func TestQueryBuilder_SelectWithPage(t *testing.T) {
 func TestQueryBuilder_ComplexSelect(t *testing.T) {
 	t.Parallel()
 
+	name := "doe"
+
 	queryBuilder := dbutils.NewQueryBuilder(nil).
 		Select("u.id", "u.name", "p.name").
 		From("users u").
 		Join("INNER", "profiles p", "u.id = p.user_id").
 		Where("u.age > ?", 18).
 		AndWhere("p.active = ?", true).
-		OrWhere("u.name LIKE ?", "%doe%").
+		OrWhereLike("u.name", dbutils.OpContains, &name).
 		GroupBy("u.id", "u.name", "p.name").
 		OrderBy("u.name", "-u.id").
 		Limit(10).
@@ -225,7 +227,7 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 	qb := dbutils.NewQueryBuilder(db).Select("id", "user_name").From("users")
 
-	err := qb.Exec(func(rows *sql.Rows) error {
+	err := qb.Query(func(rows *sql.Rows) error {
 		var user User
 
 		err := rows.Scan(&user.ID, &user.Name)
