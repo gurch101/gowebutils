@@ -10,9 +10,9 @@ why does favicon request lead to login?
 
 - email notifications for failed background jobs?
 
-- update query_builder to use QueryContext and QueryRowContext
-
 - better stack traces
+
+- SPA hydration with template functions for user-specific data
 
 mailer:
 

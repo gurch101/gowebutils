@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     contact_email TEXT NOT NULL CHECK(contact_email <> ''),  -- Contact email of the tenant
     plan TEXT NOT NULL CHECK(plan <> ''),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,        -- Status of the tenant (active/inactive)
+    role_id INTEGER REFERENCES roles(id),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,   -- Timestamp when the tenant was created
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,   -- Timestamp when the tenant was last updated
     version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1)
@@ -46,36 +47,21 @@ CREATE TABLE IF NOT EXISTS user_login_attempts (
 
 CREATE INDEX IF NOT EXISTS user_login_attempts_user_id_idx ON user_login_attempts (user_id, created_at);
 
-CREATE TABLE IF NOT EXISTS groups (
-    id BIGINT PRIMARY KEY,               -- Unique ID for each group
-    group_name TEXT NOT NULL,        -- Name of the group (not null)
-    descr TEXT,                    -- Optional description of the group
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- Creation timestamp
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- Last update timestamp
-    tenant_id INTEGER NOT NULL,          -- Foreign key to the tenants table
-    CONSTRAINT fk_tenant
-        FOREIGN KEY (tenant_id)
-        REFERENCES tenants (id)
-        ON DELETE CASCADE
+CREATE TABLE roles (
+    tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+    id SERIAL PRIMARY KEY,
+    role_name VARCHAR(255) NOT NULL,
+    description TEXT
 );
 
--- -- Create a unique index on tenant_id and name
-CREATE UNIQUE INDEX IF NOT EXISTS groups_tenant_id_name_idx ON groups (tenant_id, group_name);
+CREATE INDEX IF NOT EXISTS roles_idx ON roles (tenant_id, role_name);
 
-CREATE TABLE IF NOT EXISTS user_groups (
-    id BIGINT PRIMARY KEY,               -- Unique ID for each record in user_groups
-    user_id BIGINT NOT NULL,            -- Foreign key to users table
-    group_id BIGINT NOT NULL,           -- Foreign key to groups table
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- Creation timestamp
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- Last update timestamp
-    CONSTRAINT fk_user
-        FOREIGN KEY (user_id)
-        REFERENCES users (id)
-        ON DELETE CASCADE,               -- Cascade delete if the user is deleted
-    CONSTRAINT fk_group
-        FOREIGN KEY (group_id)
-        REFERENCES groups (id)
-        ON DELETE CASCADE,               -- Cascade delete if the group is deleted
-    CONSTRAINT user_groups_user_id_group_id_unique
-        UNIQUE (user_id, group_id)       -- Ensure the user_id, group_id combination is unique
+CREATE TABLE role_permissions (
+    tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+    role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+    code VARCHAR(255) NOT NULL,  -- e.g., "create_post", "delete_user"
+    description TEXT,
+    PRIMARY KEY (role_id, code)
 );
+
+CREATE INDEX IF NOT EXISTS role_permissions_idx ON role_permissions (tenant_id, role_id, code);

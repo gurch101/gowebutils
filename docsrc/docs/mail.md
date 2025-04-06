@@ -71,7 +71,7 @@ The mailer uses Go's `html/template` package to render email content. Each templ
 Use a `MockMailer` to test email template rendering without sending actual emails. In your tests, replace the `Mailer` instance with a `MockMailer`.
 
 ```go
-	emailer := mailutils.NewMockMailer(mailutils.WithEmailTemplateMap(templates))
+  emailer := mailutils.NewMockMailer(mailutils.WithEmailTemplateMap(templates))
   // or
   emailer := mailutils.NewMockMailer(mailutils.WithEmailTemplates(templateFS))
 

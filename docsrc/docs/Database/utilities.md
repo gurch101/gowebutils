@@ -6,13 +6,20 @@ sidebar_position: 2
 
 [godoc](https://pkg.go.dev/github.com/gurch101/gowebutils/pkg/dbutils)
 
-The `dbutils` package provides a set of helper functions for performing CRUD (Create, Read, Update, Delete) operations on single records. The only requirement for these helpers is that the datable tables need to have a unique numeric `id` column and a numeric `version` column.
+The `dbutils` package provides a set of helper functions for performing CRUD (Create, Read, Update, Delete) operations on single database records. These helpers simplify common database tasks while maintaining proper error handling and data consistency.
 
-## Usage
+### Requirements
 
-### Create
+To use these helper functions, your database tables must have:
 
-The `Insert` function inserts a single record into a table. It takes a context, a database connection, a table name, and a map of column names and values. It returns the ID of the inserted record and an error if any.
+- A unique numeric id column
+- A numeric version column for optimistic concurrency control
+
+### Create Operations
+
+#### Insert
+
+The `Insert` function adds a single record to a table and returns the ID of the newly created record.
 
 ```go
 type User struct {
@@ -30,13 +37,11 @@ func InsertUser(ctx context.Context, db dbutil.DB, user *User) (*int64, error) {
 }
 ```
 
-### Read
-
-There are a few ways to read a record from the database.
+### Read Operations
 
 #### Get By ID
 
-The `GetByID` function retrieves a single record from a table by its ID. It takes a context, a database connection, a table name, and an id. It returns a pointer to the record and an error, if any. If no record is found, a `dbutils.ErrRecordNotFound` error is returned.
+Retrieves a single record by its ID. Returns `dbutils.ErrRecordNotFound` if no matching record exists.
 
 ```go
 func GetUserByID(ctx context.Context, db dbutils.DB, userid int64) (authutils.User, error) {
@@ -57,7 +62,7 @@ func GetUserByID(ctx context.Context, db dbutils.DB, userid int64) (authutils.Us
 
 #### Get By
 
-The `GetBy` function retrieves a single record from a table by a where clause. It takes a context, a database connection, a table name, an id, and a map of fields to return. It returns an error, if any. If no record is found, a `dbutils.ErrRecordNotFound` error is returned. If more than on record is found, only the first record is scanned.
+Retrieves a single record using a custom WHERE clause. Returns `dbutils.ErrRecordNotFound` if no matching record exists. If multiple records match, only the first one is returned.
 
 ```go
 func GetUserByEmail(ctx context.Context, db dbutils.DB, email string) (authutils.User, error) {
@@ -80,7 +85,7 @@ func GetUserByEmail(ctx context.Context, db dbutils.DB, email string) (authutils
 
 #### Exists
 
-The `Exists` function checks if a record exists in a table by id. It takes a context, a database connection, a table name, and an id. It returns a boolean.
+Checks if a record with the specified ID exists in the table.
 
 ```go
 func GetUserExists(ctx context.Context, db dbutils.DB, id int64) bool {
@@ -88,9 +93,11 @@ func GetUserExists(ctx context.Context, db dbutils.DB, id int64) bool {
 }
 ```
 
-### Update
+### Update Operations
 
-The `Update` function updates a single record in a table. It takes a context, a database connection, a table name, an id and version, and a map of column names and values to update. It returns an error, if any. If the version does not match, a `ErrEditConflict` error is returned.
+#### Update By ID
+
+Updates a record with optimistic concurrency control using the version column. Returns `ErrEditConflict` if the version doesn't match (indicating the record was modified by another process).
 
 ```go
 func UpdateUser(ctx context.Context, db dbutils.DB, user *User) error {
@@ -101,9 +108,11 @@ func UpdateUser(ctx context.Context, db dbutils.DB, user *User) error {
 }
 ```
 
-### Delete
+### Delete Operations
 
-The `Delete` function deletes a single record from a table. It takes a context, a database connection, a table name, and an id. It returns an error, if any.
+#### Delete By ID
+
+Removes a record from the table by its ID.
 
 ```go
 func DeleteTenantByID(ctx context.Context, db dbutils.DB, userID int64) error {
@@ -113,12 +122,12 @@ func DeleteTenantByID(ctx context.Context, db dbutils.DB, userID int64) error {
 
 ## Error Handling
 
-All sql errors returned by the `dbutils` helper functions are wrapped. See [errors](https://pkg.go.dev/github.com/gurch101/gowebutils/pkg/dbutils#pkg-variables) for all possible errors. Use `errors.Is` to check for specific errors and handle them accordingly.
-
-### Example
+All SQL errors returned by the `dbutils` helper functions are wrapped with additional context. Use `errors.Is` to check for specific error types and handle them appropriately.
 
 ```go
 if errors.Is(err, dbutils.ErrUniqueConstraint) && strings.Contains(err.Error(), "name") {
   return nil, ErrUserAlreadyRegistered
 }
 ```
+
+See the [package documentation](https://pkg.go.dev/github.com/gurch101/gowebutils/pkg/dbutils#pkg-variables) for a complete list of error types.

@@ -32,7 +32,7 @@ func (c *InviteUserController) InviteUser(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	user := authutils.ContextGetUser(r)
+	user := authutils.GetUserFromContext(r.Context())
 
 	err = InviteUser(
 		r.Context(),

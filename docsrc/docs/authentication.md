@@ -1,18 +1,20 @@
 # Authentication
 
-The `authutils` package provides user registration and authentication functionality that leverages OIDC via AWS cognito. Upon initialization, the following endpoints are available:
+The `authutils` package provides comprehensive user authentication and registration functionality using OpenID Connect (OIDC) with AWS Cognito. This integration simplifies secure user management in your web application.
+
+### Endpoints
 
 - `/login`: Initiates the OIDC authentication flow.
 - `/logout`: Initiates the OIDC logout flow.
 - `/register`: Initiates the user registration flow.
-- `/auth/callback`: Callback endpoint for OIDC authentication. Upon success, the user is redirected to `/`.
+- `/auth/callback`: Handles OIDC authentication responses (redirects to / on success).
 
 ### Initialization
 
 1. Set up the following environment variables:
 
 ```sh
-# The host of the application
+# Your application's host URL
 export HOST="https://localhost:8080"
 export OIDC_CLIENT_ID="your-client-id"
 export OIDC_CLIENT_SECRET="your-client-secret"
@@ -40,13 +42,13 @@ func GetOrCreateUser(ctx context.Context, db dbutils.DB, email string, tokenPayl
 3. Implement the following function which will be called on every request to a protected route with a valid session:
 
 ```go
-// The user passed to this function will be the user in the session store
+// Verifies that a user in the session is still valid
 func GetUserExists(ctx context.Context, db dbutils.DB, user authutils.User) bool {
   // return true if the user is valid
 }
 ```
 
-4. When initializing the `App`, pass the `GetOrCreateUser` and the `GetUserExists` functions when creating an `App`:
+4. When initializing your application, provide these functions:
 
 ```go
 app, err := app.NewApp(
@@ -57,31 +59,31 @@ app, err := app.NewApp(
 
 ### Invite User Flow
 
-The following can be used to invite a user to your application. Invite tokens are valid for 7 days.
+You can implement a user invitation flow with the following function. Invite tokens remain valid for 7 days.
 
 ```go
 func InviteUser(
-	_ context.Context,
-	mailer mailutils.Mailer,
-	hostName string,
-	tenantID int64,
-	username, email string,
+  _ context.Context,
+  mailer mailutils.Mailer,
+  hostName string,
+  tenantID int64,
+  username, email string,
 ) error {
-	payload := map[string]any{
-		"tenant_id": tenantID,
-		"email":     email,
-		"username":  username,
-	}
-	inviteToken, err := authutils.CreateInviteToken(payload)
+  payload := map[string]any{
+    "tenant_id": tenantID,
+    "email":     email,
+    "username":  username,
+  }
+  inviteToken, err := authutils.CreateInviteToken(payload)
 
-	if err != nil {
-		return err
-	}
+  if err != nil {
+    return err
+  }
 
-	mailer.Send(email, "invite.go.tmpl", map[string]string{
-		"URL": fmt.Sprintf("%s/register?code=%s", hostName, inviteToken),
-	})
+  mailer.Send(email, "invite.go.tmpl", map[string]string{
+    "URL": fmt.Sprintf("%s/register?code=%s", hostName, inviteToken),
+  })
 
-	return nil
+  return nil
 }
 ```

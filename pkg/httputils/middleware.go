@@ -51,6 +51,7 @@ func getRateLimitConfig() *RateLimitConfig {
 	return rateLimitConfig
 }
 
+// RateLimitMiddleware is a middleware that limits the number of requests per second per IP address.
 func RateLimitMiddleware(next http.Handler) http.Handler {
 	rateLimitConfig := getRateLimitConfig()
 

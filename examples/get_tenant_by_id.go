@@ -27,7 +27,7 @@ func NewGetTenantController(app *app.App) *GetTenantController {
 }
 
 func (tc *GetTenantController) GetTenantHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := parser.ReadIDPathParam(r)
+	id, err := parser.ParseIDPathParam(r)
 
 	if err != nil {
 		httputils.NotFoundResponse(w, r)

@@ -27,7 +27,7 @@ type UpdateTenantRequest struct {
 }
 
 func (tc *UpdateTenantController) UpdateTenantHandler(w http.ResponseWriter, r *http.Request) {
-	id, err := parser.ReadIDPathParam(r)
+	id, err := parser.ParseIDPathParam(r)
 
 	if err != nil {
 		httputils.NotFoundResponse(w, r)

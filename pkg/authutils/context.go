@@ -18,11 +18,11 @@ func ContextSetUser(r *http.Request, user User) *http.Request {
 	return r.WithContext(ctx)
 }
 
-// The ContextGetUser() retrieves the User struct from the request context. The only
+// GetUserFromContext retrieves the User struct from the request context. The only
 // time that we'll use this helper is when we logically expect there to be User struct
 // value in the context, and if it doesn't exist it will firmly be an 'unexpected' error.
-func ContextGetUser(r *http.Request) User {
-	user, ok := r.Context().Value(userContextKey).(User)
+func GetUserFromContext(ctx context.Context) User {
+	user, ok := ctx.Value(userContextKey).(User)
 	if !ok {
 		panic("missing or invalid user value in request context")
 	}

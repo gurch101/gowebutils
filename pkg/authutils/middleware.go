@@ -38,3 +38,20 @@ func GetSessionMiddleware(
 		})
 	}
 }
+
+// RequirePermission checks if user has required permission. If not, returns 403.
+func RequirePermission(permission string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Get user from context (set by auth middleware)
+			user := GetUserFromContext(r.Context())
+			if !user.IsAdmin && !user.HasPermission(permission) {
+				httputils.ForbiddenResponse(w, r)
+
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}

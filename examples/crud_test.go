@@ -218,7 +218,7 @@ func TestDeleteTenantHandler(t *testing.T) {
 
 	// Verify that the tenant has been deleted
 	var count int
-	err := app.DB().QueryRowContext(context.Background(),"SELECT COUNT(*) FROM tenants WHERE id = 1").Scan(&count)
+	err := app.DB().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM tenants WHERE id = 1").Scan(&count)
 	if err != nil {
 		t.Fatalf("Failed to query tenant: %v", err)
 	}

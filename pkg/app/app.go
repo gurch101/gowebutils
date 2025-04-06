@@ -95,7 +95,7 @@ func (c *config) hasEnvVar(key string) bool {
 		return true
 	}
 
-	if parser.ParseEnvString(key, "")	!= "" {
+	if parser.ParseEnvString(key, "") != "" {
 		return true
 	}
 
@@ -268,6 +268,14 @@ func NewApp(opts ...Option) (*App, error) {
 // AddProtectedRoute adds a route that requires a valid session cookie or jwt to the App.
 func (a *App) AddProtectedRoute(method, path string, handler http.HandlerFunc) {
 	a.router.With(a.sessionMiddleware, middleware.NoCache).Method(method, path, handler)
+}
+
+func (a *App) AddProtectedRouteWithPermission(method, path string, handler http.HandlerFunc, permission string) {
+	a.router.With(
+		a.sessionMiddleware,
+		middleware.NoCache,
+		authutils.RequirePermission(permission),
+	).Method(method, path, handler)
 }
 
 // AddPublicRoute adds a route that does not require a valid session cookie or jwt to the App.

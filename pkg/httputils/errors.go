@@ -94,6 +94,19 @@ func UnauthorizedResponse(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ForbiddenResponse method is used to send a 403 Forbidden status code.
+// This can occur if a user tries to access a resource that they don't have permission to access.
+// If the request is made to an api endpoint, we will return a JSON response. Otherwise, we will redirect
+// the user to the login page.
+func ForbiddenResponse(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api") {
+		message := "You do not have permission to access this resource"
+		errorResponse(w, r, http.StatusForbidden, message)
+	} else {
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+	}
+}
+
 // HandleErrorResponse method is a utility function that will return the appropriate
 // error from the service layer of our application.
 func HandleErrorResponse(w http.ResponseWriter, r *http.Request, err error) {

@@ -2,20 +2,22 @@
 
 [godoc](https://pkg.go.dev/github.com/gurch101/gowebutils/pkg/fsutils)
 
-The `fsutils` package provides utilities for managing files in an S3 bucket, including uploading, downloading, and deleting objects.
+The `fsutils` package provides a comprehensive set of utilities for managing files in Amazon S3 buckets, including uploading, downloading, and deleting objects, allowing you to focus on your application logic rather than the details of cloud storage integration.
 
 ### Initialization
 
-The file service is automatically initialized when the App is created, provided the following environment variables are set:
+The file service is automatically initialized when you create an `App` instance, provided you've set the following environment variables:
 
 ```sh
+# S3 bucket configuration
 export AWS_S3_BUCKET_NAME="my-bucket"
 export AWS_S3_REGION="us-east-1"
+# AWS credentials
 export AWS_ACCESS_KEY_ID="my-access-key"
 export AWS_SECRET_ACCESS_KEY="my-secret-key"
 ```
 
-### Usage
+### Usage Examples
 
 #### Uploading a File
 
