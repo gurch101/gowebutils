@@ -1,6 +1,12 @@
-why does favicon request lead to login?
+- search generator with sparsefieldset support
 
-- make this work with postgresql
+- models.go with Field func
+
+- make the generator generate a Makefile, .envrc, .gitignore, .golangci.yml
+
+- why does favicon request lead to login?
+
+- make this work with postgresql/mysql
 
 - multiple tenanted sqlite dbs
 

@@ -42,7 +42,7 @@ type tenantModel struct {
 	Plan         TenantPlan
 	IsActive     bool
 	CreatedAt    time.Time
-	Version      int32
+	Version      int64
 }
 
 func newTenantModel(name, email string, plan TenantPlan) *tenantModel {

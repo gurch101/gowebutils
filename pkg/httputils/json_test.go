@@ -80,11 +80,7 @@ func TestWriteJSON(t *testing.T) {
 				Email: "alice@example.com",
 			},
 			headers: http.Header{"X-Custom-Header": []string{"CustomValue"}},
-			wantBody: `{
-	"name": "Alice",
-	"age": 30,
-	"email": "alice@example.com"
-}
+			wantBody: `{"name":"Alice","age":30,"email":"alice@example.com"}
 `,
 			wantHeader: map[string]string{
 				"Content-Type":    "application/json",
@@ -99,9 +95,7 @@ func TestWriteJSON(t *testing.T) {
 				"message": "Resource created",
 			},
 			headers: nil,
-			wantBody: `{
-	"message": "Resource created"
-}
+			wantBody: `{"message":"Resource created"}
 `,
 			wantHeader: map[string]string{
 				"Content-Type": "application/json",

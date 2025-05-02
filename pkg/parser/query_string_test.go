@@ -76,11 +76,11 @@ func TestFilters_ParseFilters(t *testing.T) {
 		qs       url.Values
 		expected parser.Filters
 	}{
-		{"default values", url.Values{}, parser.Filters{Page: 1, PageSize: 25, Sort: "id"}},
+		{"default values", url.Values{}, parser.Filters{Page: 1, PageSize: 25, Sort: "id", Fields: []string{}}},
 		{
 			"custom values",
 			url.Values{"page": {"2"}, "pageSize": {"20"}, "sort": {"name"}},
-			parser.Filters{Page: 2, PageSize: 20, Sort: "name"},
+			parser.Filters{Page: 2, PageSize: 20, Sort: "name", Fields: []string{}},
 		},
 	}
 
@@ -92,7 +92,7 @@ func TestFilters_ParseFilters(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"}, []string{"id", "name"})
 
 			if v.HasErrors() {
 				t.Errorf("unexpected error: %v", v.Errors)
@@ -124,7 +124,7 @@ func TestFilters_InvalidFilters(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"}, []string{"id", "name"})
 
 			if !v.HasErrors() {
 				t.Error("expected error, got nil")
@@ -161,7 +161,7 @@ func TestFilters_InvalidFilterValues(t *testing.T) {
 
 			var filters parser.Filters
 
-			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"})
+			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"}, []string{"id", "name"})
 
 			if !v.HasErrors() {
 				t.Error("expected validation errors, got none")
@@ -180,5 +180,29 @@ func TestFilters_InvalidFilterValues(t *testing.T) {
 				t.Errorf("expected errors for page, pageSize, and sort, got %v", errorFields)
 			}
 		})
+	}
+}
+
+func TestFilters_InvalidFields(t *testing.T) {
+	t.Parallel()
+
+	values := url.Values{"page": {"1"}, "pageSize": {"10"}, "sort": {"id"}, "fields": {"invalid"}}
+
+	v := validation.NewValidator()
+
+	var filters parser.Filters
+
+	filters.ParseQSMetadata(values, v, []string{"id", "name"}, []string{"id", "name"})
+
+	if !v.HasErrors() {
+		t.Error("expected validation errors, got none")
+	}
+
+	if len(v.Errors) != 1 {
+		t.Errorf("expected 1 error, got %d", len(v.Errors))
+	}
+
+	if v.Errors[0].Field != "fields" {
+		t.Errorf("expected error for fields, got %v", v.Errors[0].Field)
 	}
 }

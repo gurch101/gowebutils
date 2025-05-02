@@ -1,7 +1,10 @@
 // Package validation provides a validator for validating user input.
 package validation
 
-import "regexp"
+import (
+	"regexp"
+	"slices"
+)
 
 // EmailRX is a regex for sanity checking the format of email addresses.
 // The regex pattern used is taken from  https://html.spec.whatwg.org/#valid-e-mail-address.
@@ -37,6 +40,16 @@ func (v *Validator) Check(condition bool, field, message string) {
 	}
 }
 
+// ContainsAll checks if the second slice contains all elements of the first slice.
+func (v *Validator) ContainsAll(values, list []string, key, message string) {
+	for i := range values {
+		// add error and return if the value is not in the list
+		if !v.In(values[i], list, key, message+": "+values[i]) {
+			return
+		}
+	}
+}
+
 // Matches returns true if a string value matches a specific regexp pattern.
 func (v *Validator) Matches(value string, rx *regexp.Regexp, field, message string) {
 	v.Check(rx.MatchString(value), field, message)
@@ -51,14 +64,14 @@ func (v *Validator) Required(value, field, message string) {
 }
 
 // In returns true if a specific value is in a list of strings.
-func (v *Validator) In(value string, list []string, key, message string) {
-	for i := range list {
-		if value == list[i] {
-			return
-		}
+func (v *Validator) In(value string, list []string, key, message string) bool {
+	if slices.Contains(list, value) {
+		return true
 	}
 
 	v.AddError(key, message)
+
+	return false
 }
 
 // AddError adds an error to the Validator.

@@ -10,8 +10,9 @@ import (
 	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
-// Filters contains common query string parameters for pagination and sort.
+// Filters contains common query string parameters for fieldsets, pagination, and sort.
 type Filters struct {
+	Fields   []string
 	Page     int
 	PageSize int
 	Sort     string
@@ -49,13 +50,18 @@ func ParsePaginationMetadata(totalRecords, page, pageSize int) PaginationMetadat
 }
 
 const (
+	fieldsKey   = "fields"
 	sortKey     = "sort"
 	pageKey     = "page"
 	pageSizeKey = "pageSize"
 )
 
 // ParseQSMetadata parses the query string sort, page, and page size and populates the Filters struct.
-func (f *Filters) ParseQSMetadata(queryValues url.Values, v *validation.Validator, sortSafeList []string) {
+func (f *Filters) ParseQSMetadata(
+	queryValues url.Values,
+	v *validation.Validator,
+	fieldSafeList, sortSafeList []string,
+) {
 	defaultPage := 1
 
 	defaultPageSize := 25
@@ -85,12 +91,15 @@ func (f *Filters) ParseQSMetadata(queryValues url.Values, v *validation.Validato
 	f.PageSize = *pageSize
 	sort = ParseQSString(queryValues, sortKey, &defaultSort)
 	f.Sort = *sort
-	f.validate(v, sortSafeList)
+
+	f.Fields = ParseQSStringSlice(queryValues, "fields", fieldSafeList)
+
+	f.validate(v, fieldSafeList, sortSafeList)
 }
 
 // Validate checks that the page and page_size parameters contain sensible values and
 // that the sort parameter matches a value in the safelist.
-func (f *Filters) validate(v *validation.Validator, sortSafeList []string) {
+func (f *Filters) validate(v *validation.Validator, fieldSafeList, sortSafeList []string) {
 	const (
 		maxPageNumber = 10_000_000
 		maxPageSize   = 100
@@ -100,7 +109,7 @@ func (f *Filters) validate(v *validation.Validator, sortSafeList []string) {
 	v.Check(f.Page <= maxPageNumber, pageKey, "must be a maximum of 10 million")
 	v.Check(f.PageSize > 0, pageSizeKey, "must be greater than zero")
 	v.Check(f.PageSize <= maxPageSize, pageSizeKey, "must be a maximum of 100")
-	// Check that the sort parameter matches a value in the safelist.
+	v.ContainsAll(f.Fields, fieldSafeList, fieldsKey, "invalid field")
 	v.In(f.Sort, sortSafeList, sortKey, "invalid sort value")
 }
 
@@ -147,4 +156,15 @@ func ParseQSBool(queryValues url.Values, key string, defaultValue *bool) *bool {
 	result := strings.ToLower(val) == "true"
 
 	return &result
+}
+
+func ParseQSStringSlice(queryValues url.Values, key string, defaultSlice []string) []string {
+	val := queryValues.Get(key)
+	if val == "" {
+		return defaultSlice
+	}
+
+	val = strings.TrimSpace(val)
+
+	return strings.Split(val, ",")
 }

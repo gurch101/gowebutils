@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 func createRequestWithBody(t *testing.T, method, url string, payload interface{}) *http.Request {
@@ -37,7 +38,9 @@ func CreatePatchRequest(t *testing.T, url string, payload interface{}) *http.Req
 	return createRequestWithBody(t, http.MethodPatch, url, payload)
 }
 
-func CreateGetRequest(url string) *http.Request {
+func CreateGetRequest(t *testing.T, url string) *http.Request {
+	t.Helper()
+
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	httputils.SetJSONContentTypeRequestHeader(req)
 
@@ -72,4 +75,12 @@ func AssertError(t *testing.T, resp map[string]interface{}, expectedErrorField s
 
 func NewRouter() *chi.Mux {
 	return chi.NewRouter()
+}
+
+type ValidationErrorResponse struct {
+	Errors []validation.Error `json:"errors"`
+}
+
+func StringPtr(s string) *string {
+	return &s
 }

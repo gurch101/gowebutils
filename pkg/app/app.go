@@ -222,7 +222,7 @@ func NewApp(opts ...Option) (*App, error) {
 		options.db = db
 	}
 
-	if options.fileService == nil {
+	if options.fileService == nil && parser.ParseEnvString("AWS_S3_REGION", "") != "" {
 		fileService := fsutils.NewService(
 			parser.ParseEnvStringPanic("AWS_S3_REGION"),
 			parser.ParseEnvStringPanic("AWS_S3_BUCKET_NAME"),
@@ -232,7 +232,7 @@ func NewApp(opts ...Option) (*App, error) {
 		options.fileService = fileService
 	}
 
-	if options.mailer == nil {
+	if options.mailer == nil && parser.ParseEnvString("SMTP_HOST", "") != "" {
 		if options.emailTemplateMap == nil {
 			return nil, ErrEmailTemplatesNotFound
 		}
@@ -322,16 +322,18 @@ func (a *App) DB() *dbutils.DBPool {
 func (a *App) Start() error {
 	logger := httputils.InitializeSlog(parser.ParseEnvString("LOG_LEVEL", "info"))
 
-	oidcController := authutils.CreateOidcController(a.sessionManager,
-		func(ctx context.Context, email string, inviteTokenPayload map[string]any) (
-			authutils.User, error,
-		) {
-			return a.getOrCreateUserFn(ctx, a.DB(), email, inviteTokenPayload)
-		})
-	a.AddPublicRoute("GET", "/login", oidcController.LoginHandler)
-	a.AddPublicRoute("GET", "/register", oidcController.RegisterHandler)
-	a.AddPublicRoute("GET", "/auth/callback", oidcController.AuthCallback)
-	a.AddProtectedRoute("GET", "/logout", oidcController.LogoutHandler)
+	if parser.ParseEnvString("OIDC_CLIENT_ID", "") != "" {
+		oidcController := authutils.CreateOidcController(a.sessionManager,
+			func(ctx context.Context, email string, inviteTokenPayload map[string]any) (
+				authutils.User, error,
+			) {
+				return a.getOrCreateUserFn(ctx, a.DB(), email, inviteTokenPayload)
+			})
+		a.AddPublicRoute("GET", "/login", oidcController.LoginHandler)
+		a.AddPublicRoute("GET", "/register", oidcController.RegisterHandler)
+		a.AddPublicRoute("GET", "/auth/callback", oidcController.AuthCallback)
+		a.AddProtectedRoute("GET", "/logout", oidcController.LogoutHandler)
+	}
 
 	err := httputils.ServeHTTP(a.router, logger)
 	if err != nil {

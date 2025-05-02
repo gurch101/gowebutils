@@ -71,7 +71,7 @@ func (d DBPool) WithTransaction(ctx context.Context, callback func(tx DB) error)
 // Query executes a query with the given arguments.
 func (d DBPool) Query(query string, args ...any) (*sql.Rows, error) {
 	//nolint: wrapcheck
-	return d.writeDB.Query(query, args...)
+	return d.readDB.Query(query, args...)
 }
 
 // QueryContext executes a query with the given context and arguments.

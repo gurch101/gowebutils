@@ -123,6 +123,13 @@ type SlogLogEntry struct {
 
 // Write logs the request completion details.
 func (e *SlogLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Duration, _ interface{}) {
+	id, ok := e.request.Context().Value(middleware.RequestIDKey).(string)
+	requestID := "-"
+
+	if ok {
+		requestID = id
+	}
+
 	e.logger.InfoContext(e.request.Context(), "request completed",
 		slog.String("method", e.request.Method),
 		slog.String("path", e.request.URL.Path),
@@ -130,6 +137,7 @@ func (e *SlogLogEntry) Write(status, bytes int, _ http.Header, elapsed time.Dura
 		slog.Int("bytes", bytes),
 		slog.Duration("elapsed", elapsed),
 		slog.String("ip", e.request.RemoteAddr),
+		slog.String("request_id", requestID),
 	)
 }
 

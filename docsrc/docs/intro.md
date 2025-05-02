@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Introduction
 
-`gowebutils` is a collection of packages that can be used to build web applications.
+`gowebutils` is a collection of packages that can be used to build web applications in go.
 
 ## Features
 

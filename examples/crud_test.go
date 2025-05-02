@@ -134,7 +134,7 @@ func TestGetTenantHandler(t *testing.T) {
 	getTenantController := NewGetTenantController(app.App)
 	app.TestRouter.Get("/tenants/{id}", getTenantController.GetTenantHandler)
 
-	req := testutils.CreateGetRequest("/tenants/1")
+	req := testutils.CreateGetRequest(t, "/tenants/1")
 	rr := app.MakeRequest(req)
 
 	// Check the response status code
@@ -174,7 +174,7 @@ func TestGetTenantHandler_InvalidID(t *testing.T) {
 	getTenantController := NewGetTenantController(app.App)
 	app.TestRouter.Get("/tenants/{id}", getTenantController.GetTenantHandler)
 
-	req := testutils.CreateGetRequest("/tenants/invalid")
+	req := testutils.CreateGetRequest(t, "/tenants/invalid")
 	rr := app.MakeRequest(req)
 
 	// Check the response status code
@@ -191,7 +191,7 @@ func TestGetTenantHandler_NotFound(t *testing.T) {
 	getTenantController := NewGetTenantController(app.App)
 	app.TestRouter.Get("/tenants/{id}", getTenantController.GetTenantHandler)
 
-	req := testutils.CreateGetRequest("/tenants/9999")
+	req := testutils.CreateGetRequest(t, "/tenants/9999")
 	rr := app.MakeRequest(req)
 
 	// Check the response status code
@@ -531,7 +531,7 @@ func TestSearchTenantsHandler(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			req := testutils.CreateGetRequest(tc.queryString)
+			req := testutils.CreateGetRequest(t, tc.queryString)
 			rr := app.MakeRequest(req)
 
 			// Check status code

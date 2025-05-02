@@ -17,6 +17,10 @@ func seedDB(db *sql.DB) error {
 	projectRoot := getProjectRoot()
 	dataDir := filepath.Join(projectRoot, "db", "data")
 
+	if _, err := os.Stat(dataDir); os.IsNotExist(err) {
+		return nil
+	}
+
 	files, err := os.ReadDir(dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to read data directory: %w", err)

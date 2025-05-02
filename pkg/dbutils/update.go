@@ -23,7 +23,7 @@ func UpdateByID(
 	db DB,
 	tableName string,
 	id int64,
-	version int32,
+	version int64,
 	fields map[string]any,
 ) error {
 	if id < 0 || version < 0 {

@@ -56,7 +56,7 @@ func TestUpdateByID_ErrorHandling(t *testing.T) {
 		name     string
 		table    string
 		id       int64
-		version  int32
+		version  int64
 		fields   map[string]any
 		expected error
 	}{

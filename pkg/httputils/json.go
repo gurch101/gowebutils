@@ -97,11 +97,9 @@ func ensureSingleJSONValue(dec *json.Decoder) error {
 
 // WriteJSON marshals data structure to encoded JSON response and writes it to the response body.
 func WriteJSON(w http.ResponseWriter, status int, data interface{}, headers http.Header) error {
-	// Use the json.MarshalIndent() function so that whitespace is added to the encoded JSON. Use
-	// no line prefix and tab indents for each element.
-	jsonPayload, err := json.MarshalIndent(data, "", "\t")
+	jsonPayload, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("failed to marshal indent in write json: %w", err)
+		return fmt.Errorf("failed to marshal in write json: %w", err)
 	}
 
 	// Append a newline to make it easier to view in terminal applications.

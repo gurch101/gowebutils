@@ -47,38 +47,44 @@ func ServeHTTP(handler http.Handler, logger *slog.Logger) error {
 	}
 
 	shutdownError := make(chan error)
-
-	go func() {
-		// Create a quit channel which carries os.Signal values.
-		quit := make(chan os.Signal, 1)
-		// Use signal.Notify() to listen for incoming SIGINT and SIGTERM signals and relay them to the quit channel.
-		// Any other signals will not be caught by signal.Notify() and will retain their default behavior.
-		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-		// Read the signal from the quit channel. This code will block until a signal is received.
-		s := <-quit
-
-		slog.Info("shutting down server", "signal", s.String())
-
-		ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-		defer cancel()
-
-		shutdownError <- server.Shutdown(ctx)
-	}()
+	go gracefulShutdown(server, logger, shutdownError)
 
 	slog.Info("server started", "port", port)
 
-	err = server.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
+	serverErr := startServer(server)
 
-	if !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("server error %w", err)
+	if serverErr != nil && !errors.Is(serverErr, http.ErrServerClosed) {
+		return fmt.Errorf("server error %w", serverErr)
 	}
 
-	err = <-shutdownError
-	if err != nil {
-		return fmt.Errorf("server shutdown error %w", err)
+	if err := <-shutdownError; err != nil {
+		return fmt.Errorf("server shutdown error: %w", err)
 	}
 
 	slog.Info("server stopped", "port", port)
 
 	return nil
+}
+
+func gracefulShutdown(server *http.Server, logger *slog.Logger, shutdownErr chan<- error) {
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	s := <-quit
+
+	logger.Info("shutting down server", "signal", s.String())
+
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	shutdownErr <- server.Shutdown(ctx)
+}
+
+func startServer(server *http.Server) error {
+	if _, err := os.Stat("./tls/cert.pem"); err == nil {
+		//nolint: wrapcheck
+		return server.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
+	}
+
+	//nolint: wrapcheck
+	return server.ListenAndServe()
 }

@@ -40,7 +40,12 @@ func (tc *SearchTenantController) SearchTenantsHandler(w http.ResponseWriter, r 
 		ContactEmail: parser.ParseQSString(queryString, contactEmailRequestKey, nil),
 	}
 
-	searchTenantsRequest.ParseQSMetadata(queryString, v, []string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)})
+	searchTenantsRequest.ParseQSMetadata(
+		queryString,
+		v,
+		[]string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey},
+		[]string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)},
+	)
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
 		return

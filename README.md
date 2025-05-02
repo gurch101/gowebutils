@@ -16,8 +16,8 @@
 - Support for oauth2 authentication code flow. Tested with AWS Cognito.
 - invite user flow support
 - session management
+- Role-based access control
 - TODO: bearer token authentication
-- TODO: Role-based access control
 
 ##### Email
 
