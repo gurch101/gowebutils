@@ -1,0 +1,86 @@
+package users
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/gurch101/gowebutils/pkg/app"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/validation"
+)
+
+type UpdateUserController struct {
+	app *app.App
+}
+
+func NewUpdateUserController(app *app.App) *UpdateUserController {
+	return &UpdateUserController{app: app}
+}
+
+type UpdateUserRequest struct {
+	Name *string `json:"name"`
+}
+
+func (tc *UpdateUserController) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := parser.ParseIDPathParam(r)
+
+	if err != nil {
+		httputils.NotFoundResponse(w, r)
+
+		return
+	}
+
+	req, err := httputils.ReadJSON[UpdateUserRequest](w, r)
+	if err != nil {
+		httputils.UnprocessableEntityResponse(w, r, err)
+
+		return
+	}
+
+	model, err := GetUserByID(r.Context(), tc.app.DB(), id)
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+
+		return
+	}
+	model.Name = validation.Coalesce(req.Name, model.Name)
+
+	v := validation.NewValidator()
+
+	if v.HasErrors() {
+		httputils.FailedValidationResponse(w, r, v.Errors)
+
+		return
+	}
+
+	err = UpdateUser(r.Context(), tc.app.DB(), model)
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+
+		return
+	}
+
+	err = httputils.WriteJSON(
+		w,
+		http.StatusOK,
+		&GetUserByIDResponse{
+			ID:        model.ID,
+			Version:   model.Version,
+			Name:      model.Name,
+			CreatedAt: model.CreatedAt,
+			UpdatedAt: model.UpdatedAt,
+		},
+		nil)
+
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
+}
+
+func UpdateUser(ctx context.Context, db dbutils.DB, model *userModel) error {
+	return dbutils.UpdateByID(ctx, db, "users", model.ID, model.Version, map[string]any{
+		"name": model.Name,
+	})
+}

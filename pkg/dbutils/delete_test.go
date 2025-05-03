@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/fsutils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -13,7 +14,7 @@ func TestDeleteByID(t *testing.T) {
 	t.Parallel()
 	db := testutils.SetupTestDB(t)
 
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	err := dbutils.DeleteByID(context.Background(), db, "users", 1)
 	if err != nil {
@@ -65,7 +66,7 @@ func TestDelete_ErrorHandling(t *testing.T) {
 
 			db := testutils.SetupTestDB(t)
 
-			defer db.Close()
+			defer fsutils.CloseAndPanic(db)
 
 			err := dbutils.DeleteByID(context.Background(), db, tt.table, tt.id)
 

@@ -10,7 +10,11 @@ import (
 
 func TestMain(m *testing.M) {
 	// Set test encryption key
-	os.Setenv("ENCRYPTION_KEY", "0123456789ABCDEF0123456789ABCDEF")
+	err := os.Setenv("ENCRYPTION_KEY", "0123456789ABCDEF0123456789ABCDEF")
+
+	if err != nil {
+		panic(err)
+	}
 
 	code := m.Run()
 

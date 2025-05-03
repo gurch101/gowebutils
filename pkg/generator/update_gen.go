@@ -1,0 +1,292 @@
+package generator
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/gurch101/gowebutils/pkg/stringutils"
+)
+
+const updateHandlerTemplate = `package {{.PackageName}}
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/gurch101/gowebutils/pkg/app"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/validation"
+)
+
+type Update{{.SingularTitleCaseName}}Controller struct {
+	app *app.App
+}
+
+func NewUpdate{{.SingularTitleCaseName}}Controller(app *app.App) *Update{{.SingularTitleCaseName}}Controller {
+	return &Update{{.SingularTitleCaseName}}Controller{app: app}
+}
+
+type Update{{.SingularTitleCaseName}}Request struct {
+{{- range .Fields}}
+	{{.TitleCaseName}} *{{.GoType}} ` + "`" + `json:"{{.JSONName}}"` + "`" + `
+{{- end}}
+}
+
+func (tc *Update{{.SingularTitleCaseName}}Controller) Update{{.SingularTitleCaseName}}Handler(w http.ResponseWriter, r *http.Request) {
+	id, err := parser.ParseIDPathParam(r)
+
+	if err != nil {
+		httputils.NotFoundResponse(w, r)
+
+		return
+	}
+
+	req, err := httputils.ReadJSON[Update{{.SingularTitleCaseName}}Request](w, r)
+	if err != nil {
+		httputils.UnprocessableEntityResponse(w, r, err)
+
+		return
+	}
+
+	model, err := Get{{.SingularTitleCaseName}}ByID(r.Context(), tc.app.DB(), id)
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+
+		return
+	}
+
+	{{- range .Fields}}
+	model.{{.TitleCaseName}} = validation.Coalesce(req.{{.TitleCaseName}}, model.{{.TitleCaseName}})
+	{{- end}}
+
+	v := validation.NewValidator()
+	{{- range .Fields}}
+	{{- if .IsEmail}}
+	v.Email(model.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} is required")
+	{{- else if .Required}}
+	v.Required(model.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} is required")
+	{{- end}}
+	{{- end}}
+
+	if v.HasErrors() {
+		httputils.FailedValidationResponse(w, r, v.Errors)
+
+		return
+	}
+
+	err = Update{{.SingularTitleCaseName}}(r.Context(), tc.app.DB(), model)
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+
+		return
+	}
+
+	err = httputils.WriteJSON(
+		w,
+		http.StatusOK,
+		&Get{{.SingularTitleCaseName}}ByIDResponse{
+			{{- range .ModelFields}}
+			{{.TitleCaseName}}: model.{{.TitleCaseName}},
+			{{- end}}
+		},
+		nil)
+
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
+}
+
+func Update{{.SingularTitleCaseName}}(ctx context.Context, db dbutils.DB, model *{{.SingularCamelCaseName}}Model) error {
+	return dbutils.UpdateByID(ctx, db, "{{.Name}}", model.ID, model.Version, map[string]any{
+		{{- range .Fields}}
+		"{{.Name}}": model.{{.TitleCaseName}},
+		{{- end}}
+	})
+}
+`
+
+const updateHandlerTestTemplate = `package {{.PackageName}}_test
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"testing"
+
+	"github.com/gurch101/gowebgentest/internal/{{.PackageName}}"
+	"github.com/gurch101/gowebutils/pkg/testutils"
+)
+func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
+	t.Parallel()
+
+	t.Run("successful update", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+
+		defer app.Close()
+
+		createReq := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
+			{{- range .Fields}}
+			{{.TitleCaseName}}: "old_{{.JSONName}}",
+			{{- end}}
+		}
+		ID, err := {{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &createReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		controller := {{.PackageName}}.NewUpdate{{.SingularTitleCaseName}}Controller(app.App)
+		app.TestRouter.Patch("/{{.KebabCaseTableName}}/{id}", controller.Update{{.SingularTitleCaseName}}Handler)
+
+		updateReq := {{.PackageName}}.Update{{.SingularTitleCaseName}}Request{
+			{{- range .Fields}}
+			{{.TitleCaseName}}: testutils.StringPtr("new_{{.JSONName}}"),
+			{{- end}}
+		}
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", *ID), updateReq)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status code %d, got %d", http.StatusOK, rr.Code)
+		}
+
+		var response {{.PackageName}}.Get{{.SingularTitleCaseName}}ByIDResponse
+		err = json.Unmarshal(rr.Body.Bytes(), &response)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if response.ID != int64(*ID) {
+			t.Errorf("expected ID to be %d, got %d", *ID, response.ID)
+		}
+		{{- range .Fields}}
+		if response.{{.TitleCaseName}} != *updateReq.{{.TitleCaseName}} {
+			t.Errorf("expected {{.TitleCaseName}} to be %s, got %s", *updateReq.{{.TitleCaseName}}, response.{{.TitleCaseName}})
+		}
+		{{- end}}
+	})
+
+	t.Run("invalid request id", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		controller := {{.PackageName}}.NewUpdate{{.SingularTitleCaseName}}Controller(app.App)
+		app.TestRouter.Patch("/{{.KebabCaseTableName}}/{id}", controller.Update{{.SingularTitleCaseName}}Handler)
+		req := testutils.CreatePatchRequest(t, "/{{.KebabCaseTableName}}/invalid_id", nil)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusNotFound {
+			t.Errorf("expected status code %d, got %d", http.StatusNotFound, rr.Code)
+		}
+	})
+
+	t.Run("record not found", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		controller := {{.PackageName}}.NewUpdate{{.SingularTitleCaseName}}Controller(app.App)
+		app.TestRouter.Patch("/{{.KebabCaseTableName}}/{id}", controller.Update{{.SingularTitleCaseName}}Handler)
+
+		nonExistentID := int64(9999)
+		updateReq := {{.PackageName}}.Update{{.SingularTitleCaseName}}Request{
+		{{- range .Fields}}
+		{{.TitleCaseName}}: testutils.StringPtr("new_{{.JSONName}}"),
+		{{- end}}
+		}
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", nonExistentID), updateReq)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusNotFound {
+			t.Errorf("expected status code %d, got %d", http.StatusNotFound, rr.Code)
+		}
+	})
+
+	t.Run("invalid request payload", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		createReq := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
+		{{- range .Fields}}
+		{{.TitleCaseName}}: "value",
+		{{- end}}
+		}
+		ID, err := {{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &createReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		controller := {{.PackageName}}.NewUpdate{{.SingularTitleCaseName}}Controller(app.App)
+		app.TestRouter.Patch("/{{.KebabCaseTableName}}/{id}", controller.Update{{.SingularTitleCaseName}}Handler)
+
+		invalidReq := map[string]interface{}{
+			"invalid_field": "value",
+		}
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", *ID), invalidReq)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusUnprocessableEntity {
+			t.Errorf("expected status code %d, got %d", http.StatusUnprocessableEntity, rr.Code)
+		}
+	})
+}
+`
+
+func newUpdateHandlerTemplateData(moduleName string, schema Table) updateHandlerTemplateData {
+	modelFields := []ModelField{}
+	fields := []RequestField{}
+
+	for _, field := range schema.Fields {
+		sanitizedName := field.Name
+		if strings.HasSuffix(field.Name, "id") {
+			sanitizedName = strings.TrimSuffix(field.Name, "id") + "ID"
+		}
+
+		if field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at" {
+			fields = append(fields, RequestField{
+				Name:          field.Name,
+				TitleCaseName: stringutils.SnakeToTitle(sanitizedName),
+				JSONName:      stringutils.SnakeToCamel(sanitizedName),
+				HumanName:     stringutils.SnakeToHuman(sanitizedName),
+				GoType:        field.DataType.GoType(),
+				Required:      hasBlankConstraint(field.Constraints),
+				IsEmail:       isEmail(sanitizedName),
+			})
+		}
+
+		modelFields = append(modelFields, ModelField{
+			Name:          field.Name,
+			TitleCaseName: stringutils.SnakeToTitle(sanitizedName),
+			CamelCaseName: stringutils.SnakeToCamel(sanitizedName),
+			GoType:        field.DataType.GoType(),
+		})
+	}
+
+	return updateHandlerTemplateData{
+		PackageName:           schema.Name,
+		Name:                  schema.Name,
+		KebabCaseTableName:    stringutils.SnakeToKebab(schema.Name),
+		ModuleName:            moduleName,
+		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
+		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
+		ModelFields:           modelFields,
+		Fields:                fields,
+	}
+}
+
+func RenderUpdateTemplate(moduleName string, schema Table) ([]byte, []byte, error) {
+	data := newUpdateHandlerTemplateData(moduleName, schema)
+
+	tmpl, err := renderTemplateFile(updateHandlerTemplate, data)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error rendering create template: %w", err)
+	}
+
+	testTmpl, err := renderTemplateFile(updateHandlerTestTemplate, data)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error rendering create test template: %w", err)
+	}
+
+	return tmpl, testTmpl, nil
+}

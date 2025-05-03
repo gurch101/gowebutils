@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/fsutils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -223,7 +224,7 @@ func TestQueryBuilder_Execute(t *testing.T) {
 
 	db := testutils.SetupTestDB(t)
 
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	qb := dbutils.NewQueryBuilder(db).Select("id", "user_name").From("users")
 
@@ -252,7 +253,7 @@ func TestQueryBuilder_QueryRow(t *testing.T) {
 	t.Parallel()
 	db := testutils.SetupTestDB(t)
 
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	var id int64
 
@@ -271,7 +272,7 @@ func TestQueryBuilder_QueryRowNoRow(t *testing.T) {
 
 	db := testutils.SetupTestDB(t)
 
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	var id int64
 

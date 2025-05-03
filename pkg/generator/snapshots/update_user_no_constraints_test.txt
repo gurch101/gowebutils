@@ -1,0 +1,115 @@
+package users_test
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"testing"
+
+	"github.com/gurch101/gowebgentest/internal/users"
+	"github.com/gurch101/gowebutils/pkg/testutils"
+)
+
+func TestUpdateUserHandler(t *testing.T) {
+	t.Parallel()
+
+	t.Run("successful update", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+
+		defer app.Close()
+
+		createReq := users.CreateUserRequest{
+			Name: "old_name",
+		}
+		ID, err := users.CreateUser(context.Background(), app.DB(), &createReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		controller := users.NewUpdateUserController(app.App)
+		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
+
+		updateReq := users.UpdateUserRequest{
+			Name: testutils.StringPtr("new_name"),
+		}
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", *ID), updateReq)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected status code %d, got %d", http.StatusOK, rr.Code)
+		}
+
+		var response users.GetUserByIDResponse
+		err = json.Unmarshal(rr.Body.Bytes(), &response)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if response.ID != int64(*ID) {
+			t.Errorf("expected ID to be %d, got %d", *ID, response.ID)
+		}
+		if response.Name != *updateReq.Name {
+			t.Errorf("expected Name to be %s, got %s", *updateReq.Name, response.Name)
+		}
+	})
+
+	t.Run("invalid request id", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		controller := users.NewUpdateUserController(app.App)
+		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
+		req := testutils.CreatePatchRequest(t, "/users/invalid_id", nil)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusNotFound {
+			t.Errorf("expected status code %d, got %d", http.StatusNotFound, rr.Code)
+		}
+	})
+
+	t.Run("record not found", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		controller := users.NewUpdateUserController(app.App)
+		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
+
+		nonExistentID := int64(9999)
+		updateReq := users.UpdateUserRequest{
+			Name: testutils.StringPtr("new_name"),
+		}
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", nonExistentID), updateReq)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusNotFound {
+			t.Errorf("expected status code %d, got %d", http.StatusNotFound, rr.Code)
+		}
+	})
+
+	t.Run("invalid request payload", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		createReq := users.CreateUserRequest{
+			Name: "value",
+		}
+		ID, err := users.CreateUser(context.Background(), app.DB(), &createReq)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		controller := users.NewUpdateUserController(app.App)
+		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
+
+		invalidReq := map[string]interface{}{
+			"invalid_field": "value",
+		}
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", *ID), invalidReq)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusUnprocessableEntity {
+			t.Errorf("expected status code %d, got %d", http.StatusUnprocessableEntity, rr.Code)
+		}
+	})
+}

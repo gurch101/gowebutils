@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/fsutils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -13,7 +14,7 @@ func TestUpdateByID(t *testing.T) {
 	t.Parallel()
 	db := testutils.SetupTestDB(t)
 
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	fields := map[string]any{
 		"user_name": "Jane Doe",
@@ -50,7 +51,7 @@ func TestUpdateByID_ErrorHandling(t *testing.T) {
 	t.Parallel()
 	db := testutils.SetupTestDB(t)
 
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	tests := []struct {
 		name     string

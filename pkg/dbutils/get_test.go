@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/fsutils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -13,7 +14,7 @@ func TestGetByID(t *testing.T) {
 	t.Parallel()
 	db := testutils.SetupTestDB(t)
 
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	t.Run("successful retrieval", func(t *testing.T) {
 		var name, email string
@@ -74,7 +75,7 @@ func TestExists(t *testing.T) {
 	t.Parallel()
 	db := testutils.SetupTestDB(t)
 
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	t.Run("existing record", func(t *testing.T) {
 		exists := dbutils.Exists(context.Background(), db, "users", 1)

@@ -1,0 +1,97 @@
+package generator_test
+
+import (
+	"testing"
+
+	"github.com/gurch101/gowebutils/pkg/generator"
+	"github.com/gurch101/gowebutils/pkg/testutils"
+)
+
+var testUserSchema = generator.Table{
+	Name: "users",
+	Fields: []generator.Field{
+		{
+			Name:        "id",
+			DataType:    generator.SQLInt64,
+			Constraints: []string{},
+		},
+		{
+			Name:        "version",
+			DataType:    generator.SQLInt64,
+			Constraints: []string{},
+		},
+		{
+			Name:        "name",
+			DataType:    generator.SQLString,
+			Constraints: []string{"UNIQUE", "CHECK (name <> '')"},
+		},
+		{
+			Name:        "email",
+			DataType:    generator.SQLString,
+			Constraints: []string{"UNIQUE"},
+		},
+		{
+			Name:        "created_at",
+			DataType:    generator.SQLDatetime,
+			Constraints: []string{},
+		},
+		{
+			Name:        "updated_at",
+			DataType:    generator.SQLDatetime,
+			Constraints: []string{},
+		},
+	},
+	UniqueIndexes: []generator.UniqueIndex{},
+}
+
+func TestCreateGen(t *testing.T) {
+	createTemplate, createTestTemplate, err := generator.RenderCreateTemplate("github.com/gurch101/gowebutils", testUserSchema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testutils.AssertFileEqualsString(t, "snapshots/create_user.txt", string(createTemplate))
+	testutils.AssertFileEqualsString(t, "snapshots/create_user_test.txt", string(createTestTemplate))
+}
+
+func TestCreateGenNoUniqueIndexNoConstraints(t *testing.T) {
+	table := generator.Table{
+		Name: "users",
+		Fields: []generator.Field{
+			{
+				Name:        "id",
+				DataType:    generator.SQLInt64,
+				Constraints: []string{},
+			},
+			{
+				Name:        "version",
+				DataType:    generator.SQLInt64,
+				Constraints: []string{},
+			},
+			{
+				Name:        "name",
+				DataType:    generator.SQLString,
+				Constraints: []string{},
+			},
+			{
+				Name:        "created_at",
+				DataType:    generator.SQLDatetime,
+				Constraints: []string{},
+			},
+			{
+				Name:        "updated_at",
+				DataType:    generator.SQLDatetime,
+				Constraints: []string{},
+			},
+		},
+		UniqueIndexes: []generator.UniqueIndex{},
+	}
+
+	createTemplate, createTestTemplate, err := generator.RenderCreateTemplate("github.com/gurch101/gowebutils", table)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testutils.AssertFileEqualsString(t, "snapshots/create_user_no_unique_index_no_constraints.txt", string(createTemplate))
+	testutils.AssertFileEqualsString(t, "snapshots/create_user_no_unique_index_no_constraints_test.txt", string(createTestTemplate))
+}

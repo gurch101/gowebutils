@@ -67,7 +67,7 @@ func RateLimitMiddleware(next http.Handler) http.Handler {
 	}
 
 	var (
-		mu      sync.Mutex
+		mutex   sync.Mutex
 		clients = make(map[string]*client)
 	)
 
@@ -75,41 +75,41 @@ func RateLimitMiddleware(next http.Handler) http.Handler {
 		for {
 			time.Sleep(time.Minute)
 
-			mu.Lock()
-			for ip, c := range clients {
+			mutex.Lock()
+			for ipAddress, c := range clients {
 				if time.Since(c.lastSeen) > 3*time.Minute {
-					delete(clients, ip)
+					delete(clients, ipAddress)
 				}
 			}
-			mu.Unlock()
+			mutex.Unlock()
 		}
 	}()
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		ipAddress, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			ServerErrorResponse(w, r, fmt.Errorf("could not parse remote address: %w", err))
 		}
 
-		mu.Lock()
-		if _, ok := clients[ip]; !ok {
+		mutex.Lock()
+		if _, ok := clients[ipAddress]; !ok {
 			limiter := rate.NewLimiter(
 				rate.Limit(rateLimitConfig.rate),
 				rateLimitConfig.burst,
 			)
-			clients[ip] = &client{limiter: limiter, lastSeen: time.Now()}
+			clients[ipAddress] = &client{limiter: limiter, lastSeen: time.Now()}
 		} else {
-			clients[ip].lastSeen = time.Now()
+			clients[ipAddress].lastSeen = time.Now()
 		}
 
-		if !clients[ip].limiter.Allow() {
-			mu.Unlock()
+		if !clients[ipAddress].limiter.Allow() {
+			mutex.Unlock()
 			RateLimitExceededResponse(w, r)
 
 			return
 		}
 
-		mu.Unlock()
+		mutex.Unlock()
 
 		next.ServeHTTP(w, r)
 	})

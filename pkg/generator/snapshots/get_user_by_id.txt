@@ -1,0 +1,74 @@
+package users
+
+import (
+	"context"
+	"net/http"
+	"time"
+
+	"github.com/gurch101/gowebutils/pkg/app"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/parser"
+)
+
+type GetUserByIDController struct {
+	app *app.App
+}
+
+func NewGetUserByIDController(app *app.App) *GetUserByIDController {
+	return &GetUserByIDController{app: app}
+}
+
+type GetUserByIDResponse struct {
+	ID        int64     `json:"id"`
+	Version   int64     `json:"version"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (tc *GetUserByIDController) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := parser.ParseIDPathParam(r)
+
+	if err != nil {
+		httputils.NotFoundResponse(w, r)
+		return
+	}
+
+	model, err := GetUserByID(r.Context(), tc.app.DB(), id)
+
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+		return
+	}
+
+	err = httputils.WriteJSON(w, http.StatusOK, &GetUserByIDResponse{
+		ID:        model.ID,
+		Version:   model.Version,
+		Name:      model.Name,
+		Email:     model.Email,
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
+	}, nil)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
+}
+
+func GetUserByID(ctx context.Context, db dbutils.DB, userID int64) (*userModel, error) {
+	var model userModel
+
+	err := dbutils.GetByID(ctx, db, "users", userID, map[string]any{
+		"id":         &model.ID,
+		"version":    &model.Version,
+		"name":       &model.Name,
+		"email":      &model.Email,
+		"created_at": &model.CreatedAt,
+		"updated_at": &model.UpdatedAt,
+	})
+	if err != nil {
+		return nil, dbutils.WrapDBError(err)
+	}
+	return &model, nil
+}

@@ -1,0 +1,171 @@
+package users
+
+import (
+	"context"
+	"database/sql"
+	"net/http"
+	"time"
+
+	"github.com/gurch101/gowebutils/pkg/app"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/parser"
+	"github.com/gurch101/gowebutils/pkg/stringutils"
+	"github.com/gurch101/gowebutils/pkg/validation"
+)
+
+type SearchUserController struct {
+	app *app.App
+}
+
+func NewSearchUserController(app *app.App) *SearchUserController {
+	return &SearchUserController{app: app}
+}
+
+type SearchUserRequest struct {
+	Name  *string
+	Email *string
+	parser.Filters
+}
+
+type SearchUserResponse struct {
+	ID        int64     `json:"id"`
+	Version   int64     `json:"version"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http.Request) {
+	queryString := r.URL.Query()
+	request := &SearchUserRequest{
+		Name:  parser.ParseQSString(queryString, "name", nil),
+		Email: parser.ParseQSString(queryString, "email", nil),
+	}
+
+	v := validation.NewValidator()
+	request.ParseQSMetadata(queryString, v, []string{
+		"id",
+		"version",
+		"name",
+		"email",
+		"createdAt",
+		"updatedAt",
+	}, []string{
+		"id",
+		"-id",
+		"name",
+		"-name",
+		"email",
+		"-email",
+	})
+
+	if v.HasErrors() {
+		httputils.FailedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	response, pagination, err := SearchUsers(r.Context(), tc.app.DB(), request)
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+		return
+	}
+
+	filteredResponse, err := parser.StructsToFilteredMaps(response, request.Fields)
+
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+		return
+	}
+
+	err = httputils.WriteJSON(
+		w,
+		http.StatusOK,
+		map[string]interface{}{
+			"metadata": pagination,
+			"users":    filteredResponse,
+		}, nil,
+	)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
+}
+
+func SearchUsers(
+	ctx context.Context,
+	db dbutils.DB,
+	searchUserRequest *SearchUserRequest,
+) ([]*SearchUserResponse, parser.PaginationMetadata, error) {
+	models, pagination, err := findUsers(ctx, db, searchUserRequest)
+	if err != nil {
+		return nil, pagination, err
+	}
+
+	response := make([]*SearchUserResponse, 0)
+
+	for _, model := range models {
+		user := &SearchUserResponse{
+			ID:        model.ID,
+			Version:   model.Version,
+			Name:      model.Name,
+			Email:     model.Email,
+			CreatedAt: model.CreatedAt,
+			UpdatedAt: model.UpdatedAt,
+		}
+		response = append(response, user)
+	}
+	return response, pagination, nil
+}
+
+func findUsers(
+	ctx context.Context,
+	db dbutils.DB,
+	request *SearchUserRequest) ([]userModel, parser.PaginationMetadata, error) {
+	var models []userModel
+	var totalRecords int
+
+	dbFields := make([]string, len(request.Fields)+1)
+	dbFields[0] = "count(*) over()"
+
+	for i, field := range request.Fields {
+		dbFields[i+1] = stringutils.CamelToSnake(field)
+	}
+
+	err := dbutils.NewQueryBuilder(db).
+		Select(
+			dbFields...,
+		).
+		From("users").
+		Where("name = ?", request.Name).
+		AndWhere("email = ?", request.Email).
+		OrderBy(request.Sort).
+		Page(request.Page, request.PageSize).
+		QueryContext(ctx, func(rows *sql.Rows) error {
+			var model userModel
+
+			fieldsToBindTo := make([]interface{}, len(dbFields))
+			fieldsToBindTo[0] = &totalRecords
+			for i, field := range dbFields[1:] {
+				fieldsToBindTo[i+1] = model.Field(field)
+			}
+
+			err := rows.Scan(
+				fieldsToBindTo...,
+			)
+
+			if err != nil {
+				return err
+			}
+
+			models = append(models, model)
+			return nil
+		})
+
+	if err != nil {
+		return nil, parser.PaginationMetadata{}, dbutils.WrapDBError(err)
+	}
+
+	metadata := parser.ParsePaginationMetadata(totalRecords, request.Page, request.PageSize)
+	return models, metadata, nil
+}

@@ -135,7 +135,7 @@ func filterStruct(val reflect.Value, tree map[string]interface{}) (map[string]in
 	return result, nil
 }
 
-func processField(field reflect.Value, subtree interface{}) (interface{}, error) { //nolint: ireturn
+func processField(field reflect.Value, subtree interface{}) (interface{}, error) {
 	//nolint: exhaustive
 	switch node := subtree.(type) {
 	case bool:

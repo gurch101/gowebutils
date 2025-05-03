@@ -1,0 +1,85 @@
+package users_test
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"testing"
+
+	"github.com/gurch101/gowebutils/internal/users"
+	"github.com/gurch101/gowebutils/pkg/testutils"
+)
+
+func TestCreateUser(t *testing.T) {
+	t.Parallel()
+
+	t.Run("successful create", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		controller := users.NewCreateUserController(app.App)
+		app.TestRouter.Post("/users", controller.CreateUserHandler)
+
+		body := users.CreateUserRequest{
+			Name: "name",
+		}
+
+		req := testutils.CreatePostRequest(t, "/users", body)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusCreated {
+			t.Errorf("expected status code %d, got %d", http.StatusCreated, rr.Code)
+		}
+
+		var response users.CreateUserResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &response)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if response.ID <= 0 {
+			t.Errorf("expected ID to be positive, got %d", response.ID)
+		}
+
+		location := rr.Header().Get("Location")
+		if location == "" {
+			t.Errorf("expected Location header to be set")
+		}
+
+		if location != fmt.Sprintf("/users/%d", response.ID) {
+			t.Errorf("expected Location header to be %s, got %s", fmt.Sprintf("/users/%d", response.ID), location)
+		}
+
+		var name string
+
+		err = app.DB().QueryRowContext(context.Background(), fmt.Sprintf("SELECT  name  FROM users WHERE id = %d", response.ID)).Scan(
+			&name,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if name != body.Name {
+			t.Errorf("expected name to be %s, got %s", body.Name, name)
+		}
+	})
+
+	t.Run("invalid request body", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		controller := users.NewCreateUserController(app.App)
+		app.TestRouter.Post("/users", controller.CreateUserHandler)
+
+		payload := map[string]interface{}{
+			"invalid": "",
+		}
+		req := testutils.CreatePostRequest(t, "/users", payload)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusUnprocessableEntity {
+			t.Errorf("Expected status code 422 Unprocessable Entity, got %d", rr.Code)
+		}
+	})
+
+}

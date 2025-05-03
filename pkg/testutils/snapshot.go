@@ -25,7 +25,10 @@ func AssertFileEquals(t *testing.T, expectedFilePath, actualFilePath string) {
 		t.Fatalf("expected file %s does not match actual file %s", expectedFilePath, actualFilePath)
 	}
 
-	os.Remove(actualFilePath)
+	err = os.Remove(actualFilePath)
+	if err != nil {
+		t.Fatalf("error removing actual file: %v", err)
+	}
 }
 
 func AssertFileEqualsString(t *testing.T, expectedFilePath, actual string) {

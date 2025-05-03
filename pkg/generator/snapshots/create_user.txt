@@ -1,0 +1,135 @@
+package users
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/gurch101/gowebutils/pkg/app"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/validation"
+)
+
+/* Handler */
+type CreateUserController struct {
+	app *app.App
+}
+
+func NewCreateUserController(app *app.App) *CreateUserController {
+	return &CreateUserController{app: app}
+}
+
+type CreateUserRequest struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+type CreateUserResponse struct {
+	ID int64 `json:"id"`
+}
+
+func (c *CreateUserController) CreateUserHandler(
+	w http.ResponseWriter,
+	r *http.Request) {
+	req, err := httputils.ReadJSON[CreateUserRequest](w, r)
+	if err != nil {
+		httputils.UnprocessableEntityResponse(w, r, err)
+		return
+	}
+
+	v := validation.NewValidator()
+	v.Required(req.Name, "name", "Name is required")
+	v.Email(req.Email, "email", "Email is required")
+
+	if v.HasErrors() {
+		httputils.FailedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	id, err := CreateUser(r.Context(), c.app.DB(), &req)
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+		return
+	}
+
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/users/%d", *id))
+
+	err = httputils.WriteJSON(w, http.StatusCreated, CreateUserResponse{ID: *id}, headers)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
+}
+
+/* Service */
+var ErrNameAlreadyExists = validation.Error{
+	Field:   "name",
+	Message: "Name already exists",
+}
+var ErrEmailAlreadyExists = validation.Error{
+	Field:   "email",
+	Message: "Email already exists",
+}
+
+func CreateUser(
+	ctx context.Context,
+	db dbutils.DB,
+	req *CreateUserRequest) (*int64, error) {
+
+	model := newCreateUserModel(
+		req.Name,
+		req.Email,
+	)
+
+	id, err := insertUser(ctx, db, model)
+
+	if err != nil {
+		if errors.Is(err, dbutils.ErrUniqueConstraint) {
+			if strings.Contains(err.Error(), "name") {
+				return nil, ErrNameAlreadyExists
+			}
+			if strings.Contains(err.Error(), "email") {
+				return nil, ErrEmailAlreadyExists
+			}
+		}
+
+		return nil, err
+	}
+
+	return id, nil
+}
+
+/* Repository */
+type userModel struct {
+	ID        int64
+	Version   int64
+	Name      string
+	Email     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func newCreateUserModel(
+	name string,
+	email string,
+) *userModel {
+	return &userModel{
+		Name:  name,
+		Email: email,
+	}
+}
+
+func insertUser(
+	ctx context.Context,
+	db dbutils.DB,
+	model *userModel) (*int64, error) {
+
+	return dbutils.Insert(ctx, db, "users", map[string]any{
+		"name":  model.Name,
+		"email": model.Email,
+	})
+}

@@ -1,0 +1,96 @@
+package users
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+
+	"time"
+
+	"github.com/gurch101/gowebutils/pkg/app"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+)
+
+/* Handler */
+type CreateUserController struct {
+	app *app.App
+}
+
+func NewCreateUserController(app *app.App) *CreateUserController {
+	return &CreateUserController{app: app}
+}
+
+type CreateUserRequest struct {
+	Name string `json:"name"`
+}
+
+type CreateUserResponse struct {
+	ID int64 `json:"id"`
+}
+
+func (c *CreateUserController) CreateUserHandler(
+	w http.ResponseWriter,
+	r *http.Request) {
+	req, err := httputils.ReadJSON[CreateUserRequest](w, r)
+	if err != nil {
+		httputils.UnprocessableEntityResponse(w, r, err)
+		return
+	}
+
+	id, err := CreateUser(r.Context(), c.app.DB(), &req)
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+		return
+	}
+
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/users/%d", *id))
+
+	err = httputils.WriteJSON(w, http.StatusCreated, CreateUserResponse{ID: *id}, headers)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
+}
+
+/* Service */
+
+func CreateUser(
+	ctx context.Context,
+	db dbutils.DB,
+	req *CreateUserRequest) (*int64, error) {
+
+	model := newCreateUserModel(
+		req.Name,
+	)
+
+	return insertUser(ctx, db, model)
+}
+
+/* Repository */
+type userModel struct {
+	ID        int64
+	Version   int64
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func newCreateUserModel(
+	name string,
+) *userModel {
+	return &userModel{
+		Name: name,
+	}
+}
+
+func insertUser(
+	ctx context.Context,
+	db dbutils.DB,
+	model *userModel) (*int64, error) {
+
+	return dbutils.Insert(ctx, db, "users", map[string]any{
+		"name": model.Name,
+	})
+}

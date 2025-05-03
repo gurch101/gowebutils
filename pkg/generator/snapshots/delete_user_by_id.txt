@@ -1,0 +1,49 @@
+package users
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/gurch101/gowebutils/pkg/app"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/parser"
+)
+
+type DeleteUserController struct {
+	app *app.App
+}
+
+func NewDeleteUserController(app *app.App) *DeleteUserController {
+	return &DeleteUserController{app: app}
+}
+
+type DeleteUserResponse struct {
+	Message string `json:"message"`
+}
+
+func (tc *DeleteUserController) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	id, err := parser.ParseIDPathParam(r)
+
+	if err != nil {
+		httputils.NotFoundResponse(w, r)
+
+		return
+	}
+
+	err = DeleteUserByID(r.Context(), tc.app.DB(), id)
+	if err != nil {
+		httputils.HandleErrorResponse(w, r, err)
+
+		return
+	}
+
+	err = httputils.WriteJSON(w, http.StatusOK, DeleteUserResponse{Message: "User successfully deleted"}, nil)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
+}
+
+func DeleteUserByID(ctx context.Context, db dbutils.DB, id int64) error {
+	return dbutils.DeleteByID(ctx, db, "users", id)
+}
