@@ -8,7 +8,7 @@ import (
 )
 
 func TestUpdateGen(t *testing.T) {
-	updateTemplate, updateTestTemplate, err := generator.RenderUpdateTemplate("github.com/gurch101/gowebutils", testUserSchema)
+	updateTemplate, updateTestTemplate, err := generator.RenderUpdateTemplate("github.com/gurch101/gowebutils", getTestUserSchema())
 	if err != nil {
 		t.Fatal(err)
 	}

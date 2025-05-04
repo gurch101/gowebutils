@@ -127,41 +127,6 @@ func NewOidcController(
 	return &OidcController{sessionManager: sessionManager, getOrCreateUserFn: fn, oauth2Config: config}
 }
 
-// func (c *OidcController) AddRoutes(app *app.App) {
-// 	app.AddPublicRoute("GET", "/login", c.loginHandler)
-// 	app.AddPublicRoute("GET", "/register", c.registerHandler)
-// 	app.AddPublicRoute("GET", "/auth/callback", c.authCallback)
-// 	app.AddProtectedRoute("GET", "/logout", c.logoutHandler)
-// }
-
-func (c *OidcController) redirectToAuthURL(w http.ResponseWriter, r *http.Request, payload map[string]any) {
-	if payload == nil {
-		payload = map[string]any{}
-	}
-
-	payload["state"] = uuid.New().String()
-
-	state, err := Encrypt(payload)
-	if err != nil {
-		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to encrypt state: %w", err))
-	}
-
-	//nolint: exhaustruct
-	http.SetCookie(w, &http.Cookie{
-		Name:     "state",
-		Value:    state,
-		Quoted:   false,
-		HttpOnly: true,
-		Secure:   true,
-		Path:     "/",
-		// use lax since we are using a third-party for auth
-		SameSite: http.SameSiteLaxMode,
-	})
-
-	url := c.oauth2Config.config.AuthCodeURL(state)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
-
 func (c *OidcController) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	c.redirectToAuthURL(w, r, nil)
 }
@@ -297,6 +262,34 @@ func (c *OidcController) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, logoutURL, http.StatusSeeOther)
+}
+
+func (c *OidcController) redirectToAuthURL(w http.ResponseWriter, r *http.Request, payload map[string]any) {
+	if payload == nil {
+		payload = map[string]any{}
+	}
+
+	payload["state"] = uuid.New().String()
+
+	state, err := Encrypt(payload)
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, fmt.Errorf("failed to encrypt state: %w", err))
+	}
+
+	//nolint: exhaustruct
+	http.SetCookie(w, &http.Cookie{
+		Name:     "state",
+		Value:    state,
+		Quoted:   false,
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+		// use lax since we are using a third-party for auth
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	url := c.oauth2Config.config.AuthCodeURL(state)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func verifyState(w http.ResponseWriter, r *http.Request) (map[string]any, error) {

@@ -255,7 +255,7 @@ func newUpdateHandlerTemplateData(moduleName string, schema Table) updateHandler
 			sanitizedName = strings.TrimSuffix(field.Name, "id") + "ID"
 		}
 
-		if field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at" {
+		if IsRequestField(field) {
 			fields = append(fields, RequestField{
 				Name:          field.Name,
 				TitleCaseName: stringutils.SnakeToTitle(sanitizedName),

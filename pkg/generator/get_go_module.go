@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+var ErrGoModDeclarationNotFound = errors.New("module declaration not found in go.mod")
+var ErrGoModDeclarationMalformed = errors.New("malformed module declaration in go.mod")
+var ErrGoModNotFound = errors.New("go.mod file not found")
+
 // GetModuleNameFromGoMod finds and parses the go.mod file to extract the module name.
 func GetModuleNameFromGoMod() (string, error) {
 	// Find go.mod file in current directory or parent directories
@@ -18,10 +22,13 @@ func GetModuleNameFromGoMod() (string, error) {
 	}
 
 	// Open the go.mod file
+	goModPath = filepath.Clean(goModPath)
+
 	file, err := os.Open(goModPath)
 	if err != nil {
 		return "", fmt.Errorf("could not open go.mod file: %w", err)
 	}
+
 	defer func() {
 		if err := file.Close(); err != nil {
 			panic(fmt.Errorf("%w: Error closing file", err))
@@ -36,7 +43,7 @@ func GetModuleNameFromGoMod() (string, error) {
 			// Extract module name
 			moduleName := strings.TrimSpace(strings.TrimPrefix(line, "module "))
 			if moduleName == "" {
-				return "", errors.New("malformed module line in go.mod")
+				return "", ErrGoModDeclarationMalformed
 			}
 
 			return moduleName, nil
@@ -47,7 +54,7 @@ func GetModuleNameFromGoMod() (string, error) {
 		return "", fmt.Errorf("error reading go.mod file: %w", err)
 	}
 
-	return "", errors.New("module declaration not found in go.mod")
+	return "", ErrGoModDeclarationNotFound
 }
 
 // findGoModFile searches for go.mod file in the current directory and parent directories.
@@ -72,5 +79,5 @@ func findGoModFile(startDir string) (string, error) {
 		dir = parentDir
 	}
 
-	return "", errors.New("go.mod file not found")
+	return "", ErrGoModNotFound
 }

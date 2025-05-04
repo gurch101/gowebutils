@@ -3,6 +3,8 @@ package dbutils
 import (
 	"context"
 	"database/sql"
+
+	"github.com/gurch101/gowebutils/pkg/fsutils"
 )
 
 // DBPool is a wrapper around a read/write database connection pool.
@@ -36,20 +38,10 @@ func FromDB(db *sql.DB) *DBPool {
 // Close closes all database connections.
 func (d DBPool) Close() {
 	if d.writeDB == d.readDB {
-		closeErr := d.writeDB.Close()
-		if closeErr != nil {
-			panic(closeErr)
-		}
+		fsutils.CloseAndPanic(d.readDB)
 	} else {
-		closeErr := d.writeDB.Close()
-		if closeErr != nil {
-			panic(closeErr)
-		}
-
-		closeErr = d.readDB.Close()
-		if closeErr != nil {
-			panic(closeErr)
-		}
+		fsutils.CloseAndPanic(d.writeDB)
+		fsutils.CloseAndPanic(d.readDB)
 	}
 }
 

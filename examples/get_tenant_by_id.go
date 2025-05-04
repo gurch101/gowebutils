@@ -68,5 +68,6 @@ func GetTenantByID(ctx context.Context, db dbutils.DB, tenantID int64) (*tenantM
 	if err != nil {
 		return nil, dbutils.WrapDBError(err)
 	}
+
 	return &tenant, nil
 }

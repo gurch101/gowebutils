@@ -19,6 +19,7 @@ func GetOrCreateUser(ctx context.Context, db dbutils.DB, email string, tokenPayl
 			return authutils.User{}, ErrInvalidTenantID
 		}
 
+		//nolint: err113
 		return authutils.User{}, fmt.Errorf("TODO")
 	} else {
 		user, err := GetUserByEmail(ctx, db, email)
@@ -28,10 +29,13 @@ func GetOrCreateUser(ctx context.Context, db dbutils.DB, email string, tokenPayl
 				if err != nil {
 					return authutils.User{}, err
 				}
+
 				return user, nil
 			}
+
 			return authutils.User{}, err
 		}
+
 		return user, nil
 	}
 }

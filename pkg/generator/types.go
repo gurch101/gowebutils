@@ -40,6 +40,7 @@ const (
 	SQLVectorFloat32 SQLDataType = "VectorFloat32"
 )
 
+//nolint:cyclop
 func (s SQLDataType) GoType() string {
 	switch s {
 	case SQLInt:
@@ -167,6 +168,10 @@ type RequestField struct {
 	GoType        string
 	Required      bool
 	IsEmail       bool
+}
+
+func IsRequestField(field Field) bool {
+	return field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at"
 }
 
 type ModelField struct {

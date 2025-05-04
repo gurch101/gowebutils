@@ -46,6 +46,7 @@ func (tc *SearchTenantController) SearchTenantsHandler(w http.ResponseWriter, r 
 		[]string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey},
 		[]string{"id", tenantNameRequestKey, planRequestKey, contactEmailRequestKey, fmt.Sprintf("-%s", tenantNameRequestKey), fmt.Sprintf("-%s", planRequestKey), fmt.Sprintf("-%s", contactEmailRequestKey)},
 	)
+
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
 		return
@@ -56,6 +57,7 @@ func (tc *SearchTenantController) SearchTenantsHandler(w http.ResponseWriter, r 
 		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
+
 	err = httputils.WriteJSON(w, http.StatusOK, envelope{"metadata": pagination, tenantResourceKey: tenants}, nil)
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
@@ -94,6 +96,7 @@ func SearchTenants(
 		}
 		tenantResponses = append(tenantResponses, tenantResponse)
 	}
+
 	return tenantResponses, pagination, nil
 }
 
@@ -102,7 +105,9 @@ func findTenants(
 	db dbutils.DB,
 	searchTenantsRequest *SearchTenantsRequest) ([]tenantModel, parser.PaginationMetadata, error) {
 	var tenants []tenantModel
+
 	var totalRecords int
+
 	err := dbutils.NewQueryBuilder(db).
 		Select(
 			"count(*) over()",
@@ -139,6 +144,7 @@ func findTenants(
 			}
 
 			tenants = append(tenants, tenant)
+
 			return nil
 		})
 
@@ -147,5 +153,6 @@ func findTenants(
 	}
 
 	metadata := parser.ParsePaginationMetadata(totalRecords, searchTenantsRequest.Page, searchTenantsRequest.PageSize)
+
 	return tenants, metadata, nil
 }

@@ -25,59 +25,88 @@ func getDatabaseSchema(db *dbutils.DBPool) ([]Table, error) {
 	}
 
 	var tables []Table
+
 	for _, tableName := range tableNames {
-
-		// Get table info
-		tableInfo, err := getTableInfo(db, tableName)
+		table, err := processTable(db, tableName)
 		if err != nil {
 			return nil, err
 		}
 
-		// Get unique indexes
-		uniqueIndexes, err := getUniqueIndexes(db, tableName)
-		if err != nil {
-			return nil, err
-		}
-
-		var tableUniqueIndexes []UniqueIndex
-		// if the unique index is for a single field, add it the field constraint
-		for _, index := range uniqueIndexes {
-			if len(index.Fields) == 1 {
-				// get the field from the table info
-				for i, field := range tableInfo.Fields {
-					if field.Name == index.Fields[0] {
-						field.Constraints = append(field.Constraints, "UNIQUE")
-						tableInfo.Fields[i] = field
-
-						break
-					}
-				}
-			} else {
-				tableUniqueIndexes = append(tableUniqueIndexes, index)
-			}
-		}
-
-		tableInfo.UniqueIndexes = tableUniqueIndexes
-
-		constraints, err := getCheckConstraints(db, tableName)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, constraint := range constraints {
-			for i, field := range tableInfo.Fields {
-				if field.Name == constraint.Name || strings.Contains(constraint.Expression, field.Name) {
-					tableInfo.Fields[i].Constraints = append(tableInfo.Fields[i].Constraints, "CHECK "+constraint.Expression)
-
-					break
-				}
-			}
-		}
-
-		tables = append(tables, *tableInfo)
+		tables = append(tables, *table)
 	}
 
 	return tables, nil
+}
+
+func processTable(db *dbutils.DBPool, tableName string) (*Table, error) {
+	tableInfo, err := getTableInfo(db, tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := processUniqueIndexes(db, tableName, tableInfo); err != nil {
+		return nil, err
+	}
+
+	if err := processCheckConstraints(db, tableName, tableInfo); err != nil {
+		return nil, err
+	}
+
+	return tableInfo, nil
+}
+
+func processUniqueIndexes(db *dbutils.DBPool, tableName string, tableInfo *Table) error {
+	uniqueIndexes, err := getUniqueIndexes(db, tableName)
+	if err != nil {
+		return err
+	}
+
+	var tableUniqueIndexes []UniqueIndex
+
+	for _, index := range uniqueIndexes {
+		if len(index.Fields) == 1 {
+			processSingleFieldUniqueIndex(index, tableInfo)
+		} else {
+			tableUniqueIndexes = append(tableUniqueIndexes, index)
+		}
+	}
+
+	tableInfo.UniqueIndexes = tableUniqueIndexes
+
+	return nil
+}
+
+func processSingleFieldUniqueIndex(index UniqueIndex, tableInfo *Table) {
+	for i, field := range tableInfo.Fields {
+		if field.Name == index.Fields[0] {
+			field.Constraints = append(field.Constraints, "UNIQUE")
+			tableInfo.Fields[i] = field
+
+			break
+		}
+	}
+}
+
+func processCheckConstraints(db *dbutils.DBPool, tableName string, tableInfo *Table) error {
+	constraints, err := getCheckConstraints(db, tableName)
+	if err != nil {
+		return err
+	}
+
+	for _, constraint := range constraints {
+		applyConstraintToFields(constraint, tableInfo)
+	}
+
+	return nil
+}
+
+func applyConstraintToFields(constraint CheckConstraint, tableInfo *Table) {
+	for i, field := range tableInfo.Fields {
+		if field.Name == constraint.Name || strings.Contains(constraint.Expression, field.Name) {
+			tableInfo.Fields[i].Constraints = append(tableInfo.Fields[i].Constraints, "CHECK "+constraint.Expression)
+			break
+		}
+	}
 }
 
 func getTableNames(db *dbutils.DBPool) ([]string, error) {
@@ -88,15 +117,18 @@ func getTableNames(db *dbutils.DBPool) ([]string, error) {
 	defer fsutils.CloseAndPanic(rows)
 
 	var tableNames []string
+
 	for rows.Next() {
 		var tableName string
 		if err := rows.Scan(&tableName); err != nil {
 			return nil, fmt.Errorf("%w: failed to get table name", err)
 		}
+
 		if !strings.HasPrefix(tableName, "sqlite_") && !strings.HasPrefix(tableName, "schema_migrations") {
 			tableNames = append(tableNames, tableName)
 		}
 	}
+
 	return tableNames, nil
 }
 
@@ -188,6 +220,8 @@ func getUniqueIndexes(db *dbutils.DBPool, tableName string) ([]UniqueIndex, erro
 			return nil, fmt.Errorf("%w: failed to get columns in index", err)
 		}
 
+		defer fsutils.CloseAndPanic(indexInfo)
+
 		var columns []string
 
 		for indexInfo.Next() {
@@ -203,8 +237,6 @@ func getUniqueIndexes(db *dbutils.DBPool, tableName string) ([]UniqueIndex, erro
 
 			columns = append(columns, colName)
 		}
-
-		defer fsutils.CloseAndPanic(indexInfo)
 
 		indexes = append(indexes, UniqueIndex{
 			Name:   name,

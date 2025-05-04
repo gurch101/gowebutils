@@ -1,5 +1,7 @@
 package authutils
 
+import "github.com/gurch101/gowebutils/pkg/collectionutils"
+
 // User represents a user in the system.
 type User struct {
 	ID          int64
@@ -19,22 +21,10 @@ func (u *User) HasPermission(permissionCode string) bool {
 
 // HasAnyPermission checks if the user has any of the given permissions.
 func (u *User) HasAnyPermission(permissionCodes ...string) bool {
-	for _, code := range permissionCodes {
-		if u.HasPermission(code) {
-			return true
-		}
-	}
-
-	return false
+	return collectionutils.Contains(permissionCodes, u.HasPermission)
 }
 
 // HasAllPermissions checks if the user has all of the given permissions.
 func (u *User) HasAllPermissions(permissionCodes ...string) bool {
-	for _, code := range permissionCodes {
-		if !u.HasPermission(code) {
-			return false
-		}
-	}
-
-	return true
+	return collectionutils.ContainsAll(permissionCodes, u.HasPermission)
 }

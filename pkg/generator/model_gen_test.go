@@ -8,7 +8,7 @@ import (
 )
 
 func TestModelGen(t *testing.T) {
-	modelTemplate, err := generator.RenderModelTemplate("github.com/gurch101/gowebutils", testUserSchema)
+	modelTemplate, err := generator.RenderModelTemplate("github.com/gurch101/gowebutils", getTestUserSchema())
 	if err != nil {
 		t.Fatal(err)
 	}

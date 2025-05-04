@@ -8,7 +8,7 @@ import (
 )
 
 func TestSearchGen(t *testing.T) {
-	searchTemplate, searchTestTemplate, err := generator.RenderSearchTemplate("github.com/gurch101/gowebutils", testUserSchema)
+	searchTemplate, searchTestTemplate, err := generator.RenderSearchTemplate("github.com/gurch101/gowebutils", getTestUserSchema())
 	if err != nil {
 		t.Fatal(err)
 	}

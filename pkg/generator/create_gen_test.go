@@ -7,45 +7,47 @@ import (
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
-var testUserSchema = generator.Table{
-	Name: "users",
-	Fields: []generator.Field{
-		{
-			Name:        "id",
-			DataType:    generator.SQLInt64,
-			Constraints: []string{},
+func getTestUserSchema() generator.Table {
+	return generator.Table{
+		Name: "users",
+		Fields: []generator.Field{
+			{
+				Name:        "id",
+				DataType:    generator.SQLInt64,
+				Constraints: []string{},
+			},
+			{
+				Name:        "version",
+				DataType:    generator.SQLInt64,
+				Constraints: []string{},
+			},
+			{
+				Name:        "name",
+				DataType:    generator.SQLString,
+				Constraints: []string{"UNIQUE", "CHECK (name <> '')"},
+			},
+			{
+				Name:        "email",
+				DataType:    generator.SQLString,
+				Constraints: []string{"UNIQUE"},
+			},
+			{
+				Name:        "created_at",
+				DataType:    generator.SQLDatetime,
+				Constraints: []string{},
+			},
+			{
+				Name:        "updated_at",
+				DataType:    generator.SQLDatetime,
+				Constraints: []string{},
+			},
 		},
-		{
-			Name:        "version",
-			DataType:    generator.SQLInt64,
-			Constraints: []string{},
-		},
-		{
-			Name:        "name",
-			DataType:    generator.SQLString,
-			Constraints: []string{"UNIQUE", "CHECK (name <> '')"},
-		},
-		{
-			Name:        "email",
-			DataType:    generator.SQLString,
-			Constraints: []string{"UNIQUE"},
-		},
-		{
-			Name:        "created_at",
-			DataType:    generator.SQLDatetime,
-			Constraints: []string{},
-		},
-		{
-			Name:        "updated_at",
-			DataType:    generator.SQLDatetime,
-			Constraints: []string{},
-		},
-	},
-	UniqueIndexes: []generator.UniqueIndex{},
+		UniqueIndexes: []generator.UniqueIndex{},
+	}
 }
 
 func TestCreateGen(t *testing.T) {
-	createTemplate, createTestTemplate, err := generator.RenderCreateTemplate("github.com/gurch101/gowebutils", testUserSchema)
+	createTemplate, createTestTemplate, err := generator.RenderCreateTemplate("github.com/gurch101/gowebutils", getTestUserSchema())
 	if err != nil {
 		t.Fatal(err)
 	}

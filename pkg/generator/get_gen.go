@@ -202,7 +202,7 @@ func newGetOneHandlerTemplateData(moduleName string, schema Table) getHandlerTem
 			GoType:        field.DataType.GoType(),
 		})
 
-		if field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at" {
+		if IsRequestField(field) {
 			required := hasBlankConstraint(field.Constraints)
 			email := isEmail(sanitizedName)
 

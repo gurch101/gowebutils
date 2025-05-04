@@ -8,7 +8,7 @@ import (
 )
 
 func TestDeleteGen(t *testing.T) {
-	deleteTemplate, deleteTestTemplate, err := generator.RenderDeleteTemplate("github.com/gurch101/gowebutils", testUserSchema)
+	deleteTemplate, deleteTestTemplate, err := generator.RenderDeleteTemplate("github.com/gurch101/gowebutils", getTestUserSchema())
 	if err != nil {
 		t.Fatal(err)
 	}

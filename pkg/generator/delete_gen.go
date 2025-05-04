@@ -211,7 +211,7 @@ func newDeleteHandlerTemplateData(moduleName string, schema Table) deleteHandler
 			sanitizedName = strings.TrimSuffix(field.Name, "id") + "ID"
 		}
 
-		if field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at" {
+		if IsRequestField(field) {
 			required := hasBlankConstraint(field.Constraints)
 			email := isEmail(sanitizedName)
 

@@ -79,6 +79,7 @@ func CreateTenant(ctx context.Context, db dbutils.DB, createTenantRequest *Creat
 
 		return nil, err
 	}
+
 	return id, nil
 }
 

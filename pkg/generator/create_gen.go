@@ -410,10 +410,11 @@ func newCreateHandlerTemplateData(moduleName string, schema Table) createHandler
 	for _, field := range schema.Fields {
 		sanitizedName := getSanitizedName(field.Name)
 
-		if field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at" {
+		if IsRequestField(field) {
 			if hasUniqueConstraint(field.Constraints) {
 				includeUniqueConstraint = true
 				requireValidation = true
+
 				uniqueFields = append(uniqueFields, newUniqueField(field))
 			}
 

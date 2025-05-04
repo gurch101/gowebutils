@@ -2,7 +2,33 @@ version: "2"
 linters:
   enable:
     - varnamelen
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - cyclop
+    - dupl
+    - dupword
+    - err113
+    - errname
+    - errorlint
+    - fatcontext
+    - forcetypeassert
+    - funcorder
     - funlen
+    - gocheckcompilerdirectives
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gosec
+    - whitespace
+    - wsl
   settings:
     varnamelen:
       ignore-names:
@@ -22,3 +48,6 @@ linters:
         linters:
           - funlen
           - varnamelen
+          - cyclop
+          - forcetypeassert
+          - gocognit

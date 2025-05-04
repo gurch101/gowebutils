@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/gurch101/gowebutils/pkg/fsutils"
 	"github.com/gurch101/gowebutils/pkg/stringutils"
 )
 
@@ -264,18 +264,7 @@ func (qb *QueryBuilder) QueryContext(ctx context.Context, callback func(*sql.Row
 		return fmt.Errorf("query builder exec error: %w", err)
 	}
 
-	defer func() {
-		closeErr := rows.Close()
-		if err != nil {
-			if closeErr != nil {
-				slog.Error(fmt.Sprintf("Failed to close rows: %v", closeErr))
-			}
-
-			return
-		}
-
-		err = closeErr
-	}()
+	defer fsutils.CloseAndPanic(rows)
 
 	for rows.Next() {
 		if err := callback(rows); err != nil {

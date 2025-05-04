@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -11,10 +12,14 @@ const readWritePermissions = 0o600
 func AssertFileEquals(t *testing.T, expectedFilePath, actualFilePath string) {
 	t.Helper()
 
+	actualFilePath = filepath.Clean(actualFilePath)
+
 	actual, err := os.ReadFile(actualFilePath)
 	if err != nil {
 		t.Fatalf("error reading actual file: %v", err)
 	}
+
+	expectedFilePath = filepath.Clean(expectedFilePath)
 
 	expected, err := os.ReadFile(expectedFilePath)
 	if err != nil {
@@ -34,7 +39,9 @@ func AssertFileEquals(t *testing.T, expectedFilePath, actualFilePath string) {
 func AssertFileEqualsString(t *testing.T, expectedFilePath, actual string) {
 	t.Helper()
 
+	expectedFilePath = filepath.Clean(expectedFilePath)
 	expected, err := os.ReadFile(expectedFilePath)
+
 	if err != nil {
 		if err := os.WriteFile(expectedFilePath, []byte(strings.TrimSpace(actual)), readWritePermissions); err != nil {
 			t.Fatalf("error writing to expected file: %v", err)
@@ -47,6 +54,7 @@ func AssertFileEqualsString(t *testing.T, expectedFilePath, actual string) {
 		if err := os.WriteFile(expectedFilePath+".new", []byte(strings.TrimSpace(actual)), readWritePermissions); err != nil {
 			t.Fatalf("error writing to expected file: %v", err)
 		}
+
 		t.Fatalf("expected file %s does not match actual contents", expectedFilePath)
 	}
 }

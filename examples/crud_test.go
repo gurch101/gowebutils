@@ -13,6 +13,7 @@ import (
 
 func TestCreateTenant(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -36,6 +37,7 @@ func TestCreateTenant(t *testing.T) {
 
 	// Check the response body
 	var response map[string]interface{}
+
 	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
@@ -46,6 +48,7 @@ func TestCreateTenant(t *testing.T) {
 	}
 
 	var tenantID int64
+
 	err = app.DB().QueryRowContext(context.Background(), "SELECT id FROM tenants WHERE tenant_name = ?", "TestTenant").Scan(&tenantID)
 	if err != nil {
 		t.Fatalf("Failed to query tenant: %v", err)
@@ -54,6 +57,7 @@ func TestCreateTenant(t *testing.T) {
 
 func TestCreateTenantInvalidPlan(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -77,6 +81,7 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 
 	// Check the response body
 	var response map[string]interface{}
+
 	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
@@ -87,6 +92,7 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 
 func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -118,6 +124,7 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 
 	// Check the response body
 	var response map[string]interface{}
+
 	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
@@ -128,6 +135,7 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 
 func TestGetTenantHandler(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -144,6 +152,7 @@ func TestGetTenantHandler(t *testing.T) {
 
 	// Check the response body
 	var response GetTenantResponse
+
 	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
@@ -152,15 +161,19 @@ func TestGetTenantHandler(t *testing.T) {
 	if response.ID != 1 {
 		t.Errorf("Expected tenant ID 1, got %d", response.ID)
 	}
+
 	if response.TenantName != "Acme" {
 		t.Errorf("Expected tenant name 'Acme', got '%s'", response.TenantName)
 	}
+
 	if response.ContactEmail != "admin@acme.com" {
 		t.Errorf("Expected contact email 'admin@acme.com', got '%s'", response.ContactEmail)
 	}
+
 	if response.Plan != Free {
 		t.Errorf("Expected plan 'free', got '%s'", response.Plan)
 	}
+
 	if !response.IsActive {
 		t.Errorf("Expected tenant to be active")
 	}
@@ -168,6 +181,7 @@ func TestGetTenantHandler(t *testing.T) {
 
 func TestGetTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -185,6 +199,7 @@ func TestGetTenantHandler_InvalidID(t *testing.T) {
 
 func TestGetTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -202,6 +217,7 @@ func TestGetTenantHandler_NotFound(t *testing.T) {
 
 func TestDeleteTenantHandler(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -218,10 +234,12 @@ func TestDeleteTenantHandler(t *testing.T) {
 
 	// Verify that the tenant has been deleted
 	var count int
+
 	err := app.DB().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM tenants WHERE id = 1").Scan(&count)
 	if err != nil {
 		t.Fatalf("Failed to query tenant: %v", err)
 	}
+
 	if count != 0 {
 		t.Errorf("Expected tenant to be deleted, but it still exists")
 	}
@@ -229,6 +247,7 @@ func TestDeleteTenantHandler(t *testing.T) {
 
 func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -245,6 +264,7 @@ func TestDeleteTenantHandler_InvalidID(t *testing.T) {
 
 func TestDeleteTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -261,6 +281,7 @@ func TestDeleteTenantHandler_NotFound(t *testing.T) {
 
 func TestUpdateTenantHandler(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -286,6 +307,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 
 	// Check the response body
 	var response map[string]interface{}
+
 	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
@@ -302,6 +324,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 		Plan         string
 		IsActive     bool
 	}
+
 	err = app.DB().QueryRowContext(context.Background(), `SELECT tenant_name, contact_email, plan, is_active FROM tenants WHERE id = 1`).
 		Scan(&updatedTenant.TenantName, &updatedTenant.ContactEmail, &updatedTenant.Plan, &updatedTenant.IsActive)
 	if err != nil {
@@ -311,12 +334,15 @@ func TestUpdateTenantHandler(t *testing.T) {
 	if updatedTenant.TenantName != updateTenantRequest["tenantName"] {
 		t.Errorf("Expected tenant name '%s', got '%s'", updateTenantRequest["tenantName"], updatedTenant.TenantName)
 	}
+
 	if updatedTenant.ContactEmail != updateTenantRequest["contactEmail"] {
 		t.Errorf("Expected contact email '%s', got '%s'", updateTenantRequest["contactEmail"], updatedTenant.ContactEmail)
 	}
+
 	if updatedTenant.Plan != updateTenantRequest["plan"] {
 		t.Errorf("Expected plan '%s', got '%s'", updateTenantRequest["plan"], updatedTenant.Plan)
 	}
+
 	if updatedTenant.IsActive != updateTenantRequest["isActive"] {
 		t.Errorf("Expected isActive '%v', got '%v'", updateTenantRequest["isActive"], updatedTenant.IsActive)
 	}
@@ -324,6 +350,7 @@ func TestUpdateTenantHandler(t *testing.T) {
 
 func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -340,6 +367,7 @@ func TestUpdateTenantHandler_InvalidID(t *testing.T) {
 
 func TestUpdateTenantHandler_NotFound(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -356,6 +384,7 @@ func TestUpdateTenantHandler_NotFound(t *testing.T) {
 
 func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -377,6 +406,7 @@ func TestUpdateTenantHandler_InvalidRequest(t *testing.T) {
 
 func TestSearchTenantsHandler(t *testing.T) {
 	t.Parallel()
+
 	app := testutils.NewTestApp(t)
 	defer app.Close()
 
@@ -542,6 +572,7 @@ func TestSearchTenantsHandler(t *testing.T) {
 			// For successful requests, check the response content
 			if tc.expectedStatus == http.StatusOK {
 				var response map[string]interface{}
+
 				err := json.Unmarshal(rr.Body.Bytes(), &response)
 				if err != nil {
 					t.Fatalf("Failed to unmarshal response: %v", err)

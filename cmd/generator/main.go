@@ -62,6 +62,7 @@ func runCli(module string, tableSchema []generator.Table) {
 				}
 
 				writeFileIfNotExist(fmt.Sprintf("internal/%s/models.go", table.Name), modelTemplate)
+
 				continue
 			}
 
@@ -93,122 +94,139 @@ func writeFileIfNotExist(filename string, content []byte) {
 }
 
 func getTableSelection(tableSchema []generator.Table) []generator.Table {
-	var selectedTables []generator.Table
-
-	// print table names
-	fmt.Println("Select tables to generate:")
-	for _, table := range tableSchema {
-		fmt.Printf("%s\n", table.Name)
-	}
-
-	// prompt user to write table
-	var tableNames []string
+	printTableOptions(tableSchema)
 
 	for {
-		fmt.Print("Enter table names (comma-separated): ")
-		var input string
-		if _, err := fmt.Scanln(&input); err != nil {
-			panic(err)
+		tableNames := getUserInput("Enter table names (comma-separated): ")
+
+		normalized := normalizeInput(tableNames)
+		if isSelectAll(normalized) {
+			return tableSchema
 		}
-		tableNames = strings.Split(input, ",")
-		if len(tableNames) == 0 {
-			fmt.Println("Please enter at least one table name.")
+
+		selectedTables, invalid := filterValidTables(normalized, tableSchema)
+		if invalid {
+			fmt.Println("One or more table names are invalid.")
 			continue
 		}
 
-		for i, tableName := range tableNames {
-			tableNames[i] = strings.ToLower(strings.TrimSpace(tableName))
-		}
+		return selectedTables
+	}
+}
 
-		if tableNames[0] == "all" || tableNames[0] == "*" {
-			selectedTables = tableSchema
-			break
-		}
+func printTableOptions(tables []generator.Table) {
+	fmt.Println("Select tables to generate:")
 
-		invalidTable := false
-		// ensure every table name is valid
-		for _, tableName := range tableNames {
-			found := false
-			for _, table := range tableSchema {
-				if table.Name == tableName {
-					found = true
-					selectedTables = append(selectedTables, table)
-					break
-				}
-			}
-			if !found {
-				fmt.Printf("Table %s does not exist.\n", tableName)
-				invalidTable = true
+	for _, table := range tables {
+		fmt.Println(table.Name)
+	}
+}
+
+func getUserInput(prompt string) []string {
+	fmt.Print(prompt)
+
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		panic(err)
+	}
+
+	return strings.Split(input, ",")
+}
+
+func normalizeInput(inputs []string) []string {
+	for i := range inputs {
+		inputs[i] = strings.ToLower(strings.TrimSpace(inputs[i]))
+	}
+
+	return inputs
+}
+
+func isSelectAll(input []string) bool {
+	if len(input) == 0 {
+		return false
+	}
+
+	return input[0] == "all" || input[0] == "*"
+}
+
+func filterValidTables(names []string, schema []generator.Table) ([]generator.Table, bool) {
+	var result []generator.Table
+
+	for _, name := range names {
+		found := false
+
+		for _, table := range schema {
+			if table.Name == name {
+				result = append(result, table)
+				found = true
+
 				break
 			}
 		}
 
-		if invalidTable {
-			continue
+		if !found {
+			fmt.Printf("Table %s does not exist.\n", name)
+			return nil, true
 		}
-
-		break
 	}
 
-	return selectedTables
+	return result, false
 }
 
 func getActionSelection() []string {
-	var selectedActions []string
-
 	allActions := []string{"create", "get", "update", "list", "delete", "model"}
 
+	printActions(allActions)
+
 	for {
-		fmt.Println("Select actions to generate:")
-		for _, action := range allActions {
-			fmt.Printf("%s\n", action)
+		actionNames := getUserInput("Enter actions (comma-separated): ")
+
+		normalized := normalizeInput(actionNames)
+		if isSelectAll(normalized) {
+			return allActions
 		}
-		fmt.Print("Enter actions (comma-separated): ")
-		var input string
-		if _, err := fmt.Scanln(&input); err != nil {
-			panic(err)
-		}
-		selectedActions = strings.Split(input, ",")
-		if len(selectedActions) == 0 {
-			fmt.Println("Please enter at least one action.")
+
+		selectedActions, invalid := filterValidActions(normalized, allActions)
+		if invalid {
+			fmt.Println("One or more actions are invalid.")
 			continue
 		}
 
-		for i, action := range selectedActions {
-			selectedActions[i] = strings.ToLower(strings.TrimSpace(action))
+		return selectedActions
+	}
+}
+
+func printActions(actions []string) {
+	fmt.Println("Select actions to generate:")
+
+	for _, action := range actions {
+		fmt.Println(action)
+	}
+}
+
+func filterValidActions(actions, validActions []string) ([]string, bool) {
+	var result []string
+
+	for _, action := range actions {
+		if !contains(validActions, action) {
+			fmt.Printf("Action %s does not exist.\n", action)
+			return nil, true
 		}
 
-		if selectedActions[0] == "all" || selectedActions[0] == "*" {
-			selectedActions = allActions
-			break
-		}
-
-		// ensure every action is valid
-		invalidAction := false
-		for _, action := range selectedActions {
-			found := false
-			for _, validAction := range allActions {
-				if action == validAction {
-					found = true
-					selectedActions = append(selectedActions, action)
-					break
-				}
-			}
-
-			if !found {
-				fmt.Printf("Action %s does not exist.\n", action)
-				invalidAction = true
-				break
-			}
-		}
-
-		if invalidAction {
-			continue
-		}
-		break
+		result = append(result, action)
 	}
 
-	return selectedActions
+	return result, false
+}
+
+func contains(slice []string, val string) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+
+	return false
 }
 
 type actionConfig struct {
@@ -245,5 +263,4 @@ func getActionMap() map[string]actionConfig {
 			"internal/%s/delete_%s_by_id_test.go",
 		},
 	}
-
 }

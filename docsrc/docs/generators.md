@@ -49,9 +49,9 @@ To ensure the generator works optimally, follow these conventions in your databa
 
 - Primary Key: Must be named `id` and of type `int64`.
 
-- Table Names: Use **_plural_**, **_snake_case_**, and **_lowercase_** (e.g., `users`, `order_items`).
+- Table Names: Use _plural_, _snake_case_, and _lowercase_ (e.g., `users`, `order_items`).
 
-- Column Names: Use **_snake_case_** and **_lowercase_**.
+- Column Names: Use _snake_case_ and _lowercase_.
 
 - Required Fields: Add `CHECK` constraints like `CHECK (column_name <> '')` to mark fields as required in the generated create/update handlers.
 

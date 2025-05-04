@@ -31,16 +31,17 @@ func seedDB(db *sql.DB) error {
 			continue
 		}
 
-		filePath := filepath.Join(dataDir, file.Name())
+		seedFilePath := filepath.Join(dataDir, file.Name())
+		seedFilePath = filepath.Clean(seedFilePath)
 
-		data, err := os.ReadFile(filePath)
+		data, err := os.ReadFile(seedFilePath)
 		if err != nil {
-			return fmt.Errorf("failed to read data file %s: %w", filePath, err)
+			return fmt.Errorf("failed to read data file %s: %w", seedFilePath, err)
 		}
 
 		_, err = db.Exec(string(data))
 		if err != nil {
-			return fmt.Errorf("failed to execute data file %s: %w", filePath, err)
+			return fmt.Errorf("failed to execute data file %s: %w", seedFilePath, err)
 		}
 	}
 
@@ -84,16 +85,17 @@ func SetupTestDB(t *testing.T) *sql.DB {
 			continue
 		}
 
-		filePath := filepath.Join(migrationDir, file.Name())
+		migrationFilePath := filepath.Join(migrationDir, file.Name())
+		filepath.Clean(migrationFilePath)
 
-		migration, err := os.ReadFile(filePath)
+		migration, err := os.ReadFile(migrationFilePath)
 		if err != nil {
-			t.Fatalf("Failed to read migration file %s: %v", filePath, err)
+			t.Fatalf("Failed to read migration file %s: %v", migrationFilePath, err)
 		}
 
 		_, err = db.Exec(string(migration))
 		if err != nil {
-			t.Fatalf("Failed to execute migration %s: %v", filePath, err)
+			t.Fatalf("Failed to execute migration %s: %v", migrationFilePath, err)
 		}
 	}
 

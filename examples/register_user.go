@@ -11,15 +11,11 @@ import (
 
 func RegisterUser(ctx context.Context, db dbutils.DB, username, email, inviteToken string) (authutils.User, error) {
 	var userID *int64
+
 	var err error
 
 	if inviteToken != "" {
-		// TODO
-		// userID, err = a.registerInvitedUser(ctx, username, email, inviteToken)
 
-		// if err != nil {
-		// 	return User{}, fmt.Errorf("failed to register invited user: %w", err)
-		// }
 	} else {
 		userID, err = registerNewUser(ctx, db, username, email)
 
@@ -39,6 +35,7 @@ func RegisterUser(ctx context.Context, db dbutils.DB, username, email, inviteTok
 
 func registerNewUser(ctx context.Context, db dbutils.DB, username, email string) (*int64, error) {
 	var userID *int64
+
 	err := dbutils.WithTransaction(ctx, db, func(tx dbutils.DB) error {
 		tenantID, err := dbutils.Insert(ctx, tx, "tenants", map[string]any{
 			"tenant_name":   uuid.New().String(),
