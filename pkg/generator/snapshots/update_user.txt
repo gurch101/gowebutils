@@ -24,6 +24,18 @@ type UpdateUserRequest struct {
 	Email *string `json:"email"`
 }
 
+// UpdateUser godoc
+//
+//	@Summary		Update a user
+//	@Description	Update a user by ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int64					true	"User ID"
+//	@Param			user	body		UpdateUserRequest	true	"Update user"
+//	@Success		200		{object}	GetUserByIDResponse
+//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router			/users/{id} [patch]
 func (tc *UpdateUserController) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := parser.ParseIDPathParam(r)
 

@@ -37,6 +37,26 @@ type SearchUserResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// ListUser godoc
+//
+//	@Summary		List users
+//	@Description	get users
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param 			id query int64 false "id"
+//	@Param 			version query int64 false "version"
+//	@Param 			name query string false "name"
+//	@Param 			email query string false "email"
+//	@Param 			createdAt query time.Time false "createdAt"
+//	@Param 			updatedAt query time.Time false "updatedAt"
+//	@Param			fields query string false "csv list of fields to include. By default all fields are included"
+//	@Param      page query int false "page number"
+//	@Param			pageSize	query		int		false	"page size"
+//	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
+//	@Success		200	{array}		SearchUserResponse
+//	@Failure		400,404,500	{object}	httputils.ErrorResponse
+//	@Router			/users [get]
 func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http.Request) {
 	queryString := r.URL.Query()
 	request := &SearchUserRequest{

@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"net/http"
 	{{if .UniqueConstraint}}"strings"{{end}}
-	{{if .IncludeTime}}"time"{{end}}
 
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
@@ -42,6 +41,18 @@ type Create{{.SingularTitleCaseName}}Response struct {
 	ID int64 ` + "`" + `json:"id"` + "`" + `
 }
 
+// Create{{.SingularTitleCaseName}} godoc
+//
+//	@Summary		Create a {{.SingularCamelCaseName}}
+//	@Description	Create a new {{.SingularCamelCaseName}}
+//	@Tags			{{.Name}}
+//	@Accept			json
+//	@Produce		json
+//	@Param			{{.SingularCamelCaseName}}	body		Create{{.SingularTitleCaseName}}Request	true	"Create {{.SingularCamelCaseName}}"}"
+//	@Success		201	{object}	CreateUserResponse
+//	@Header     201 {string}  Location  "/{{.KebabCaseTableName}}/{id}"
+//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router			/{{.KebabCaseTableName}} [post]
 func (c *Create{{.SingularTitleCaseName}}Controller) Create{{.SingularTitleCaseName}}Handler(
 	w http.ResponseWriter,
 	r *http.Request) {
@@ -122,24 +133,6 @@ func Create{{.SingularTitleCaseName}}(
 }
 
 /* Repository */
-type {{.SingularCamelCaseName}}Model struct {
-	{{- range .ModelFields}}
-	{{.TitleCaseName}} {{.GoType}}
-	{{- end}}
-}
-
-func newCreate{{.SingularTitleCaseName}}Model(
-	{{- range .Fields}}
-	{{.JSONName}} {{.GoType}},
-	{{- end}}
-) *{{.SingularCamelCaseName}}Model {
-	return &{{.SingularCamelCaseName}}Model{
-		{{- range .Fields}}
-		{{.TitleCaseName}}: {{.JSONName}},
-		{{- end}}
-	}
-}
-
 func insert{{.SingularTitleCaseName}}(
 	ctx context.Context,
 	db dbutils.DB,
@@ -407,44 +400,20 @@ func getSanitizedName(name string) string {
 	return sanitizedName
 }
 
-func newModelField(sanitizedName string, field Field) ModelField {
-	return ModelField{
-		Name:          field.Name,
-		TitleCaseName: stringutils.SnakeToTitle(sanitizedName),
-		CamelCaseName: stringutils.SnakeToCamel(sanitizedName),
-		GoType:        field.DataType.GoType(),
-		JSONName:      stringutils.SnakeToCamel(sanitizedName),
-	}
-}
-
-func newUniqueField(field Field) UniqueField {
-	return UniqueField{
-		Name:          field.Name,
-		JSONName:      stringutils.SnakeToCamel(field.Name),
-		TitleCaseName: stringutils.SnakeToTitle(field.Name),
-		HumanName:     stringutils.SnakeToHuman(field.Name),
-	}
-}
-
 func newCreateHandlerTemplateData(moduleName string, schema Table) createHandlerTemplateData {
 	fields := []RequestField{}
 	uniqueFields := []UniqueField{}
 	modelFields := []ModelField{}
-	includeTime := false
 	includeUniqueConstraint := false
 	requireValidation := false
 
 	for _, field := range schema.Fields {
 		sanitizedName := getSanitizedName(field.Name)
 
-		if field.DataType == SQLDatetime || field.DataType == SQLTimestamp {
-			includeTime = true
-		}
-
 		if field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at" {
 			if hasUniqueConstraint(field.Constraints) {
 				includeUniqueConstraint = true
-
+				requireValidation = true
 				uniqueFields = append(uniqueFields, newUniqueField(field))
 			}
 
@@ -475,7 +444,6 @@ func newCreateHandlerTemplateData(moduleName string, schema Table) createHandler
 		ModuleName:            moduleName,
 		UniqueConstraint:      includeUniqueConstraint,
 		RequireValidation:     requireValidation,
-		IncludeTime:           includeTime,
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
 		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),

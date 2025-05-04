@@ -1,5 +1,7 @@
 package generator
 
+import "github.com/gurch101/gowebutils/pkg/stringutils"
+
 type Table struct {
 	Name          string
 	Fields        []Field
@@ -129,11 +131,32 @@ type searchHandlerTemplateData struct {
 	ModelFields           []ModelField
 }
 
+type modelTemplateData struct {
+	PackageName           string
+	Name                  string
+	ModuleName            string
+	TitleCaseTableName    string
+	SingularTitleCaseName string
+	SingularCamelCaseName string
+	IncludeTime           bool
+	ModelFields           []ModelField
+	Fields                []RequestField
+}
+
 type UniqueField struct {
 	Name          string
 	TitleCaseName string
 	JSONName      string
 	HumanName     string
+}
+
+func newUniqueField(field Field) UniqueField {
+	return UniqueField{
+		Name:          field.Name,
+		JSONName:      stringutils.SnakeToCamel(field.Name),
+		TitleCaseName: stringutils.SnakeToTitle(field.Name),
+		HumanName:     stringutils.SnakeToHuman(field.Name),
+	}
 }
 
 type RequestField struct {
@@ -152,4 +175,14 @@ type ModelField struct {
 	CamelCaseName string
 	GoType        string
 	JSONName      string
+}
+
+func newModelField(sanitizedName string, field Field) ModelField {
+	return ModelField{
+		Name:          field.Name,
+		TitleCaseName: stringutils.SnakeToTitle(sanitizedName),
+		CamelCaseName: stringutils.SnakeToCamel(sanitizedName),
+		GoType:        field.DataType.GoType(),
+		JSONName:      stringutils.SnakeToCamel(sanitizedName),
+	}
 }

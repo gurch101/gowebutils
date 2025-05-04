@@ -44,6 +44,23 @@ type Search{{.SingularTitleCaseName}}Response struct {
 	{{- end}}
 }
 
+// List{{.SingularTitleCaseName}} godoc
+//
+//	@Summary		List {{.SingularCamelCaseName}}s
+//	@Description	get {{.SingularCamelCaseName}}s
+//	@Tags			{{.Name}}
+//	@Accept			json
+//	@Produce		json
+	{{- range .ModelFields}}
+//	@Param 			{{.CamelCaseName}} query {{.GoType}} false "{{.CamelCaseName}}"
+	{{- end}}
+//	@Param			fields query string false "csv list of fields to include. By default all fields are included"
+//	@Param      page query int false "page number"
+//	@Param			pageSize	query		int		false	"page size"
+//	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
+//	@Success		200	{array}		Search{{.SingularTitleCaseName}}Response
+//	@Failure		400,404,500	{object}	httputils.ErrorResponse
+//	@Router			/{{.KebabCaseTableName}} [get]
 func (tc *Search{{.SingularTitleCaseName}}Controller) Search{{.SingularTitleCaseName}}Handler(w http.ResponseWriter, r *http.Request) {
 	queryString := r.URL.Query()
 	request := &Search{{.SingularTitleCaseName}}Request{

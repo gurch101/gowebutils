@@ -1,0 +1,43 @@
+package users
+
+import (
+	"time"
+)
+
+type userModel struct {
+	ID        int64
+	Version   int64
+	Name      string
+	Email     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func newCreateUserModel(
+	name string,
+	email string,
+) *userModel {
+	return &userModel{
+		Name:  name,
+		Email: email,
+	}
+}
+
+func (m *userModel) Field(field string) interface{} {
+	switch field {
+	case "id":
+		return &m.ID
+	case "version":
+		return &m.Version
+	case "name":
+		return &m.Name
+	case "email":
+		return &m.Email
+	case "created_at":
+		return &m.CreatedAt
+	case "updated_at":
+		return &m.UpdatedAt
+	default:
+		return nil
+	}
+}

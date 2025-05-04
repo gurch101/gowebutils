@@ -44,6 +44,9 @@ func AssertFileEqualsString(t *testing.T, expectedFilePath, actual string) {
 	}
 
 	if strings.TrimSpace(string(expected)) != strings.TrimSpace(actual) {
+		if err := os.WriteFile(expectedFilePath+".new", []byte(strings.TrimSpace(actual)), readWritePermissions); err != nil {
+			t.Fatalf("error writing to expected file: %v", err)
+		}
 		t.Fatalf("expected file %s does not match actual contents", expectedFilePath)
 	}
 }

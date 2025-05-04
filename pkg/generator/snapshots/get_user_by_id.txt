@@ -28,6 +28,17 @@ type GetUserByIDResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// GetUser godoc
+//
+//	@Summary		Get a user
+//	@Description	get user by ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int64	true	"user ID"
+//	@Success		200	{object}	GetUserByIDResponse
+//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router			/users/{id} [get]
 func (tc *GetUserByIDController) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := parser.ParseIDPathParam(r)
 

@@ -23,3 +23,11 @@
 mailer:
 
 - what happens to mails in progress when the server is shutdown?
+
+make all error responses conform to:
+{
+  "errors": [{
+    "field": "foo",
+    "message: "all"
+  }]
+}

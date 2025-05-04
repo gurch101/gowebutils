@@ -18,7 +18,7 @@ coverage:
 lint:
 	golangci-lint run
 
-lint-fix:
+lintfix:
 	golangci-lint run --fix
 
 fmt:

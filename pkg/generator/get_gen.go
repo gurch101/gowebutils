@@ -34,6 +34,17 @@ type Get{{.SingularTitleCaseName}}ByIDResponse struct {
 	{{- end}}
 }
 
+// Get{{.SingularTitleCaseName}} godoc
+//
+//	@Summary		Get a {{.SingularCamelCaseName}}
+//	@Description	get {{.SingularCamelCaseName}} by ID
+//	@Tags			{{.Name}}
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int64	true	"{{.SingularCamelCaseName}} ID"
+//	@Success		200	{object}	Get{{.SingularTitleCaseName}}ByIDResponse
+//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router			/{{.KebabCaseTableName}}/{id} [get]
 func (tc *Get{{.SingularTitleCaseName}}ByIDController) Get{{.SingularTitleCaseName}}ByIDHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := parser.ParseIDPathParam(r)
 

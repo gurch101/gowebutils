@@ -21,11 +21,15 @@ func logError(r *http.Request, err error) {
 	)
 }
 
+type ErrorResponse struct {
+	Errors any `json:"errors"`
+}
+
 func errorResponse(w http.ResponseWriter, r *http.Request, status int, message interface{}) {
 	// Write the response using the writeJSON() helper. If this happens to return an error
 	// then log it, and fall back to sending the client an empty response with a 500 Internal
 	// Server Error status code
-	err := WriteJSON(w, status, map[string]any{"errors": message}, nil)
+	err := WriteJSON(w, status, ErrorResponse{Errors: message}, nil)
 	if err != nil {
 		logError(r, err)
 		w.WriteHeader(http.StatusInternalServerError)

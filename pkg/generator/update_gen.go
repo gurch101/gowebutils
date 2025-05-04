@@ -34,6 +34,18 @@ type Update{{.SingularTitleCaseName}}Request struct {
 {{- end}}
 }
 
+// Update{{.SingularTitleCaseName}} godoc
+//
+//	@Summary		Update a {{.SingularCamelCaseName}}
+//	@Description	Update a {{.SingularCamelCaseName}} by ID
+//	@Tags			{{.Name}}
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int64					true	"{{.SingularTitleCaseName}} ID"
+//	@Param			{{.SingularCamelCaseName}}	body		Update{{.SingularTitleCaseName}}Request	true	"Update {{.SingularCamelCaseName}}"
+//	@Success		200		{object}	Get{{.SingularTitleCaseName}}ByIDResponse
+//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router			/{{.KebabCaseTableName}}/{id} [patch]
 func (tc *Update{{.SingularTitleCaseName}}Controller) Update{{.SingularTitleCaseName}}Handler(w http.ResponseWriter, r *http.Request) {
 	id, err := parser.ParseIDPathParam(r)
 

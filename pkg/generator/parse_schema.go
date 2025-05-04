@@ -66,7 +66,7 @@ func getDatabaseSchema(db *dbutils.DBPool) ([]Table, error) {
 
 		for _, constraint := range constraints {
 			for i, field := range tableInfo.Fields {
-				if field.Name == constraint.Name {
+				if field.Name == constraint.Name || strings.Contains(constraint.Expression, field.Name) {
 					tableInfo.Fields[i].Constraints = append(tableInfo.Fields[i].Constraints, "CHECK "+constraint.Expression)
 
 					break

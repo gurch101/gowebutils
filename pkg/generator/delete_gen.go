@@ -31,6 +31,17 @@ type Delete{{.SingularTitleCaseName}}Response struct {
 	Message string ` + "`" + `json:"message"` + "`" + `
 }
 
+// Delete{{.SingularTitleCaseName}} godoc
+//
+//	@Summary		Delete a {{.SingularCamelCaseName}}
+//	@Description	Delete by {{.SingularCamelCaseName}} ID
+//	@Tags			{{.Name}}
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"{{.SingularCamelCaseName}} ID"	Format(int64)
+//	@Success		200	{object}	Delete{{.SingularTitleCaseName}}Response
+//	@Failure		400,404,422,500	{object}	httputils.ErrorResponse
+//	@Router			/{{.KebabCaseTableName}}/{id} [delete]
 func (tc *Delete{{.SingularTitleCaseName}}Controller) Delete{{.SingularTitleCaseName}}Handler(w http.ResponseWriter, r *http.Request) {
 	id, err := parser.ParseIDPathParam(r)
 

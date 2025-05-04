@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
@@ -32,6 +31,18 @@ type CreateUserResponse struct {
 	ID int64 `json:"id"`
 }
 
+// CreateUser godoc
+//
+//	@Summary		Create a user
+//	@Description	Create a new user
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		CreateUserRequest	true	"Create user"}"
+//	@Success		201	{object}	CreateUserResponse
+//	@Header     201 {string}  Location  "/users/{id}"
+//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router			/users [post]
 func (c *CreateUserController) CreateUserHandler(
 	w http.ResponseWriter,
 	r *http.Request) {
@@ -104,25 +115,6 @@ func CreateUser(
 }
 
 /* Repository */
-type userModel struct {
-	ID        int64
-	Version   int64
-	Name      string
-	Email     string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-func newCreateUserModel(
-	name string,
-	email string,
-) *userModel {
-	return &userModel{
-		Name:  name,
-		Email: email,
-	}
-}
-
 func insertUser(
 	ctx context.Context,
 	db dbutils.DB,

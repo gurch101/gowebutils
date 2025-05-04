@@ -22,6 +22,17 @@ type DeleteUserResponse struct {
 	Message string `json:"message"`
 }
 
+// DeleteUser godoc
+//
+//	@Summary		Delete a user
+//	@Description	Delete by user ID
+//	@Tags			users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"user ID"	Format(int64)
+//	@Success		200	{object}	DeleteUserResponse
+//	@Failure		400,404,422,500	{object}	httputils.ErrorResponse
+//	@Router			/users/{id} [delete]
 func (tc *DeleteUserController) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := parser.ParseIDPathParam(r)
 
