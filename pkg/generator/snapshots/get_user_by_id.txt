@@ -32,8 +32,8 @@ type GetUserByIDResponse struct {
 
 // GetUser godoc
 //
-//	@Summary		Get a user
-//	@Description	get user by ID
+//	@Summary		Get a User
+//	@Description	get User by ID
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json

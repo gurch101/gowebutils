@@ -23,7 +23,7 @@ func NewCreateUserController(app *app.App) *CreateUserController {
 }
 
 type CreateUserRequest struct {
-	Name      string `json:"name"`
+	Name      string `json:"name" validate:"required"`
 	Email     string `json:"email"`
 	SomeInt64 int64  `json:"someInt64"`
 	SomeBool  bool   `json:"someBool"`
@@ -35,8 +35,8 @@ type CreateUserResponse struct {
 
 // CreateUser godoc
 //
-//	@Summary			Create a user
-//	@Description	Create a new user
+//	@Summary			Create a User
+//	@Description	Create a new User
 //	@Tags					users
 //	@Accept				json
 //	@Produce			json

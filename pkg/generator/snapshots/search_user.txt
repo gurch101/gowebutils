@@ -43,8 +43,8 @@ type SearchUserResponse struct {
 
 // ListUser godoc
 //
-//	@Summary		List users
-//	@Description	get users
+//	@Summary		List Users
+//	@Description	get Users
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json
@@ -57,8 +57,8 @@ type SearchUserResponse struct {
 //	@Param 			createdAt query time.Time false "createdAt"
 //	@Param 			updatedAt query time.Time false "updatedAt"
 //	@Param			fields query string false "csv list of fields to include. By default all fields are included"
-//	@Param      page query int false "page number"
-//	@Param			pageSize	query		int		false	"page size"
+//	@Param      page query int false "page number" minimum(1) default(1)
+//	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
 //	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
 //	@Success		200	{array}		SearchUserResponse
 //	@Failure		400,404,500	{object}	httputils.ErrorResponse

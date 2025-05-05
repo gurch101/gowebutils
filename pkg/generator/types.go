@@ -74,6 +74,7 @@ type createHandlerTemplateData struct {
 	PackageName           string
 	Name                  string
 	ModuleName            string
+	HumanName             string
 	TitleCaseTableName    string
 	SingularTitleCaseName string
 	SingularCamelCaseName string
@@ -102,6 +103,7 @@ type getHandlerTemplateData struct {
 	PackageName           string
 	Name                  string
 	ModuleName            string
+	HumanName             string
 	SingularTitleCaseName string
 	SingularCamelCaseName string
 	KebabCaseTableName    string
@@ -113,6 +115,7 @@ type updateHandlerTemplateData struct {
 	PackageName           string
 	Name                  string
 	ModuleName            string
+	HumanName             string
 	KebabCaseTableName    string
 	SingularTitleCaseName string
 	SingularCamelCaseName string
@@ -124,6 +127,7 @@ type searchHandlerTemplateData struct {
 	PackageName           string
 	Name                  string
 	ModuleName            string
+	HumanName             string
 	TitleCaseTableName    string
 	SingularTitleCaseName string
 	SingularCamelCaseName string
@@ -181,6 +185,14 @@ type RequestField struct {
 
 func IsRequestField(field Field) bool {
 	return field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at"
+}
+
+func (field RequestField) SwaggerTag() string {
+	if field.Required {
+		return ` validate:"required"`
+	}
+
+	return ""
 }
 
 type ModelField struct {

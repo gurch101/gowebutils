@@ -24,8 +24,8 @@ type DeleteUserResponse struct {
 
 // DeleteUser godoc
 //
-//	@Summary		Delete a user
-//	@Description	Delete by user ID
+//	@Summary		Delete a User
+//	@Description	Delete by User ID
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json

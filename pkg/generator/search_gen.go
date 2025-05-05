@@ -46,8 +46,8 @@ type Search{{.SingularTitleCaseName}}Response struct {
 
 // List{{.SingularTitleCaseName}} godoc
 //
-//	@Summary		List {{.SingularCamelCaseName}}s
-//	@Description	get {{.SingularCamelCaseName}}s
+//	@Summary		List {{.HumanName}}
+//	@Description	get {{.HumanName}}
 //	@Tags			{{.Name}}
 //	@Accept			json
 //	@Produce		json
@@ -55,8 +55,8 @@ type Search{{.SingularTitleCaseName}}Response struct {
 //	@Param 			{{.CamelCaseName}} query {{.GoType}} false "{{.CamelCaseName}}"
 	{{- end}}
 //	@Param			fields query string false "csv list of fields to include. By default all fields are included"
-//	@Param      page query int false "page number"
-//	@Param			pageSize	query		int		false	"page size"
+//	@Param      page query int false "page number" minimum(1) default(1)
+//	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
 //	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
 //	@Success		200	{array}		Search{{.SingularTitleCaseName}}Response
 //	@Failure		400,404,500	{object}	httputils.ErrorResponse
@@ -358,6 +358,7 @@ func newSearchHandlerTemplateData(moduleName string, schema Table) searchHandler
 	return searchHandlerTemplateData{
 		PackageName:           schema.Name,
 		Name:                  schema.Name,
+		HumanName:             stringutils.SnakeToHuman(schema.Name),
 		ModuleName:            moduleName,
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),

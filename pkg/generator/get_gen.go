@@ -36,8 +36,8 @@ type Get{{.SingularTitleCaseName}}ByIDResponse struct {
 
 // Get{{.SingularTitleCaseName}} godoc
 //
-//	@Summary		Get a {{.SingularCamelCaseName}}
-//	@Description	get {{.SingularCamelCaseName}} by ID
+//	@Summary		Get a {{.HumanName}}
+//	@Description	get {{.HumanName}} by ID
 //	@Tags			{{.Name}}
 //	@Accept			json
 //	@Produce		json
@@ -209,6 +209,7 @@ func newGetOneHandlerTemplateData(moduleName string, schema Table) getHandlerTem
 		PackageName:           schema.Name,
 		Name:                  schema.Name,
 		ModuleName:            moduleName,
+		HumanName:             stringutils.SnakeToHuman(strings.TrimSuffix(schema.Name, "s")),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
 		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
 		KebabCaseTableName:    stringutils.SnakeToKebab(schema.Name),

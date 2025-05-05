@@ -124,7 +124,7 @@ func getTableNames(db *dbutils.DBPool) ([]string, error) {
 			return nil, fmt.Errorf("%w: failed to get table name", err)
 		}
 
-		if !strings.HasPrefix(tableName, "sqlite_") && !strings.HasPrefix(tableName, "schema_migrations") {
+		if !strings.HasPrefix(tableName, "sqlite_") && !strings.HasPrefix(tableName, "schema_migrations") && tableName != "sessions" {
 			tableNames = append(tableNames, tableName)
 		}
 	}

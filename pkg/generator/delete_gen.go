@@ -33,8 +33,8 @@ type Delete{{.SingularTitleCaseName}}Response struct {
 
 // Delete{{.SingularTitleCaseName}} godoc
 //
-//	@Summary		Delete a {{.SingularCamelCaseName}}
-//	@Description	Delete by {{.SingularCamelCaseName}} ID
+//	@Summary		Delete a {{.HumanName}}
+//	@Description	Delete by {{.HumanName}} ID
 //	@Tags			{{.Name}}
 //	@Accept			json
 //	@Produce		json
@@ -206,7 +206,7 @@ func newDeleteHandlerTemplateData(moduleName string, schema Table) deleteHandler
 		PackageName:           schema.Name,
 		Name:                  schema.Name,
 		ModuleName:            moduleName,
-		HumanName:             stringutils.SnakeToHuman(schema.Name),
+		HumanName:             stringutils.SnakeToHuman(strings.TrimSuffix(schema.Name, "s")),
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		KebabCaseTableName:    stringutils.SnakeToKebab(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),

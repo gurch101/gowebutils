@@ -11,10 +11,10 @@ const createHandlerTemplate = `package {{.PackageName}}
 
 import (
 	"context"
-	"errors"
+	{{if .UniqueConstraint}}"errors"{{end}}
 	"fmt"
 	"net/http"
-	{{if .UniqueConstraint}}"strings"{{end}}
+	{{if .UniqueConstraint}}"strings"{{- end}}
 
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
@@ -33,7 +33,7 @@ func NewCreate{{.SingularTitleCaseName}}Controller(app *app.App) *Create{{.Singu
 
 type Create{{.SingularTitleCaseName}}Request struct {
 {{- range .Fields}}
-	{{.TitleCaseName}} {{.GoType}} ` + "`" + `json:"{{.JSONName}}"` + "`" + `
+	{{.TitleCaseName}} {{.GoType}} ` + "`" + `json:"{{.JSONName}}"{{.SwaggerTag}}` + "`" + `
 {{- end}}
 }
 
@@ -43,13 +43,13 @@ type Create{{.SingularTitleCaseName}}Response struct {
 
 // Create{{.SingularTitleCaseName}} godoc
 //
-//	@Summary			Create a {{.SingularCamelCaseName}}
-//	@Description	Create a new {{.SingularCamelCaseName}}
+//	@Summary			Create a {{.HumanName}}
+//	@Description	Create a new {{.HumanName}}
 //	@Tags					{{.Name}}
 //	@Accept				json
 //	@Produce			json
 //	@Param				{{.SingularCamelCaseName}}	body		Create{{.SingularTitleCaseName}}Request	true	"Create {{.SingularCamelCaseName}}"
-//	@Success			201	{object}	CreateUserResponse
+//	@Success			201	{object}	Create{{.SingularTitleCaseName}}Response
 //	@Header     	201 {string}  Location  "/{{.KebabCaseTableName}}/{id}"
 //	@Failure			400,422,404,500	{object}	httputils.ErrorResponse
 //	@Router				/{{.KebabCaseTableName}} [post]
@@ -435,6 +435,7 @@ func newCreateHandlerTemplateData(moduleName string, schema Table) createHandler
 		PackageName:           schema.Name,
 		Name:                  schema.Name,
 		ModuleName:            moduleName,
+		HumanName:             stringutils.SnakeToHuman(strings.TrimSuffix(schema.Name, "s")),
 		UniqueConstraint:      includeUniqueConstraint,
 		RequireValidation:     requireValidation,
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),

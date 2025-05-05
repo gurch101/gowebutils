@@ -25,8 +25,8 @@ type UpdateUserRequest struct {
 
 // UpdateUser godoc
 //
-//	@Summary		Update a user
-//	@Description	Update a user by ID
+//	@Summary		Update a User
+//	@Description	Update a User by ID
 //	@Tags			users
 //	@Accept			json
 //	@Produce		json

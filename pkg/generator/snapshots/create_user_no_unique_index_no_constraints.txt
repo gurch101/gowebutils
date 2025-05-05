@@ -2,7 +2,7 @@ package users
 
 import (
 	"context"
-	"errors"
+
 	"fmt"
 	"net/http"
 
@@ -30,8 +30,8 @@ type CreateUserResponse struct {
 
 // CreateUser godoc
 //
-//	@Summary			Create a user
-//	@Description	Create a new user
+//	@Summary			Create a User
+//	@Description	Create a new User
 //	@Tags					users
 //	@Accept				json
 //	@Produce			json

@@ -36,8 +36,8 @@ type Update{{.SingularTitleCaseName}}Request struct {
 
 // Update{{.SingularTitleCaseName}} godoc
 //
-//	@Summary		Update a {{.SingularCamelCaseName}}
-//	@Description	Update a {{.SingularCamelCaseName}} by ID
+//	@Summary		Update a {{.HumanName}}
+//	@Description	Update a {{.HumanName}} by ID
 //	@Tags			{{.Name}}
 //	@Accept			json
 //	@Produce		json
@@ -257,6 +257,7 @@ func newUpdateHandlerTemplateData(moduleName string, schema Table) updateHandler
 		Name:                  schema.Name,
 		KebabCaseTableName:    stringutils.SnakeToKebab(schema.Name),
 		ModuleName:            moduleName,
+		HumanName:             stringutils.SnakeToHuman(strings.TrimSuffix(schema.Name, "s")),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
 		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
 		ModelFields:           modelFields,
