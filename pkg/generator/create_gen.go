@@ -43,16 +43,16 @@ type Create{{.SingularTitleCaseName}}Response struct {
 
 // Create{{.SingularTitleCaseName}} godoc
 //
-//	@Summary		Create a {{.SingularCamelCaseName}}
+//	@Summary			Create a {{.SingularCamelCaseName}}
 //	@Description	Create a new {{.SingularCamelCaseName}}
-//	@Tags			{{.Name}}
-//	@Accept			json
-//	@Produce		json
-//	@Param			{{.SingularCamelCaseName}}	body		Create{{.SingularTitleCaseName}}Request	true	"Create {{.SingularCamelCaseName}}"}"
-//	@Success		201	{object}	CreateUserResponse
-//	@Header     201 {string}  Location  "/{{.KebabCaseTableName}}/{id}"
-//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
-//	@Router			/{{.KebabCaseTableName}} [post]
+//	@Tags					{{.Name}}
+//	@Accept				json
+//	@Produce			json
+//	@Param				{{.SingularCamelCaseName}}	body		Create{{.SingularTitleCaseName}}Request	true	"Create {{.SingularCamelCaseName}}"
+//	@Success			201	{object}	CreateUserResponse
+//	@Header     	201 {string}  Location  "/{{.KebabCaseTableName}}/{id}"
+//	@Failure			400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router				/{{.KebabCaseTableName}} [post]
 func (c *Create{{.SingularTitleCaseName}}Controller) Create{{.SingularTitleCaseName}}Handler(
 	w http.ResponseWriter,
 	r *http.Request) {
@@ -65,7 +65,7 @@ func (c *Create{{.SingularTitleCaseName}}Controller) Create{{.SingularTitleCaseN
 		v := validation.NewValidator()
 		{{- range .Fields}}
 			{{- if .IsEmail}}
-				v.Email(req.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} is required")
+				v.Email(req.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} must be a valid email address")
 			{{- else if .Required}}
 				v.Required(req.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} is required")
 			{{- end}}
@@ -155,7 +155,7 @@ import (
 	"net/http"
 	"testing"
 
-	"{{.ModuleName}}/internal/users"
+	"{{.ModuleName}}/internal/{{.PackageName}}"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -169,15 +169,7 @@ t.Parallel()
 		controller := {{.PackageName}}.NewCreate{{.SingularTitleCaseName}}Controller(app.App)
 		app.TestRouter.Post("/{{.KebabCaseTableName}}", controller.Create{{.SingularTitleCaseName}}Handler)
 
-		body := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-			{{- range .Fields}}
-				{{- if .IsEmail}}
-				{{.TitleCaseName}}: "{{.JSONName}}@example.com",
-				{{- else}}
-				{{.TitleCaseName}}: "{{.JSONName}}",
-				{{- end}}
-			{{- end}}
-		}
+		body := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}Request(t)
 
 		req := testutils.CreatePostRequest(t, "/{{.KebabCaseTableName}}", body)
 		rr := app.MakeRequest(req)
@@ -220,7 +212,7 @@ t.Parallel()
 
 		{{- range .Fields}}
 		if {{.JSONName}} != body.{{.TitleCaseName}} {
-			t.Errorf("expected {{.JSONName}} to be %s, got %s", body.{{.TitleCaseName}}, {{.JSONName}})
+			t.Errorf("expected {{.JSONName}} to be %v, got %v", body.{{.TitleCaseName}}, {{.JSONName}})
 		}
 		{{- end}}
 	})

@@ -21,9 +21,7 @@ func TestCreateUser(t *testing.T) {
 		controller := users.NewCreateUserController(app.App)
 		app.TestRouter.Post("/users", controller.CreateUserHandler)
 
-		body := users.CreateUserRequest{
-			Name: "name",
-		}
+		body := users.CreateTestUserRequest(t)
 
 		req := testutils.CreatePostRequest(t, "/users", body)
 		rr := app.MakeRequest(req)
@@ -60,7 +58,7 @@ func TestCreateUser(t *testing.T) {
 			t.Fatal(err)
 		}
 		if name != body.Name {
-			t.Errorf("expected name to be %s, got %s", body.Name, name)
+			t.Errorf("expected name to be %v, got %v", body.Name, name)
 		}
 	})
 

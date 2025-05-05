@@ -76,7 +76,7 @@ func (tc *Update{{.SingularTitleCaseName}}Controller) Update{{.SingularTitleCase
 	v := validation.NewValidator()
 	{{- range .Fields}}
 	{{- if .IsEmail}}
-	v.Email(model.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} is required")
+	v.Email(model.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} must be a valid email address")
 	{{- else if .Required}}
 	v.Required(model.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} is required")
 	{{- end}}
@@ -122,13 +122,12 @@ func Update{{.SingularTitleCaseName}}(ctx context.Context, db dbutils.DB, model 
 const updateHandlerTestTemplate = `package {{.PackageName}}_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gurch101/gowebgentest/internal/{{.PackageName}}"
+	"{{.ModuleName}}/internal/{{.PackageName}}"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
@@ -139,25 +138,14 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 
 		defer app.Close()
 
-		createReq := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-			{{- range .Fields}}
-			{{.TitleCaseName}}: "old_{{.JSONName}}",
-			{{- end}}
-		}
-		ID, err := {{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &createReq)
-		if err != nil {
-			t.Fatal(err)
-		}
+		ID, _ := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
 
 		controller := {{.PackageName}}.NewUpdate{{.SingularTitleCaseName}}Controller(app.App)
 		app.TestRouter.Patch("/{{.KebabCaseTableName}}/{id}", controller.Update{{.SingularTitleCaseName}}Handler)
 
-		updateReq := {{.PackageName}}.Update{{.SingularTitleCaseName}}Request{
-			{{- range .Fields}}
-			{{.TitleCaseName}}: testutils.StringPtr("new_{{.JSONName}}"),
-			{{- end}}
-		}
-		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", *ID), updateReq)
+		updateReq := {{.PackageName}}.CreateTestUpdate{{.SingularTitleCaseName}}Request(t)
+
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", ID), updateReq)
 		rr := app.MakeRequest(req)
 
 		if rr.Code != http.StatusOK {
@@ -165,17 +153,17 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 		}
 
 		var response {{.PackageName}}.Get{{.SingularTitleCaseName}}ByIDResponse
-		err = json.Unmarshal(rr.Body.Bytes(), &response)
+		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if response.ID != int64(*ID) {
-			t.Errorf("expected ID to be %d, got %d", *ID, response.ID)
+		if response.ID != ID {
+			t.Errorf("expected ID to be %d, got %d", ID, response.ID)
 		}
 		{{- range .Fields}}
 		if response.{{.TitleCaseName}} != *updateReq.{{.TitleCaseName}} {
-			t.Errorf("expected {{.TitleCaseName}} to be %s, got %s", *updateReq.{{.TitleCaseName}}, response.{{.TitleCaseName}})
+			t.Errorf("expected {{.TitleCaseName}} to be %v, got %v", *updateReq.{{.TitleCaseName}}, response.{{.TitleCaseName}})
 		}
 		{{- end}}
 	})
@@ -202,11 +190,8 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 		app.TestRouter.Patch("/{{.KebabCaseTableName}}/{id}", controller.Update{{.SingularTitleCaseName}}Handler)
 
 		nonExistentID := int64(9999)
-		updateReq := {{.PackageName}}.Update{{.SingularTitleCaseName}}Request{
-		{{- range .Fields}}
-		{{.TitleCaseName}}: testutils.StringPtr("new_{{.JSONName}}"),
-		{{- end}}
-		}
+		updateReq := {{.PackageName}}.CreateTestUpdate{{.SingularTitleCaseName}}Request(t)
+
 		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", nonExistentID), updateReq)
 		rr := app.MakeRequest(req)
 
@@ -219,15 +204,7 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
 
-		createReq := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-		{{- range .Fields}}
-		{{.TitleCaseName}}: "value",
-		{{- end}}
-		}
-		ID, err := {{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &createReq)
-		if err != nil {
-			t.Fatal(err)
-		}
+		ID, _ := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
 
 		controller := {{.PackageName}}.NewUpdate{{.SingularTitleCaseName}}Controller(app.App)
 		app.TestRouter.Patch("/{{.KebabCaseTableName}}/{id}", controller.Update{{.SingularTitleCaseName}}Handler)
@@ -235,7 +212,7 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 		invalidReq := map[string]interface{}{
 			"invalid_field": "value",
 		}
-		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", *ID), invalidReq)
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", ID), invalidReq)
 		rr := app.MakeRequest(req)
 
 		if rr.Code != http.StatusUnprocessableEntity {

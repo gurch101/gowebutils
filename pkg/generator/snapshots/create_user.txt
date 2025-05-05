@@ -23,8 +23,10 @@ func NewCreateUserController(app *app.App) *CreateUserController {
 }
 
 type CreateUserRequest struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	SomeInt64 int64  `json:"someInt64"`
+	SomeBool  bool   `json:"someBool"`
 }
 
 type CreateUserResponse struct {
@@ -33,16 +35,16 @@ type CreateUserResponse struct {
 
 // CreateUser godoc
 //
-//	@Summary		Create a user
+//	@Summary			Create a user
 //	@Description	Create a new user
-//	@Tags			users
-//	@Accept			json
-//	@Produce		json
-//	@Param			user	body		CreateUserRequest	true	"Create user"}"
-//	@Success		201	{object}	CreateUserResponse
-//	@Header     201 {string}  Location  "/users/{id}"
-//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
-//	@Router			/users [post]
+//	@Tags					users
+//	@Accept				json
+//	@Produce			json
+//	@Param				user	body		CreateUserRequest	true	"Create user"
+//	@Success			201	{object}	CreateUserResponse
+//	@Header     	201 {string}  Location  "/users/{id}"
+//	@Failure			400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router				/users [post]
 func (c *CreateUserController) CreateUserHandler(
 	w http.ResponseWriter,
 	r *http.Request) {
@@ -54,7 +56,7 @@ func (c *CreateUserController) CreateUserHandler(
 
 	v := validation.NewValidator()
 	v.Required(req.Name, "name", "Name is required")
-	v.Email(req.Email, "email", "Email is required")
+	v.Email(req.Email, "email", "Email must be a valid email address")
 
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
@@ -94,6 +96,8 @@ func CreateUser(
 	model := newCreateUserModel(
 		req.Name,
 		req.Email,
+		req.SomeInt64,
+		req.SomeBool,
 	)
 
 	id, err := insertUser(ctx, db, model)
@@ -121,7 +125,9 @@ func insertUser(
 	model *userModel) (*int64, error) {
 
 	return dbutils.Insert(ctx, db, "users", map[string]any{
-		"name":  model.Name,
-		"email": model.Email,
+		"name":       model.Name,
+		"email":      model.Email,
+		"some_int64": model.SomeInt64,
+		"some_bool":  model.SomeBool,
 	})
 }

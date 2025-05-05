@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"math"
 	"net/url"
 	"strconv"
@@ -68,27 +67,16 @@ func (f *Filters) ParseQSMetadata(
 
 	defaultSort := "id"
 
-	var page, pageSize *int
-
 	var sort *string
 
-	page, err := ParseQSInt(queryValues, pageKey, &defaultPage)
-	if err != nil {
-		v.AddError(pageKey, "Invalid page")
-
-		return
-	}
+	page := ParseQSInt(queryValues, pageKey, &defaultPage)
 
 	f.Page = *page
 
-	pageSize, err = ParseQSInt(queryValues, pageSizeKey, &defaultPageSize)
-	if err != nil {
-		v.AddError(pageSizeKey, "Invalid pageSize")
-
-		return
-	}
+	pageSize := ParseQSInt(queryValues, pageSizeKey, &defaultPageSize)
 
 	f.PageSize = *pageSize
+
 	sort = ParseQSString(queryValues, sortKey, &defaultSort)
 	f.Sort = *sort
 
@@ -129,19 +117,36 @@ func ParseQSString(queryValues url.Values, key string, defaultValue *string) *st
 
 // ParseQSInt returns an integer value from the query string or the provided
 // default value if no matching key can be found.
-func ParseQSInt(queryValues url.Values, key string, defaultValue *int) (*int, error) {
+func ParseQSInt(queryValues url.Values, key string, defaultValue *int) *int {
 	val := queryValues.Get(key)
 
 	if val == "" {
-		return defaultValue, nil
+		return defaultValue
 	}
 
 	intVal, err := strconv.Atoi(val)
 	if err != nil {
-		return defaultValue, fmt.Errorf("invalid value for env var %s: %w", key, err)
+		return defaultValue
 	}
 
-	return &intVal, nil
+	return &intVal
+}
+
+// ParseQSInt64 returns an integer value from the query string or the provided
+// default value if no matching key can be found.
+func ParseQSInt64(queryValues url.Values, key string, defaultValue *int64) *int64 {
+	val := queryValues.Get(key)
+
+	if val == "" {
+		return defaultValue
+	}
+
+	intVal, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+
+	return &intVal
 }
 
 // ParseQSBool returns a boolean value from the query string or the provided

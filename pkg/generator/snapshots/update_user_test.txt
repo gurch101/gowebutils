@@ -1,13 +1,12 @@
 package users_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/gurch101/gowebgentest/internal/users"
+	"github.com/gurch101/gowebutils/internal/users"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -19,23 +18,14 @@ func TestUpdateUserHandler(t *testing.T) {
 
 		defer app.Close()
 
-		createReq := users.CreateUserRequest{
-			Name:  "old_name",
-			Email: "old_email",
-		}
-		ID, err := users.CreateUser(context.Background(), app.DB(), &createReq)
-		if err != nil {
-			t.Fatal(err)
-		}
+		ID, _ := users.CreateTestUser(t, app.DB())
 
 		controller := users.NewUpdateUserController(app.App)
 		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
 
-		updateReq := users.UpdateUserRequest{
-			Name:  testutils.StringPtr("new_name"),
-			Email: testutils.StringPtr("new_email"),
-		}
-		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", *ID), updateReq)
+		updateReq := users.CreateTestUpdateUserRequest(t)
+
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", ID), updateReq)
 		rr := app.MakeRequest(req)
 
 		if rr.Code != http.StatusOK {
@@ -43,19 +33,25 @@ func TestUpdateUserHandler(t *testing.T) {
 		}
 
 		var response users.GetUserByIDResponse
-		err = json.Unmarshal(rr.Body.Bytes(), &response)
+		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if response.ID != int64(*ID) {
-			t.Errorf("expected ID to be %d, got %d", *ID, response.ID)
+		if response.ID != ID {
+			t.Errorf("expected ID to be %d, got %d", ID, response.ID)
 		}
 		if response.Name != *updateReq.Name {
-			t.Errorf("expected Name to be %s, got %s", *updateReq.Name, response.Name)
+			t.Errorf("expected Name to be %v, got %v", *updateReq.Name, response.Name)
 		}
 		if response.Email != *updateReq.Email {
-			t.Errorf("expected Email to be %s, got %s", *updateReq.Email, response.Email)
+			t.Errorf("expected Email to be %v, got %v", *updateReq.Email, response.Email)
+		}
+		if response.SomeInt64 != *updateReq.SomeInt64 {
+			t.Errorf("expected SomeInt64 to be %v, got %v", *updateReq.SomeInt64, response.SomeInt64)
+		}
+		if response.SomeBool != *updateReq.SomeBool {
+			t.Errorf("expected SomeBool to be %v, got %v", *updateReq.SomeBool, response.SomeBool)
 		}
 	})
 
@@ -81,10 +77,8 @@ func TestUpdateUserHandler(t *testing.T) {
 		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
 
 		nonExistentID := int64(9999)
-		updateReq := users.UpdateUserRequest{
-			Name:  testutils.StringPtr("new_name"),
-			Email: testutils.StringPtr("new_email"),
-		}
+		updateReq := users.CreateTestUpdateUserRequest(t)
+
 		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", nonExistentID), updateReq)
 		rr := app.MakeRequest(req)
 
@@ -97,14 +91,7 @@ func TestUpdateUserHandler(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
 
-		createReq := users.CreateUserRequest{
-			Name:  "value",
-			Email: "value",
-		}
-		ID, err := users.CreateUser(context.Background(), app.DB(), &createReq)
-		if err != nil {
-			t.Fatal(err)
-		}
+		ID, _ := users.CreateTestUser(t, app.DB())
 
 		controller := users.NewUpdateUserController(app.App)
 		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
@@ -112,7 +99,7 @@ func TestUpdateUserHandler(t *testing.T) {
 		invalidReq := map[string]interface{}{
 			"invalid_field": "value",
 		}
-		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", *ID), invalidReq)
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", ID), invalidReq)
 		rr := app.MakeRequest(req)
 
 		if rr.Code != http.StatusUnprocessableEntity {

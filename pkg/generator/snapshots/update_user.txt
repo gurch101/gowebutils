@@ -20,8 +20,10 @@ func NewUpdateUserController(app *app.App) *UpdateUserController {
 }
 
 type UpdateUserRequest struct {
-	Name  *string `json:"name"`
-	Email *string `json:"email"`
+	Name      *string `json:"name"`
+	Email     *string `json:"email"`
+	SomeInt64 *int64  `json:"someInt64"`
+	SomeBool  *bool   `json:"someBool"`
 }
 
 // UpdateUser godoc
@@ -60,10 +62,12 @@ func (tc *UpdateUserController) UpdateUserHandler(w http.ResponseWriter, r *http
 	}
 	model.Name = validation.Coalesce(req.Name, model.Name)
 	model.Email = validation.Coalesce(req.Email, model.Email)
+	model.SomeInt64 = validation.Coalesce(req.SomeInt64, model.SomeInt64)
+	model.SomeBool = validation.Coalesce(req.SomeBool, model.SomeBool)
 
 	v := validation.NewValidator()
 	v.Required(model.Name, "name", "Name is required")
-	v.Email(model.Email, "email", "Email is required")
+	v.Email(model.Email, "email", "Email must be a valid email address")
 
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
@@ -86,6 +90,8 @@ func (tc *UpdateUserController) UpdateUserHandler(w http.ResponseWriter, r *http
 			Version:   model.Version,
 			Name:      model.Name,
 			Email:     model.Email,
+			SomeInt64: model.SomeInt64,
+			SomeBool:  model.SomeBool,
 			CreatedAt: model.CreatedAt,
 			UpdatedAt: model.UpdatedAt,
 		},
@@ -98,7 +104,9 @@ func (tc *UpdateUserController) UpdateUserHandler(w http.ResponseWriter, r *http
 
 func UpdateUser(ctx context.Context, db dbutils.DB, model *userModel) error {
 	return dbutils.UpdateByID(ctx, db, "users", model.ID, model.Version, map[string]any{
-		"name":  model.Name,
-		"email": model.Email,
+		"name":       model.Name,
+		"email":      model.Email,
+		"some_int64": model.SomeInt64,
+		"some_bool":  model.SomeBool,
 	})
 }

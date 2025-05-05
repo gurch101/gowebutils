@@ -88,7 +88,6 @@ func Get{{.SingularTitleCaseName}}ByID(ctx context.Context, db dbutils.DB, {{.Si
 const getHandlerTestTemplate = `package {{.PackageName}}_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -105,24 +104,12 @@ func TestGet{{.SingularTitleCaseName}}ByID(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
 
-		createReq := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-			{{- range .CreateFields}}
-				{{- if .IsEmail}}
-				{{.TitleCaseName}}: "{{.JSONName}}@example.com",
-				{{- else if .Required}}
-				{{.TitleCaseName}}: "{{.JSONName}}",
-				{{- end}}
-			{{- end}}
-		}
-		ID, err := {{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &createReq)
-		if err != nil {
-			t.Fatal(err)
-		}
+		ID, createReq := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
 
 		controller := {{.PackageName}}.NewGet{{.SingularTitleCaseName}}ByIDController(app.App)
 		app.TestRouter.Get("/{{.KebabCaseTableName}}/{id}", controller.Get{{.SingularTitleCaseName}}ByIDHandler)
 
-		req := testutils.CreateGetRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", *ID))
+		req := testutils.CreateGetRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", ID))
 		rr := app.MakeRequest(req)
 
 		if rr.Code != http.StatusOK {
@@ -130,17 +117,17 @@ func TestGet{{.SingularTitleCaseName}}ByID(t *testing.T) {
 		}
 
 		var response {{.PackageName}}.Get{{.SingularTitleCaseName}}ByIDResponse
-		err = json.Unmarshal(rr.Body.Bytes(), &response)
+		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if response.ID != int64(*ID) {
+		if response.ID != ID {
 			t.Errorf("expected ID to be %d, got %d", ID, response.ID)
 		}
 		{{- range .CreateFields}}
 		if response.{{.TitleCaseName}} != createReq.{{.TitleCaseName}} {
-			t.Errorf("expected {{.JSONName}} to be %s, got %s", createReq.{{.TitleCaseName}}, response.{{.TitleCaseName}})
+			t.Errorf("expected {{.JSONName}} to be %v, got %v", createReq.{{.TitleCaseName}}, response.{{.TitleCaseName}})
 		}
 		{{- end}}
 		if response.CreatedAt.IsZero() {

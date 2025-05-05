@@ -24,6 +24,8 @@ type GetUserByIDResponse struct {
 	Version   int64     `json:"version"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
+	SomeInt64 int64     `json:"someInt64"`
+	SomeBool  bool      `json:"someBool"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -59,6 +61,8 @@ func (tc *GetUserByIDController) GetUserByIDHandler(w http.ResponseWriter, r *ht
 		Version:   model.Version,
 		Name:      model.Name,
 		Email:     model.Email,
+		SomeInt64: model.SomeInt64,
+		SomeBool:  model.SomeBool,
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,
 	}, nil)
@@ -75,6 +79,8 @@ func GetUserByID(ctx context.Context, db dbutils.DB, userID int64) (*userModel, 
 		"version":    &model.Version,
 		"name":       &model.Name,
 		"email":      &model.Email,
+		"some_int64": &model.SomeInt64,
+		"some_bool":  &model.SomeBool,
 		"created_at": &model.CreatedAt,
 		"updated_at": &model.UpdatedAt,
 	})

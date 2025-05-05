@@ -1,7 +1,6 @@
 package users_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,19 +17,12 @@ func TestGetUserByID(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
 
-		createReq := users.CreateUserRequest{
-			Name:  "name",
-			Email: "email@example.com",
-		}
-		ID, err := users.CreateUser(context.Background(), app.DB(), &createReq)
-		if err != nil {
-			t.Fatal(err)
-		}
+		ID, createReq := users.CreateTestUser(t, app.DB())
 
 		controller := users.NewGetUserByIDController(app.App)
 		app.TestRouter.Get("/users/{id}", controller.GetUserByIDHandler)
 
-		req := testutils.CreateGetRequest(t, fmt.Sprintf("/users/%d", *ID))
+		req := testutils.CreateGetRequest(t, fmt.Sprintf("/users/%d", ID))
 		rr := app.MakeRequest(req)
 
 		if rr.Code != http.StatusOK {
@@ -38,19 +30,25 @@ func TestGetUserByID(t *testing.T) {
 		}
 
 		var response users.GetUserByIDResponse
-		err = json.Unmarshal(rr.Body.Bytes(), &response)
+		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if response.ID != int64(*ID) {
+		if response.ID != ID {
 			t.Errorf("expected ID to be %d, got %d", ID, response.ID)
 		}
 		if response.Name != createReq.Name {
-			t.Errorf("expected name to be %s, got %s", createReq.Name, response.Name)
+			t.Errorf("expected name to be %v, got %v", createReq.Name, response.Name)
 		}
 		if response.Email != createReq.Email {
-			t.Errorf("expected email to be %s, got %s", createReq.Email, response.Email)
+			t.Errorf("expected email to be %v, got %v", createReq.Email, response.Email)
+		}
+		if response.SomeInt64 != createReq.SomeInt64 {
+			t.Errorf("expected someInt64 to be %v, got %v", createReq.SomeInt64, response.SomeInt64)
+		}
+		if response.SomeBool != createReq.SomeBool {
+			t.Errorf("expected someBool to be %v, got %v", createReq.SomeBool, response.SomeBool)
 		}
 		if response.CreatedAt.IsZero() {
 			t.Error("expected CreatedAt to be set")

@@ -18,33 +18,13 @@ func TestDeleteUser(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
 
-		createController := users.NewCreateUserController(app.App)
 		deleteController := users.NewDeleteUserController(app.App)
 
-		app.TestRouter.Post("/users", createController.CreateUserHandler)
 		app.TestRouter.Delete("/users/{id}", deleteController.DeleteUserHandler)
 
-		createBody := users.CreateUserRequest{
-			Name:  "name",
-			Email: "email@example.com",
-		}
+		ID, _ := users.CreateTestUser(t, app.DB())
 
-		createReq := testutils.CreatePostRequest(t, "/users", createBody)
-		createRr := app.MakeRequest(createReq)
-
-		if createRr.Code != http.StatusCreated {
-			t.Fatalf("expected status code %d, got %d", http.StatusCreated, createRr.Code)
-		}
-
-		var createResponse users.CreateUserResponse
-		err := json.Unmarshal(createRr.Body.Bytes(), &createResponse)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		id := createResponse.ID
-
-		deleteURL := fmt.Sprintf("/users/%d", id)
+		deleteURL := fmt.Sprintf("/users/%d", ID)
 		deleteReq, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -68,7 +48,7 @@ func TestDeleteUser(t *testing.T) {
 
 		var count int
 		err = app.DB().QueryRowContext(context.Background(),
-			"SELECT COUNT(*) FROM users WHERE id = $1", id).Scan(&count)
+			"SELECT COUNT(*) FROM users WHERE id = $1", ID).Scan(&count)
 		if err != nil {
 			t.Fatal(err)
 		}

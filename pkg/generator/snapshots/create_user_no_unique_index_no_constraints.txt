@@ -30,16 +30,16 @@ type CreateUserResponse struct {
 
 // CreateUser godoc
 //
-//	@Summary		Create a user
+//	@Summary			Create a user
 //	@Description	Create a new user
-//	@Tags			users
-//	@Accept			json
-//	@Produce		json
-//	@Param			user	body		CreateUserRequest	true	"Create user"}"
-//	@Success		201	{object}	CreateUserResponse
-//	@Header     201 {string}  Location  "/users/{id}"
-//	@Failure		400,422,404,500	{object}	httputils.ErrorResponse
-//	@Router			/users [post]
+//	@Tags					users
+//	@Accept				json
+//	@Produce			json
+//	@Param				user	body		CreateUserRequest	true	"Create user"
+//	@Success			201	{object}	CreateUserResponse
+//	@Header     	201 {string}  Location  "/users/{id}"
+//	@Failure			400,422,404,500	{object}	httputils.ErrorResponse
+//	@Router				/users [post]
 func (c *CreateUserController) CreateUserHandler(
 	w http.ResponseWriter,
 	r *http.Request) {

@@ -32,6 +32,16 @@ func getTestUserSchema() generator.Table {
 				Constraints: []string{"UNIQUE"},
 			},
 			{
+				Name:        "some_int64",
+				DataType:    generator.SQLInt64,
+				Constraints: []string{},
+			},
+			{
+				Name:        "some_bool",
+				DataType:    generator.SQLBoolean,
+				Constraints: []string{},
+			},
+			{
 				Name:        "created_at",
 				DataType:    generator.SQLDatetime,
 				Constraints: []string{},

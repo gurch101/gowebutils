@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gurch101/gowebgentest/internal/users"
+	"github.com/gurch101/gowebutils/internal/users"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -18,15 +18,7 @@ func TestSearchUser(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
 
-		body := users.CreateUserRequest{
-			Name:  "name",
-			Email: "email@example.com",
-		}
-
-		_, err := users.CreateUser(context.Background(), app.DB(), &body)
-		if err != nil {
-			t.Fatal(err)
-		}
+		ID, _ := users.CreateTestUser(t, app.DB())
 
 		controller := users.NewSearchUserController(app.App)
 		app.TestRouter.Get("/users", controller.SearchUserHandler)
@@ -41,7 +33,7 @@ func TestSearchUser(t *testing.T) {
 		var response struct {
 			Data []users.SearchUserResponse `json:"users"`
 		}
-		err = json.Unmarshal(rr.Body.Bytes(), &response)
+		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -50,7 +42,7 @@ func TestSearchUser(t *testing.T) {
 			t.Errorf("expected 1 user, got %d", len(response.Data))
 		}
 
-		actualRecord, err := users.GetUserByID(context.Background(), app.DB(), response.Data[0].ID)
+		actualRecord, err := users.GetUserByID(context.Background(), app.DB(), ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -65,6 +57,12 @@ func TestSearchUser(t *testing.T) {
 		}
 		if response.Data[0].Email != actualRecord.Email {
 			t.Errorf("expected Email to be %v, got %v", actualRecord.Email, response.Data[0].Email)
+		}
+		if response.Data[0].SomeInt64 != actualRecord.SomeInt64 {
+			t.Errorf("expected SomeInt64 to be %v, got %v", actualRecord.SomeInt64, response.Data[0].SomeInt64)
+		}
+		if response.Data[0].SomeBool != actualRecord.SomeBool {
+			t.Errorf("expected SomeBool to be %v, got %v", actualRecord.SomeBool, response.Data[0].SomeBool)
 		}
 		if response.Data[0].CreatedAt != actualRecord.CreatedAt {
 			t.Errorf("expected CreatedAt to be %v, got %v", actualRecord.CreatedAt, response.Data[0].CreatedAt)
@@ -128,14 +126,7 @@ func TestSearchUser(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
 
-		body := users.CreateUserRequest{
-			Name:  "name",
-			Email: "email@example.com",
-		}
-		_, err := users.CreateUser(context.Background(), app.DB(), &body)
-		if err != nil {
-			t.Fatal(err)
-		}
+		users.CreateTestUser(t, app.DB())
 
 		controller := users.NewSearchUserController(app.App)
 		app.TestRouter.Get("/users", controller.SearchUserHandler)

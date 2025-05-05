@@ -23,8 +23,10 @@ func NewSearchUserController(app *app.App) *SearchUserController {
 }
 
 type SearchUserRequest struct {
-	Name  *string
-	Email *string
+	Name      *string
+	Email     *string
+	SomeInt64 *int64
+	SomeBool  *bool
 	parser.Filters
 }
 
@@ -33,6 +35,8 @@ type SearchUserResponse struct {
 	Version   int64     `json:"version"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
+	SomeInt64 int64     `json:"someInt64"`
+	SomeBool  bool      `json:"someBool"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -48,6 +52,8 @@ type SearchUserResponse struct {
 //	@Param 			version query int64 false "version"
 //	@Param 			name query string false "name"
 //	@Param 			email query string false "email"
+//	@Param 			someInt64 query int64 false "someInt64"
+//	@Param 			someBool query bool false "someBool"
 //	@Param 			createdAt query time.Time false "createdAt"
 //	@Param 			updatedAt query time.Time false "updatedAt"
 //	@Param			fields query string false "csv list of fields to include. By default all fields are included"
@@ -60,8 +66,10 @@ type SearchUserResponse struct {
 func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http.Request) {
 	queryString := r.URL.Query()
 	request := &SearchUserRequest{
-		Name:  parser.ParseQSString(queryString, "name", nil),
-		Email: parser.ParseQSString(queryString, "email", nil),
+		Name:      parser.ParseQSString(queryString, "name", nil),
+		Email:     parser.ParseQSString(queryString, "email", nil),
+		SomeInt64: parser.ParseQSInt64(queryString, "someInt64", nil),
+		SomeBool:  parser.ParseQSBool(queryString, "someBool", nil),
 	}
 
 	v := validation.NewValidator()
@@ -70,6 +78,8 @@ func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http
 		"version",
 		"name",
 		"email",
+		"someInt64",
+		"someBool",
 		"createdAt",
 		"updatedAt",
 	}, []string{
@@ -79,6 +89,10 @@ func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http
 		"-name",
 		"email",
 		"-email",
+		"someInt64",
+		"-someInt64",
+		"someBool",
+		"-someBool",
 	})
 
 	if v.HasErrors() {
@@ -130,6 +144,8 @@ func SearchUsers(
 			Version:   model.Version,
 			Name:      model.Name,
 			Email:     model.Email,
+			SomeInt64: model.SomeInt64,
+			SomeBool:  model.SomeBool,
 			CreatedAt: model.CreatedAt,
 			UpdatedAt: model.UpdatedAt,
 		}
@@ -159,6 +175,8 @@ func findUsers(
 		From("users").
 		Where("name = ?", request.Name).
 		AndWhere("email = ?", request.Email).
+		AndWhere("some_int64 = ?", request.SomeInt64).
+		AndWhere("some_bool = ?", request.SomeBool).
 		OrderBy(request.Sort).
 		Page(request.Page, request.PageSize).
 		QueryContext(ctx, func(rows *sql.Rows) error {

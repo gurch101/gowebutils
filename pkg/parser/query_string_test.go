@@ -44,22 +44,18 @@ func TestParseInt(t *testing.T) {
 		key          string
 		defaultValue int
 		expected     int
-		expectErr    bool
 	}{
-		{"key exists", url.Values{"key": {"10"}}, "key", 5, 10, false},
-		{"key does not exist", url.Values{}, "key", 5, 5, false},
-		{"key exists but empty", url.Values{"key": {""}}, "key", 5, 5, false},
-		{"key exists but invalid", url.Values{"key": {"invalid"}}, "key", 5, 5, true},
+		{"key exists", url.Values{"key": {"10"}}, "key", 5, 10},
+		{"key does not exist", url.Values{}, "key", 5, 5},
+		{"key exists but empty", url.Values{"key": {""}}, "key", 5, 5},
+		{"key exists but invalid", url.Values{"key": {"invalid"}}, "key", 5, 5},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result, err := parser.ParseQSInt(tt.qs, tt.key, &tt.defaultValue)
-			if (err != nil) != tt.expectErr {
-				t.Errorf("expected error: %v, got: %v", tt.expectErr, err)
-			}
+			result := parser.ParseQSInt(tt.qs, tt.key, &tt.defaultValue)
 
 			if *result != tt.expected {
 				t.Errorf("expected %d, got %d", tt.expected, result)
@@ -100,34 +96,6 @@ func TestFilters_ParseFilters(t *testing.T) {
 
 			if filters.Page != tt.expected.Page || filters.PageSize != tt.expected.PageSize || filters.Sort != tt.expected.Sort {
 				t.Errorf("expected %+v, got %+v", tt.expected, filters)
-			}
-		})
-	}
-}
-
-func TestFilters_InvalidFilters(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name string
-		qs   url.Values
-	}{
-		{"invalid page", url.Values{"page": {"invalid"}, "pageSize": {"10"}, "sort": {"name"}}},
-		{"invalid pageSize", url.Values{"page": {"1"}, "pageSize": {"invalid"}, "sort": {"name"}}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			v := validation.NewValidator()
-
-			var filters parser.Filters
-
-			filters.ParseQSMetadata(tt.qs, v, []string{"id", "name"}, []string{"id", "name"})
-
-			if !v.HasErrors() {
-				t.Error("expected error, got nil")
 			}
 		})
 	}

@@ -144,6 +144,15 @@ type modelTemplateData struct {
 	Fields                []RequestField
 }
 
+type testHelperTemplateData struct {
+	PackageName           string
+	ModuleName            string
+	Name                  string
+	TitleCaseTableName    string
+	SingularTitleCaseName string
+	Fields                []RequestField
+}
+
 type UniqueField struct {
 	Name          string
 	TitleCaseName string

@@ -64,6 +64,15 @@ func runCli(module string, tableSchema []generator.Table) {
 				writeFileIfNotExist(fmt.Sprintf("internal/%s/models.go", table.Name), modelTemplate)
 
 				continue
+			} else if action == "test_helper" {
+				testHelperTemplate, err := generator.RenderTestHelperTemplate(module, table)
+				if err != nil {
+					panic(err)
+				}
+
+				writeFileIfNotExist(fmt.Sprintf("internal/%s/test_helpers.go", table.Name), testHelperTemplate)
+
+				continue
 			}
 
 			cfg := actionMap[action]
@@ -174,7 +183,7 @@ func filterValidTables(names []string, schema []generator.Table) ([]generator.Ta
 }
 
 func getActionSelection() []string {
-	allActions := []string{"create", "get", "update", "list", "delete", "model"}
+	allActions := []string{"create", "get", "update", "list", "delete", "model", "test_helper"}
 
 	printActions(allActions)
 

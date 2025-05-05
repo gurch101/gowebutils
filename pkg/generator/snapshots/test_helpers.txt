@@ -1,0 +1,45 @@
+package users
+
+import (
+	"context"
+	"testing"
+
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/testutils"
+)
+
+func CreateTestUserRequest(t *testing.T) CreateUserRequest {
+	t.Helper()
+
+	return CreateUserRequest{
+		Name:      "Name",
+		Email:     "test@example.com",
+		SomeInt64: 1,
+		SomeBool:  true,
+	}
+}
+
+func CreateTestUser(t *testing.T, db dbutils.DB) (int64, CreateUserRequest) {
+	t.Helper()
+
+	createReq := CreateTestUserRequest(t)
+
+	ID, err := CreateUser(context.Background(), db, &createReq)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return *ID, createReq
+}
+
+func CreateTestUpdateUserRequest(t *testing.T) UpdateUserRequest {
+	t.Helper()
+
+	return UpdateUserRequest{
+		Name:      testutils.StringPtr("newName"),
+		Email:     testutils.StringPtr("newtest@example.com"),
+		SomeInt64: testutils.Int64Ptr(2),
+		SomeBool:  testutils.BoolPtr(false),
+	}
+}

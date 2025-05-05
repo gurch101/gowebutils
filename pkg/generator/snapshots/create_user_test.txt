@@ -21,10 +21,7 @@ func TestCreateUser(t *testing.T) {
 		controller := users.NewCreateUserController(app.App)
 		app.TestRouter.Post("/users", controller.CreateUserHandler)
 
-		body := users.CreateUserRequest{
-			Name:  "name",
-			Email: "email@example.com",
-		}
+		body := users.CreateTestUserRequest(t)
 
 		req := testutils.CreatePostRequest(t, "/users", body)
 		rr := app.MakeRequest(req)
@@ -54,19 +51,29 @@ func TestCreateUser(t *testing.T) {
 
 		var name string
 		var email string
+		var someInt64 int64
+		var someBool bool
 
-		err = app.DB().QueryRowContext(context.Background(), fmt.Sprintf("SELECT  name  ,email  FROM users WHERE id = %d", response.ID)).Scan(
+		err = app.DB().QueryRowContext(context.Background(), fmt.Sprintf("SELECT  name  ,email  ,some_int64  ,some_bool  FROM users WHERE id = %d", response.ID)).Scan(
 			&name,
 			&email,
+			&someInt64,
+			&someBool,
 		)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if name != body.Name {
-			t.Errorf("expected name to be %s, got %s", body.Name, name)
+			t.Errorf("expected name to be %v, got %v", body.Name, name)
 		}
 		if email != body.Email {
-			t.Errorf("expected email to be %s, got %s", body.Email, email)
+			t.Errorf("expected email to be %v, got %v", body.Email, email)
+		}
+		if someInt64 != body.SomeInt64 {
+			t.Errorf("expected someInt64 to be %v, got %v", body.SomeInt64, someInt64)
+		}
+		if someBool != body.SomeBool {
+			t.Errorf("expected someBool to be %v, got %v", body.SomeBool, someBool)
 		}
 	})
 

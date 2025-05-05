@@ -9,6 +9,8 @@ type userModel struct {
 	Version   int64
 	Name      string
 	Email     string
+	SomeInt64 int64
+	SomeBool  bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -16,10 +18,14 @@ type userModel struct {
 func newCreateUserModel(
 	name string,
 	email string,
+	someInt64 int64,
+	someBool bool,
 ) *userModel {
 	return &userModel{
-		Name:  name,
-		Email: email,
+		Name:      name,
+		Email:     email,
+		SomeInt64: someInt64,
+		SomeBool:  someBool,
 	}
 }
 
@@ -33,6 +39,10 @@ func (m *userModel) Field(field string) interface{} {
 		return &m.Name
 	case "email":
 		return &m.Email
+	case "some_int64":
+		return &m.SomeInt64
+	case "some_bool":
+		return &m.SomeBool
 	case "created_at":
 		return &m.CreatedAt
 	case "updated_at":

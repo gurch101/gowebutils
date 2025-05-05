@@ -65,7 +65,7 @@ func (tc *Search{{.SingularTitleCaseName}}Controller) Search{{.SingularTitleCase
 	queryString := r.URL.Query()
 	request := &Search{{.SingularTitleCaseName}}Request{
 		{{- range .Fields}}
-		{{.TitleCaseName}}: parser.ParseQS{{if eq .GoType "bool"}}Bool{{else}}String{{end}}(queryString, "{{.JSONName}}", nil),
+		{{.TitleCaseName}}: parser.ParseQS{{if eq .GoType "bool"}}Bool{{else if (eq .GoType "int64")}}Int64{{else if (eq .GoType "int")}}Int{{else}}String{{end}}(queryString, "{{.JSONName}}", nil),
 		{{- end}}
 	}
 
@@ -205,7 +205,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gurch101/gowebgentest/internal/{{.PackageName}}"
+	"{{.ModuleName}}/internal/{{.PackageName}}"
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -216,20 +216,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         app := testutils.NewTestApp(t)
         defer app.Close()
 
-        body := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-            {{- range .Fields}}
-                {{- if .IsEmail}}
-                {{.TitleCaseName}}: "{{.JSONName}}@example.com",
-                {{- else}}
-                {{.TitleCaseName}}: "{{.JSONName}}",
-                {{- end}}
-            {{- end}}
-        }
-
-        _, err := {{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &body)
-        if err != nil {
-            t.Fatal(err)
-        }
+				ID, _ := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
 
         controller := {{.PackageName}}.NewSearch{{.SingularTitleCaseName}}Controller(app.App)
         app.TestRouter.Get("/{{.KebabCaseTableName}}", controller.Search{{.SingularTitleCaseName}}Handler)
@@ -244,7 +231,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         var response struct {
             Data []{{.PackageName}}.Search{{.SingularTitleCaseName}}Response ` + "`" + `json:"{{.Name}}"` + "`" + `
         }
-        err = json.Unmarshal(rr.Body.Bytes(), &response)
+        err := json.Unmarshal(rr.Body.Bytes(), &response)
         if err != nil {
             t.Fatal(err)
         }
@@ -253,7 +240,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
             t.Errorf("expected 1 user, got %d", len(response.Data))
         }
 
-				actualRecord, err := {{.PackageName}}.Get{{.SingularTitleCaseName}}ByID(context.Background(), app.DB(), response.Data[0].ID)
+				actualRecord, err := {{.PackageName}}.Get{{.SingularTitleCaseName}}ByID(context.Background(), app.DB(), ID)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -319,19 +306,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
 			app := testutils.NewTestApp(t)
 			defer app.Close()
 
-			body := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-					{{- range .Fields}}
-						{{- if .IsEmail}}
-						{{.TitleCaseName}}: "{{.JSONName}}@example.com",
-						{{- else}}
-						{{.TitleCaseName}}: "{{.JSONName}}",
-						{{- end}}
-					{{- end}}
-			}
-			_, err := {{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &body)
-			if err != nil {
-					t.Fatal(err)
-			}
+			{{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
 
 			controller := {{.PackageName}}.NewSearch{{.SingularTitleCaseName}}Controller(app.App)
 			app.TestRouter.Get("/{{.KebabCaseTableName}}", controller.Search{{.SingularTitleCaseName}}Handler)
@@ -343,9 +318,9 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
 					t.Errorf("expected status code %d, got %d", http.StatusOK, rr.Code)
 			}
 
-        if !strings.Contains(rr.Body.String(), "id") {
-            t.Errorf("expected response to contain {{.PackageName}} id, got %s", rr.Body.String())
-        }
+			if !strings.Contains(rr.Body.String(), "id") {
+					t.Errorf("expected response to contain {{.PackageName}} id, got %s", rr.Body.String())
+			}
     })
 }
 `

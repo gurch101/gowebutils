@@ -89,38 +89,13 @@ func TestDelete{{.SingularTitleCaseName}}(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
 
-		createController := {{.PackageName}}.NewCreate{{.SingularTitleCaseName}}Controller(app.App)
 		deleteController := {{.PackageName}}.NewDelete{{.SingularTitleCaseName}}Controller(app.App)
 
-		app.TestRouter.Post("/{{.KebabCaseTableName}}", createController.Create{{.SingularTitleCaseName}}Handler)
 		app.TestRouter.Delete("/{{.KebabCaseTableName}}/{id}", deleteController.Delete{{.SingularTitleCaseName}}Handler)
 
-		createBody := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-			{{- range .CreateFields}}
-				{{- if .IsEmail}}
-				{{.TitleCaseName}}: "{{.JSONName}}@example.com",
-				{{- else}}
-				{{.TitleCaseName}}: "{{.JSONName}}",
-				{{- end}}
-			{{- end}}
-		}
+		ID, _ := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
 
-		createReq := testutils.CreatePostRequest(t, "/{{.KebabCaseTableName}}", createBody)
-		createRr := app.MakeRequest(createReq)
-
-		if createRr.Code != http.StatusCreated {
-			t.Fatalf("expected status code %d, got %d", http.StatusCreated, createRr.Code)
-		}
-
-		var createResponse {{.PackageName}}.Create{{.SingularTitleCaseName}}Response
-		err := json.Unmarshal(createRr.Body.Bytes(), &createResponse)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		id := createResponse.ID
-
-		deleteURL := fmt.Sprintf("/{{.KebabCaseTableName}}/%d", id)
+		deleteURL := fmt.Sprintf("/{{.KebabCaseTableName}}/%d", ID)
 		deleteReq, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -144,7 +119,7 @@ func TestDelete{{.SingularTitleCaseName}}(t *testing.T) {
 
 		var count int
 		err = app.DB().QueryRowContext(context.Background(),
-			"SELECT COUNT(*) FROM {{.Name}} WHERE id = $1", id).Scan(&count)
+			"SELECT COUNT(*) FROM {{.Name}} WHERE id = $1", ID).Scan(&count)
 		if err != nil {
 			t.Fatal(err)
 		}
