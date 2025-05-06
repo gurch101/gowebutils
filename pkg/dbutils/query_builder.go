@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -258,8 +259,8 @@ func (qb *QueryBuilder) Query(callback func(*sql.Rows) error) error {
 // QueryContext executes the query with the given context and calls the callback function for each row.
 func (qb *QueryBuilder) QueryContext(ctx context.Context, callback func(*sql.Rows) error) error {
 	query, args := qb.Build()
-
 	rows, err := qb.db.QueryContext(ctx, query, args...)
+
 	if err != nil {
 		return fmt.Errorf("query builder exec error: %w", err)
 	}
@@ -306,23 +307,13 @@ func isNilValue(v any) bool {
 		return true
 	}
 
-	switch val := v.(type) {
-	case *int:
-		return val == nil
-	case *string:
-		return val == nil
-	case *bool:
-		return val == nil
-	case *float64:
-		return val == nil
-	case *struct{}:
-		return val == nil
-	case *interface{}:
-		return val == nil
-	// Add other pointer types as needed
-	default:
-		return false
+	val := reflect.ValueOf(v)
+	// Check if it's a pointer, channel, func, interface, map, or slice
+	if val.Kind() == reflect.Ptr || val.Kind() == reflect.Interface {
+		return val.IsNil()
 	}
+
+	return false
 }
 
 func parenthesize(s string) string {
