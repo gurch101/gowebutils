@@ -12,6 +12,7 @@ test:
 	go test -race -shuffle=on ./...
 
 docs:
+	rm -rf docs
 	cd docsrc && npm run build && cd ..
 
 coverage:
