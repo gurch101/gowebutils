@@ -18,6 +18,10 @@ import (
 	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/parser"
 	"github.com/gurch101/gowebutils/pkg/validation"
+
+	{{- range .ForeignKeys}}
+	"{{$.ModuleName}}/internal/{{.Table}}"
+	{{- end}}
 )
 
 type Update{{.SingularTitleCaseName}}Controller struct {
@@ -38,7 +42,7 @@ type Update{{.SingularTitleCaseName}}Request struct {
 //
 //	@Summary		Update a {{.HumanName}}
 //	@Description	Update a {{.HumanName}} by ID
-//	@Tags			{{.Name}}
+//	@Tags			{{.HumanName}}s
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		int64					true	"{{.SingularTitleCaseName}} ID"
@@ -62,17 +66,47 @@ func (tc *Update{{.SingularTitleCaseName}}Controller) Update{{.SingularTitleCase
 		return
 	}
 
-	model, err := Get{{.SingularTitleCaseName}}ByID(r.Context(), tc.app.DB(), id)
+	resp, err := Update{{.SingularTitleCaseName}}(r.Context(), tc.app.DB(), id, &req)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 
 		return
 	}
 
+	err = httputils.WriteJSON(
+		w,
+		http.StatusOK,
+		resp,
+		nil)
+
+	if err != nil {
+		httputils.ServerErrorResponse(w, r, err)
+	}
+}
+
+func Update{{.SingularTitleCaseName}}(
+	ctx context.Context,
+	db dbutils.DB,
+	id int64,
+	req *Update{{.SingularTitleCaseName}}Request,
+) (*Get{{.SingularTitleCaseName}}ByIDResponse, error) {
+
+	model, err := Get{{.SingularTitleCaseName}}ByID(ctx, db, id)
+	if err != nil {
+		return nil, err
+	}
+
+	{{range .ForeignKeys}}
+	if req.{{.TitleCaseFromColumnName}} != nil && *req.{{.TitleCaseFromColumnName}} != model.{{.TitleCaseFromColumnName}} && !{{.Table}}.{{.SingularTitleCaseTableName}}Exists(ctx, db, *req.{{.TitleCaseFromColumnName}}) {
+		return nil, Err{{.SingularTitleCaseTableName}}NotFound
+	}
+	{{- end}}
+
 	{{- range .Fields}}
 	model.{{.TitleCaseName}} = validation.Coalesce(req.{{.TitleCaseName}}, model.{{.TitleCaseName}})
 	{{- end}}
 
+	{{- if .RequireValidation}}
 	v := validation.NewValidator()
 	{{- range .Fields}}
 	{{- if .IsEmail}}
@@ -83,34 +117,22 @@ func (tc *Update{{.SingularTitleCaseName}}Controller) Update{{.SingularTitleCase
 	{{- end}}
 
 	if v.HasErrors() {
-		httputils.FailedValidationResponse(w, r, v.Errors)
+		return nil, v.AsError()
+	}
+	{{- end}}
 
-		return
+	if err := update{{.SingularTitleCaseName}}(ctx, db, model); err != nil {
+		return nil, err
 	}
 
-	err = Update{{.SingularTitleCaseName}}(r.Context(), tc.app.DB(), model)
-	if err != nil {
-		httputils.HandleErrorResponse(w, r, err)
-
-		return
-	}
-
-	err = httputils.WriteJSON(
-		w,
-		http.StatusOK,
-		&Get{{.SingularTitleCaseName}}ByIDResponse{
-			{{- range .ModelFields}}
-			{{.TitleCaseName}}: model.{{.TitleCaseName}},
-			{{- end}}
-		},
-		nil)
-
-	if err != nil {
-		httputils.ServerErrorResponse(w, r, err)
-	}
+	return &Get{{.SingularTitleCaseName}}ByIDResponse{
+		{{- range .ModelFields}}
+		{{.TitleCaseName}}: model.{{.TitleCaseName}},
+		{{- end}}
+	}, nil
 }
 
-func Update{{.SingularTitleCaseName}}(ctx context.Context, db dbutils.DB, model *{{.SingularCamelCaseName}}Model) error {
+func update{{.SingularTitleCaseName}}(ctx context.Context, db dbutils.DB, model *{{.SingularCamelCaseName}}Model) error {
 	return dbutils.UpdateByID(ctx, db, "{{.Name}}", model.ID, model.Version, map[string]any{
 		{{- range .Fields}}
 		"{{.Name}}": model.{{.TitleCaseName}},
@@ -129,7 +151,13 @@ import (
 
 	"{{.ModuleName}}/internal/{{.PackageName}}"
 	"github.com/gurch101/gowebutils/pkg/testutils"
+	{{if .ForeignKeys}}
+	"github.com/gurch101/gowebutils/pkg/collectionutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/validation"
+	{{- end}}
 )
+
 func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 	t.Parallel()
 
@@ -143,7 +171,15 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 		controller := {{.PackageName}}.NewUpdate{{.SingularTitleCaseName}}Controller(app.App)
 		app.TestRouter.Patch("/{{.KebabCaseTableName}}/{id}", controller.Update{{.SingularTitleCaseName}}Handler)
 
+		{{if .ForeignKeys}}
+		updateReq := {{.PackageName}}.CreateTestUpdate{{.SingularTitleCaseName}}RequestWithValues(t, {{$.PackageName}}.Update{{.SingularTitleCaseName}}Request{
+			{{- range .ForeignKeys}}
+			{{.TitleCaseFromColumnName}}: testutils.Int64Ptr(1),
+			{{- end}}
+		})
+		{{- else}}
 		updateReq := {{.PackageName}}.CreateTestUpdate{{.SingularTitleCaseName}}Request(t)
+		{{- end}}
 
 		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{.KebabCaseTableName}}/%d", ID), updateReq)
 		rr := app.MakeRequest(req)
@@ -200,6 +236,43 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 		}
 	})
 
+	{{- range .ForeignKeys}}
+	t.Run("invalid {{.HumanTableName}} foreign key", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		ID, _ := {{$.PackageName}}.CreateTest{{$.SingularTitleCaseName}}(t, app.DB())
+
+		controller := {{$.PackageName}}.NewUpdate{{$.SingularTitleCaseName}}Controller(app.App)
+		app.TestRouter.Patch("/{{$.KebabCaseTableName}}/{id}", controller.Update{{$.SingularTitleCaseName}}Handler)
+
+		updateReq := {{$.PackageName}}.CreateTestUpdate{{$.SingularTitleCaseName}}RequestWithValues(t, {{$.PackageName}}.Update{{$.SingularTitleCaseName}}Request{
+			{{.TitleCaseFromColumnName}}: testutils.Int64Ptr(2),
+		})
+
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{$.KebabCaseTableName}}/%d", ID), updateReq)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
+		}
+
+		var errorResponse httputils.ErrorResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ok := collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanTableName}} not found"
+		})
+
+		if !ok {
+			t.Errorf("Expected error message for {{.JSONName}}, but got none")
+		}
+	});
+	{{- end}}
+
 	t.Run("invalid request payload", func(t *testing.T) {
 		app := testutils.NewTestApp(t)
 		defer app.Close()
@@ -225,14 +298,20 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 func newUpdateHandlerTemplateData(moduleName string, schema Table) updateHandlerTemplateData {
 	modelFields := []ModelField{}
 	fields := []RequestField{}
+	requireValidation := false
 
 	for _, field := range schema.Fields {
 		sanitizedName := field.Name
+
 		if strings.HasSuffix(field.Name, "id") {
 			sanitizedName = strings.TrimSuffix(field.Name, "id") + "ID"
 		}
 
 		if IsRequestField(field) {
+			if hasBlankConstraint(field.Constraints) || isEmail(sanitizedName) {
+				requireValidation = true
+			}
+
 			fields = append(fields, RequestField{
 				Name:          field.Name,
 				TitleCaseName: stringutils.SnakeToTitle(sanitizedName),
@@ -259,9 +338,11 @@ func newUpdateHandlerTemplateData(moduleName string, schema Table) updateHandler
 		ModuleName:            moduleName,
 		HumanName:             stringutils.SnakeToHuman(strings.TrimSuffix(schema.Name, "s")),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
-		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
+		SingularCamelCaseName: stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s")),
+		RequireValidation:     requireValidation,
 		ModelFields:           modelFields,
 		Fields:                fields,
+		ForeignKeys:           schema.ForeignKeys,
 	}
 }
 

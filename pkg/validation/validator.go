@@ -2,8 +2,10 @@
 package validation
 
 import (
+	"fmt"
 	"regexp"
 	"slices"
+	"strings"
 )
 
 // EmailRX is a regex for sanity checking the format of email addresses.
@@ -21,9 +23,21 @@ type Error struct {
 	Message string `json:"message"`
 }
 
-// Error returns the validation error message.
 func (v Error) Error() string {
-	return v.Message
+	return fmt.Sprintf("%s: %s", v.Field, v.Message)
+}
+
+type ValidationError struct {
+	Errors []Error
+}
+
+func (ve ValidationError) Error() string {
+	var sb strings.Builder
+	for _, err := range ve.Errors {
+		sb.WriteString(fmt.Sprintf("%s: %s; ", err.Field, err.Message))
+	}
+
+	return sb.String()
 }
 
 // NewValidator creates a new Validator.
@@ -86,4 +100,12 @@ func (v *Validator) AddError(field, message string) {
 // HasErrors returns true if the Validator has any errors.
 func (v *Validator) HasErrors() bool {
 	return len(v.Errors) > 0
+}
+
+func (v *Validator) AsError() error {
+	if !v.HasErrors() {
+		return nil
+	}
+
+	return ValidationError{Errors: v.Errors}
 }

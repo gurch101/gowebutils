@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gurch101/gowebutils/internal/tenants"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 func CreateTestUserRequest(t *testing.T) CreateUserRequest {
@@ -15,14 +17,29 @@ func CreateTestUserRequest(t *testing.T) CreateUserRequest {
 		Name:      "Name",
 		Email:     "test@example.com",
 		SomeInt64: 1,
+		TenantID:  1,
 		SomeBool:  true,
 	}
 }
 
+func CreateTestUserRequestWithValues(t *testing.T, req UpdateUserRequest) CreateUserRequest {
+	t.Helper()
+	createRequest := CreateTestUserRequest(t)
+	createRequest.Name = validation.Coalesce(req.Name, createRequest.Name)
+	createRequest.Email = validation.Coalesce(req.Email, createRequest.Email)
+	createRequest.SomeInt64 = validation.Coalesce(req.SomeInt64, createRequest.SomeInt64)
+	createRequest.TenantID = validation.Coalesce(req.TenantID, createRequest.TenantID)
+	createRequest.SomeBool = validation.Coalesce(req.SomeBool, createRequest.SomeBool)
+
+	return createRequest
+}
+
 func CreateTestUser(t *testing.T, db dbutils.DB) (int64, CreateUserRequest) {
 	t.Helper()
+	tenantID, _ := tenants.CreateTestTenant(t, db)
 
 	createReq := CreateTestUserRequest(t)
+	createReq.TenantID = tenantID
 
 	ID, err := CreateUser(context.Background(), db, &createReq)
 
@@ -40,6 +57,19 @@ func CreateTestUpdateUserRequest(t *testing.T) UpdateUserRequest {
 		Name:      testutils.StringPtr("newName"),
 		Email:     testutils.StringPtr("newtest@example.com"),
 		SomeInt64: testutils.Int64Ptr(2),
+		TenantID:  testutils.Int64Ptr(2),
 		SomeBool:  testutils.BoolPtr(false),
+	}
+}
+
+func CreateTestUpdateUserRequestWithValues(t *testing.T, req UpdateUserRequest) UpdateUserRequest {
+	t.Helper()
+
+	return UpdateUserRequest{
+		Name:      testutils.StringPtr(validation.Coalesce(req.Name, "newName")),
+		Email:     testutils.StringPtr(validation.Coalesce(req.Email, "newtest@example.com")),
+		SomeInt64: testutils.Int64Ptr(validation.Coalesce(req.SomeInt64, 2)),
+		TenantID:  testutils.Int64Ptr(validation.Coalesce(req.TenantID, 2)),
+		SomeBool:  testutils.BoolPtr(validation.Coalesce(req.SomeBool, false)),
 	}
 }

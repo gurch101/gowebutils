@@ -1,0 +1,11 @@
+package users
+
+import (
+	"context"
+
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+)
+
+func UserExists(ctx context.Context, db dbutils.DB, id int64) bool {
+	return dbutils.Exists(ctx, db, "users", id)
+}

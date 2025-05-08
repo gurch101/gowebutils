@@ -38,7 +38,7 @@ type Get{{.SingularTitleCaseName}}ByIDResponse struct {
 //
 //	@Summary		Get a {{.HumanName}}
 //	@Description	get {{.HumanName}} by ID
-//	@Tags			{{.Name}}
+//	@Tags			{{.HumanName}}s
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		int64	true	"{{.SingularCamelCaseName}} ID"
@@ -130,12 +130,16 @@ func TestGet{{.SingularTitleCaseName}}ByID(t *testing.T) {
 			t.Errorf("expected {{.JSONName}} to be %v, got %v", createReq.{{.TitleCaseName}}, response.{{.TitleCaseName}})
 		}
 		{{- end}}
+		{{- if .HasCreatedAt}}
 		if response.CreatedAt.IsZero() {
 			t.Error("expected CreatedAt to be set")
 		}
+		{{- end}}
+		{{- if .HasUpdatedAt}}
 		if response.UpdatedAt.IsZero() {
 			t.Error("expected UpdatedAt to be set")
 		}
+		{{- end}}
 	})
 
 	t.Run("record not found", func(t *testing.T) {
@@ -174,11 +178,21 @@ func TestGet{{.SingularTitleCaseName}}ByID(t *testing.T) {
 func newGetOneHandlerTemplateData(moduleName string, schema Table) getHandlerTemplateData {
 	modelFields := []ModelField{}
 	createFields := []RequestField{}
+	hasCreatedAt := false
+	hasUpdatedAt := false
 
 	for _, field := range schema.Fields {
 		sanitizedName := field.Name
 		if strings.HasSuffix(field.Name, "id") {
 			sanitizedName = strings.TrimSuffix(field.Name, "id") + "ID"
+		}
+
+		if field.Name == "created_at" {
+			hasCreatedAt = true
+		}
+
+		if field.Name == "updated_at" {
+			hasUpdatedAt = true
 		}
 
 		modelFields = append(modelFields, ModelField{
@@ -211,10 +225,12 @@ func newGetOneHandlerTemplateData(moduleName string, schema Table) getHandlerTem
 		ModuleName:            moduleName,
 		HumanName:             stringutils.SnakeToHuman(strings.TrimSuffix(schema.Name, "s")),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
-		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
+		SingularCamelCaseName: stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s")),
 		KebabCaseTableName:    stringutils.SnakeToKebab(schema.Name),
 		ModelFields:           modelFields,
 		CreateFields:          createFields,
+		HasCreatedAt:          hasCreatedAt,
+		HasUpdatedAt:          hasUpdatedAt,
 	}
 }
 

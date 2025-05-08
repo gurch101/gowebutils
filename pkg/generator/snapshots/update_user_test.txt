@@ -8,6 +8,10 @@ import (
 
 	"github.com/gurch101/gowebutils/internal/users"
 	"github.com/gurch101/gowebutils/pkg/testutils"
+
+	"github.com/gurch101/gowebutils/pkg/collectionutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 func TestUpdateUserHandler(t *testing.T) {
@@ -23,7 +27,9 @@ func TestUpdateUserHandler(t *testing.T) {
 		controller := users.NewUpdateUserController(app.App)
 		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
 
-		updateReq := users.CreateTestUpdateUserRequest(t)
+		updateReq := users.CreateTestUpdateUserRequestWithValues(t, users.UpdateUserRequest{
+			TenantID: testutils.Int64Ptr(1),
+		})
 
 		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", ID), updateReq)
 		rr := app.MakeRequest(req)
@@ -49,6 +55,9 @@ func TestUpdateUserHandler(t *testing.T) {
 		}
 		if response.SomeInt64 != *updateReq.SomeInt64 {
 			t.Errorf("expected SomeInt64 to be %v, got %v", *updateReq.SomeInt64, response.SomeInt64)
+		}
+		if response.TenantID != *updateReq.TenantID {
+			t.Errorf("expected TenantID to be %v, got %v", *updateReq.TenantID, response.TenantID)
 		}
 		if response.SomeBool != *updateReq.SomeBool {
 			t.Errorf("expected SomeBool to be %v, got %v", *updateReq.SomeBool, response.SomeBool)
@@ -84,6 +93,40 @@ func TestUpdateUserHandler(t *testing.T) {
 
 		if rr.Code != http.StatusNotFound {
 			t.Errorf("expected status code %d, got %d", http.StatusNotFound, rr.Code)
+		}
+	})
+	t.Run("invalid Tenant foreign key", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		ID, _ := users.CreateTestUser(t, app.DB())
+
+		controller := users.NewUpdateUserController(app.App)
+		app.TestRouter.Patch("/users/{id}", controller.UpdateUserHandler)
+
+		updateReq := users.CreateTestUpdateUserRequestWithValues(t, users.UpdateUserRequest{
+			TenantID: testutils.Int64Ptr(2),
+		})
+
+		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/users/%d", ID), updateReq)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
+		}
+
+		var errorResponse httputils.ErrorResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ok := collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "tenantId" && e.Message == "Tenant not found"
+		})
+
+		if !ok {
+			t.Errorf("Expected error message for tenantId, but got none")
 		}
 	})
 

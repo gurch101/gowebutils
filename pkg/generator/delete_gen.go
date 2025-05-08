@@ -35,7 +35,7 @@ type Delete{{.SingularTitleCaseName}}Response struct {
 //
 //	@Summary		Delete a {{.HumanName}}
 //	@Description	Delete by {{.HumanName}} ID
-//	@Tags			{{.Name}}
+//	@Tags			{{.HumanName}}s
 //	@Accept			json
 //	@Produce		json
 //	@Param			id	path		int	true	"{{.SingularCamelCaseName}} ID"	Format(int64)
@@ -210,7 +210,7 @@ func newDeleteHandlerTemplateData(moduleName string, schema Table) deleteHandler
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		KebabCaseTableName:    stringutils.SnakeToKebab(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
-		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
+		SingularCamelCaseName: stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s")),
 		CreateFields:          fields,
 	}
 }

@@ -27,7 +27,7 @@ func AssertFileEquals(t *testing.T, expectedFilePath, actualFilePath string) {
 	}
 
 	if strings.TrimSpace(string(expected)) != strings.TrimSpace(string(actual)) {
-		t.Fatalf("expected file %s does not match actual file %s", expectedFilePath, actualFilePath)
+		t.Errorf("expected file %s does not match actual file %s", expectedFilePath, actualFilePath)
 	}
 
 	err = os.Remove(actualFilePath)
@@ -55,6 +55,6 @@ func AssertFileEqualsString(t *testing.T, expectedFilePath, actual string) {
 			t.Fatalf("error writing to expected file: %v", err)
 		}
 
-		t.Fatalf("expected file %s does not match actual contents", expectedFilePath)
+		t.Errorf("expected file %s does not match actual contents", expectedFilePath)
 	}
 }

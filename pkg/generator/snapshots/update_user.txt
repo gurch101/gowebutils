@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gurch101/gowebutils/internal/tenants"
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
@@ -23,6 +24,7 @@ type UpdateUserRequest struct {
 	Name      *string `json:"name"`
 	Email     *string `json:"email"`
 	SomeInt64 *int64  `json:"someInt64"`
+	TenantID  *int64  `json:"tenantId"`
 	SomeBool  *bool   `json:"someBool"`
 }
 
@@ -30,7 +32,7 @@ type UpdateUserRequest struct {
 //
 //	@Summary		Update a User
 //	@Description	Update a User by ID
-//	@Tags			users
+//	@Tags			Users
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		int64					true	"User ID"
@@ -54,28 +56,7 @@ func (tc *UpdateUserController) UpdateUserHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	model, err := GetUserByID(r.Context(), tc.app.DB(), id)
-	if err != nil {
-		httputils.HandleErrorResponse(w, r, err)
-
-		return
-	}
-	model.Name = validation.Coalesce(req.Name, model.Name)
-	model.Email = validation.Coalesce(req.Email, model.Email)
-	model.SomeInt64 = validation.Coalesce(req.SomeInt64, model.SomeInt64)
-	model.SomeBool = validation.Coalesce(req.SomeBool, model.SomeBool)
-
-	v := validation.NewValidator()
-	v.Required(model.Name, "name", "Name is required")
-	v.Email(model.Email, "email", "Email must be a valid email address")
-
-	if v.HasErrors() {
-		httputils.FailedValidationResponse(w, r, v.Errors)
-
-		return
-	}
-
-	err = UpdateUser(r.Context(), tc.app.DB(), model)
+	resp, err := UpdateUser(r.Context(), tc.app.DB(), id, &req)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 
@@ -85,16 +66,7 @@ func (tc *UpdateUserController) UpdateUserHandler(w http.ResponseWriter, r *http
 	err = httputils.WriteJSON(
 		w,
 		http.StatusOK,
-		&GetUserByIDResponse{
-			ID:        model.ID,
-			Version:   model.Version,
-			Name:      model.Name,
-			Email:     model.Email,
-			SomeInt64: model.SomeInt64,
-			SomeBool:  model.SomeBool,
-			CreatedAt: model.CreatedAt,
-			UpdatedAt: model.UpdatedAt,
-		},
+		resp,
 		nil)
 
 	if err != nil {
@@ -102,11 +74,57 @@ func (tc *UpdateUserController) UpdateUserHandler(w http.ResponseWriter, r *http
 	}
 }
 
-func UpdateUser(ctx context.Context, db dbutils.DB, model *userModel) error {
+func UpdateUser(
+	ctx context.Context,
+	db dbutils.DB,
+	id int64,
+	req *UpdateUserRequest,
+) (*GetUserByIDResponse, error) {
+
+	model, err := GetUserByID(ctx, db, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.TenantID != nil && *req.TenantID != model.TenantID && !tenants.TenantExists(ctx, db, *req.TenantID) {
+		return nil, ErrTenantNotFound
+	}
+	model.Name = validation.Coalesce(req.Name, model.Name)
+	model.Email = validation.Coalesce(req.Email, model.Email)
+	model.SomeInt64 = validation.Coalesce(req.SomeInt64, model.SomeInt64)
+	model.TenantID = validation.Coalesce(req.TenantID, model.TenantID)
+	model.SomeBool = validation.Coalesce(req.SomeBool, model.SomeBool)
+	v := validation.NewValidator()
+	v.Required(model.Name, "name", "Name is required")
+	v.Email(model.Email, "email", "Email must be a valid email address")
+
+	if v.HasErrors() {
+		return nil, v.AsError()
+	}
+
+	if err := updateUser(ctx, db, model); err != nil {
+		return nil, err
+	}
+
+	return &GetUserByIDResponse{
+		ID:        model.ID,
+		Version:   model.Version,
+		Name:      model.Name,
+		Email:     model.Email,
+		SomeInt64: model.SomeInt64,
+		TenantID:  model.TenantID,
+		SomeBool:  model.SomeBool,
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
+	}, nil
+}
+
+func updateUser(ctx context.Context, db dbutils.DB, model *userModel) error {
 	return dbutils.UpdateByID(ctx, db, "users", model.ID, model.Version, map[string]any{
 		"name":       model.Name,
 		"email":      model.Email,
 		"some_int64": model.SomeInt64,
+		"tenant_id":  model.TenantID,
 		"some_bool":  model.SomeBool,
 	})
 }

@@ -26,6 +26,7 @@ type SearchUserRequest struct {
 	Name      *string
 	Email     *string
 	SomeInt64 *int64
+	Tenant    *int64
 	SomeBool  *bool
 	parser.Filters
 }
@@ -36,6 +37,7 @@ type SearchUserResponse struct {
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
 	SomeInt64 int64     `json:"someInt64"`
+	TenantID  int64     `json:"tenantId"`
 	SomeBool  bool      `json:"someBool"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
@@ -45,7 +47,7 @@ type SearchUserResponse struct {
 //
 //	@Summary		List Users
 //	@Description	get Users
-//	@Tags			users
+//	@Tags			Users
 //	@Accept			json
 //	@Produce		json
 //	@Param 			id query int64 false "id"
@@ -53,6 +55,7 @@ type SearchUserResponse struct {
 //	@Param 			name query string false "name"
 //	@Param 			email query string false "email"
 //	@Param 			someInt64 query int64 false "someInt64"
+//	@Param 			tenantId query int64 false "tenantId"
 //	@Param 			someBool query bool false "someBool"
 //	@Param 			createdAt query time.Time false "createdAt"
 //	@Param 			updatedAt query time.Time false "updatedAt"
@@ -69,6 +72,7 @@ func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http
 		Name:      parser.ParseQSString(queryString, "name", nil),
 		Email:     parser.ParseQSString(queryString, "email", nil),
 		SomeInt64: parser.ParseQSInt64(queryString, "someInt64", nil),
+		Tenant:    parser.ParseQSInt64(queryString, "tenant", nil),
 		SomeBool:  parser.ParseQSBool(queryString, "someBool", nil),
 	}
 
@@ -79,6 +83,7 @@ func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http
 		"name",
 		"email",
 		"someInt64",
+		"tenantId",
 		"someBool",
 		"createdAt",
 		"updatedAt",
@@ -91,6 +96,8 @@ func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http
 		"-email",
 		"someInt64",
 		"-someInt64",
+		"tenant",
+		"-tenant",
 		"someBool",
 		"-someBool",
 	})
@@ -145,6 +152,7 @@ func SearchUsers(
 			Name:      model.Name,
 			Email:     model.Email,
 			SomeInt64: model.SomeInt64,
+			TenantID:  model.TenantID,
 			SomeBool:  model.SomeBool,
 			CreatedAt: model.CreatedAt,
 			UpdatedAt: model.UpdatedAt,
@@ -176,6 +184,7 @@ func findUsers(
 		Where("name = ?", request.Name).
 		AndWhere("email = ?", request.Email).
 		AndWhere("some_int64 = ?", request.SomeInt64).
+		AndWhere("tenant_id = ?", request.Tenant).
 		AndWhere("some_bool = ?", request.SomeBool).
 		OrderBy(request.Sort).
 		Page(request.Page, request.PageSize).

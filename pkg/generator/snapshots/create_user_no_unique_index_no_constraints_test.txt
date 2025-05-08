@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/internal/users"
+
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -20,9 +21,7 @@ func TestCreateUser(t *testing.T) {
 
 		controller := users.NewCreateUserController(app.App)
 		app.TestRouter.Post("/users", controller.CreateUserHandler)
-
 		body := users.CreateTestUserRequest(t)
-
 		req := testutils.CreatePostRequest(t, "/users", body)
 		rr := app.MakeRequest(req)
 

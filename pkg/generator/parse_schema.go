@@ -52,6 +52,10 @@ func processTable(db *dbutils.DBPool, tableName string) (*Table, error) {
 		return nil, err
 	}
 
+	if err := processForeignKeys(db, tableName, tableInfo); err != nil {
+		return nil, err
+	}
+
 	return tableInfo, nil
 }
 
@@ -107,6 +111,30 @@ func applyConstraintToFields(constraint CheckConstraint, tableInfo *Table) {
 			break
 		}
 	}
+}
+
+func processForeignKeys(db *dbutils.DBPool, tableName string, tableInfo *Table) error {
+	rows, err := db.Query(fmt.Sprintf("PRAGMA foreign_key_list(%s)", tableName))
+	if err != nil {
+		return fmt.Errorf("%w: failed to query foreign keys", err)
+	}
+	defer fsutils.CloseAndPanic(rows)
+
+	for rows.Next() {
+		var id, seq int
+
+		var match string
+
+		var foreignKey ForeignKey
+
+		if err := rows.Scan(&id, &seq, &foreignKey.Table, &foreignKey.FromColumn, &foreignKey.ToColumn, &foreignKey.OnUpdate, &foreignKey.OnDelete, &match); err != nil {
+			return fmt.Errorf("%w: failed to get foreign key", err)
+		}
+
+		tableInfo.ForeignKeys = append(tableInfo.ForeignKeys, foreignKey)
+	}
+
+	return nil
 }
 
 func getTableNames(db *dbutils.DBPool) ([]string, error) {

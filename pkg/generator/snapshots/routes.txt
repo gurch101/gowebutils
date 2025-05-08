@@ -1,0 +1,15 @@
+package users
+
+import (
+	"net/http"
+
+	"github.com/gurch101/gowebutils/pkg/app"
+)
+
+func Routes(app *app.App) {
+	app.AddProtectedRoute(http.MethodGet, "/users", NewSearchUserController(app).SearchUserHandler)
+	app.AddProtectedRoute(http.MethodPost, "/users", NewCreateUserController(app).CreateUserHandler)
+	app.AddProtectedRoute(http.MethodGet, "/users/{id}", NewGetUserByIDController(app).GetUserByIDHandler)
+	app.AddProtectedRoute(http.MethodPatch, "/users/{id}", NewUpdateUserController(app).UpdateUserHandler)
+	app.AddProtectedRoute(http.MethodDelete, "/users/{id}", NewDeleteUserController(app).DeleteUserHandler)
+}

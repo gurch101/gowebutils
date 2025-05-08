@@ -11,7 +11,21 @@ const modelTemplate = `package {{.PackageName}}
 
 import (
 	{{if .IncludeTime}}"time"{{end}}
+	{{if .IncludeValidation}}"github.com/gurch101/gowebutils/pkg/validation"{{end}}
 )
+
+{{- range .UniqueFields}}
+var Err{{.TitleCaseName}}AlreadyExists = validation.Error{
+	Field:   "{{.JSONName}}",
+	Message: "{{.HumanName}} already exists",
+}
+{{- end}}
+{{- range .ForeignKeys}}
+var Err{{.SingularTitleCaseTableName}}NotFound = validation.Error{
+	Field:   "{{.JSONName}}",
+	Message: "{{.HumanTableName}} not found",
+}
+{{- end}}
 
 type {{.SingularCamelCaseName}}Model struct {
 	{{- range .ModelFields}}
@@ -46,7 +60,9 @@ func (m *{{.SingularCamelCaseName}}Model) Field(field string) interface{} {
 func newModelTemplateData(moduleName string, schema Table) modelTemplateData {
 	modelFields := []ModelField{}
 	fields := []RequestField{}
+	uniqueFields := []UniqueField{}
 	includeTime := false
+	includeValidation := len(schema.ForeignKeys) > 0
 
 	for _, field := range schema.Fields {
 		sanitizedName := getSanitizedName(field.Name)
@@ -55,7 +71,12 @@ func newModelTemplateData(moduleName string, schema Table) modelTemplateData {
 			includeTime = true
 		}
 
-		if field.Name != "id" && field.Name != "version" && field.Name != "created_at" && field.Name != "updated_at" {
+		if IsRequestField(field) {
+			if hasUniqueConstraint(field.Constraints) {
+				uniqueFields = append(uniqueFields, newUniqueField(field))
+				includeValidation = true
+			}
+
 			fields = append(fields, RequestField{
 				Name:          field.Name,
 				TitleCaseName: stringutils.SnakeToTitle(sanitizedName),
@@ -73,11 +94,14 @@ func newModelTemplateData(moduleName string, schema Table) modelTemplateData {
 		Name:                  schema.Name,
 		ModuleName:            moduleName,
 		IncludeTime:           includeTime,
+		IncludeValidation:     includeValidation,
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
-		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
+		SingularCamelCaseName: stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s")),
 		ModelFields:           modelFields,
 		Fields:                fields,
+		UniqueFields:          uniqueFields,
+		ForeignKeys:           schema.ForeignKeys,
 	}
 }
 

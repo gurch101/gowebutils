@@ -1,8 +1,22 @@
 package users
 
 import (
+	"github.com/gurch101/gowebutils/pkg/validation"
 	"time"
 )
+
+var ErrNameAlreadyExists = validation.Error{
+	Field:   "name",
+	Message: "Name already exists",
+}
+var ErrEmailAlreadyExists = validation.Error{
+	Field:   "email",
+	Message: "Email already exists",
+}
+var ErrTenantNotFound = validation.Error{
+	Field:   "tenantId",
+	Message: "Tenant not found",
+}
 
 type userModel struct {
 	ID        int64
@@ -10,6 +24,7 @@ type userModel struct {
 	Name      string
 	Email     string
 	SomeInt64 int64
+	TenantID  int64
 	SomeBool  bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -19,12 +34,14 @@ func newCreateUserModel(
 	name string,
 	email string,
 	someInt64 int64,
+	tenantId int64,
 	someBool bool,
 ) *userModel {
 	return &userModel{
 		Name:      name,
 		Email:     email,
 		SomeInt64: someInt64,
+		TenantID:  tenantId,
 		SomeBool:  someBool,
 	}
 }
@@ -41,6 +58,8 @@ func (m *userModel) Field(field string) interface{} {
 		return &m.Email
 	case "some_int64":
 		return &m.SomeInt64
+	case "tenant_id":
+		return &m.TenantID
 	case "some_bool":
 		return &m.SomeBool
 	case "created_at":

@@ -26,6 +26,7 @@ func main() {
 	defer db.Close()
 
 	tableSchema, err := generator.ParseSchema(db)
+
 	if err != nil {
 		panic(err)
 	}
@@ -55,26 +56,6 @@ func runCli(module string, tableSchema []generator.Table) {
 		}
 
 		for _, action := range selectedActions {
-			if action == "model" {
-				modelTemplate, err := generator.RenderModelTemplate(module, table)
-				if err != nil {
-					panic(err)
-				}
-
-				writeFileIfNotExist(fmt.Sprintf("internal/%s/models.go", table.Name), modelTemplate)
-
-				continue
-			} else if action == "test_helper" {
-				testHelperTemplate, err := generator.RenderTestHelperTemplate(module, table)
-				if err != nil {
-					panic(err)
-				}
-
-				writeFileIfNotExist(fmt.Sprintf("internal/%s/test_helpers.go", table.Name), testHelperTemplate)
-
-				continue
-			}
-
 			cfg := actionMap[action]
 
 			template, testTemplate, err := cfg.renderFunc(module, table)
@@ -83,10 +64,12 @@ func runCli(module string, tableSchema []generator.Table) {
 			}
 
 			filename := fmt.Sprintf(cfg.fileNameFmt, table.Name, singularModelName)
-			testFilename := fmt.Sprintf(cfg.testFileFmt, table.Name, singularModelName)
-
 			writeFileIfNotExist(filename, template)
-			writeFileIfNotExist(testFilename, testTemplate)
+
+			if testTemplate != nil {
+				testFilename := fmt.Sprintf(cfg.testFileFmt, table.Name, singularModelName)
+				writeFileIfNotExist(testFilename, testTemplate)
+			}
 		}
 	}
 }
@@ -183,7 +166,7 @@ func filterValidTables(names []string, schema []generator.Table) ([]generator.Ta
 }
 
 func getActionSelection() []string {
-	allActions := []string{"create", "get", "update", "list", "delete", "model", "test_helper"}
+	allActions := []string{"create", "get", "update", "list", "delete", "exists", "model", "routes", "test_helper"}
 
 	printActions(allActions)
 
@@ -270,6 +253,38 @@ func getActionMap() map[string]actionConfig {
 			generator.RenderDeleteTemplate,
 			"internal/%s/delete_%s_by_id.go",
 			"internal/%s/delete_%s_by_id_test.go",
+		},
+		"model": {
+			func(module string, table generator.Table) ([]byte, []byte, error) {
+				modelTemplate, err := generator.RenderModelTemplate(module, table)
+				return modelTemplate, nil, err
+			},
+			"internal/%s/%s_models.go",
+			"",
+		},
+		"routes": {
+			func(module string, table generator.Table) ([]byte, []byte, error) {
+				routesTemplate, err := generator.RenderRoutesTemplate(module, table)
+				return routesTemplate, nil, err
+			},
+			"internal/%s/%s_routes.go",
+			"",
+		},
+		"test_helper": {
+			func(module string, table generator.Table) ([]byte, []byte, error) {
+				testHelperTemplate, err := generator.RenderTestHelperTemplate(module, table)
+				return testHelperTemplate, nil, err
+			},
+			"internal/%s/%s_test_helpers.go",
+			"",
+		},
+		"exists": {
+			func(module string, table generator.Table) ([]byte, []byte, error) {
+				existsTemplate, err := generator.RenderExistsTemplate(module, table)
+				return existsTemplate, nil, err
+			},
+			"internal/%s/%s_exists.go",
+			"",
 		},
 	}
 }

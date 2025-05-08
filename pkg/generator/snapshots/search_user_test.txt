@@ -39,7 +39,7 @@ func TestSearchUser(t *testing.T) {
 		}
 
 		if len(response.Data) != 1 {
-			t.Errorf("expected 1 user, got %d", len(response.Data))
+			t.Fatalf("expected 1 user, got %d", len(response.Data))
 		}
 
 		actualRecord, err := users.GetUserByID(context.Background(), app.DB(), ID)
@@ -60,6 +60,9 @@ func TestSearchUser(t *testing.T) {
 		}
 		if response.Data[0].SomeInt64 != actualRecord.SomeInt64 {
 			t.Errorf("expected SomeInt64 to be %v, got %v", actualRecord.SomeInt64, response.Data[0].SomeInt64)
+		}
+		if response.Data[0].TenantID != actualRecord.TenantID {
+			t.Errorf("expected TenantID to be %v, got %v", actualRecord.TenantID, response.Data[0].TenantID)
 		}
 		if response.Data[0].SomeBool != actualRecord.SomeBool {
 			t.Errorf("expected SomeBool to be %v, got %v", actualRecord.SomeBool, response.Data[0].SomeBool)

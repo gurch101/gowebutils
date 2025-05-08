@@ -47,6 +47,9 @@ func TestGetUserByID(t *testing.T) {
 		if response.SomeInt64 != createReq.SomeInt64 {
 			t.Errorf("expected someInt64 to be %v, got %v", createReq.SomeInt64, response.SomeInt64)
 		}
+		if response.TenantID != createReq.TenantID {
+			t.Errorf("expected tenantId to be %v, got %v", createReq.TenantID, response.TenantID)
+		}
 		if response.SomeBool != createReq.SomeBool {
 			t.Errorf("expected someBool to be %v, got %v", createReq.SomeBool, response.SomeBool)
 		}

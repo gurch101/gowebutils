@@ -32,7 +32,7 @@ type CreateUserResponse struct {
 //
 //	@Summary			Create a User
 //	@Description	Create a new User
-//	@Tags					users
+//	@Tags					Users
 //	@Accept				json
 //	@Produce			json
 //	@Param				user	body		CreateUserRequest	true	"Create user"
@@ -65,7 +65,6 @@ func (c *CreateUserController) CreateUserHandler(
 }
 
 /* Service */
-
 func CreateUser(
 	ctx context.Context,
 	db dbutils.DB,

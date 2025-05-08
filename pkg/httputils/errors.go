@@ -22,14 +22,16 @@ func logError(r *http.Request, err error) {
 }
 
 type ErrorResponse struct {
-	Errors any `json:"errors"`
+	Status  int                `json:"status"`
+	Message string             `json:"message"`
+	Errors  []validation.Error `json:"errors,omitempty"`
 }
 
-func errorResponse(w http.ResponseWriter, r *http.Request, status int, message interface{}) {
+func errorResponse(w http.ResponseWriter, r *http.Request, status int, message string) {
 	// Write the response using the writeJSON() helper. If this happens to return an error
 	// then log it, and fall back to sending the client an empty response with a 500 Internal
 	// Server Error status code
-	err := WriteJSON(w, status, ErrorResponse{Errors: message}, nil)
+	err := WriteJSON(w, status, ErrorResponse{Status: status, Message: message}, nil)
 	if err != nil {
 		logError(r, err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -62,7 +64,16 @@ func BadRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
 
 // FailedValidationResponse sends JSON-formatted error message to client with 400 Bad Request status code.
 func FailedValidationResponse(w http.ResponseWriter, r *http.Request, errors []validation.Error) {
-	errorResponse(w, r, http.StatusBadRequest, errors)
+	err := WriteJSON(w, http.StatusBadRequest, ErrorResponse{Status: http.StatusBadRequest, Message: "validation errors", Errors: errors}, nil)
+	if err != nil {
+		logError(r, err)
+		w.WriteHeader(http.StatusInternalServerError)
+
+		_, err = w.Write([]byte("internal server error"))
+		if err != nil {
+			logError(r, err)
+		}
+	}
 }
 
 // NotFoundResponse method is used to send a 404 Not Found status code.
@@ -114,11 +125,15 @@ func ForbiddenResponse(w http.ResponseWriter, r *http.Request) {
 // HandleErrorResponse method is a utility function that will return the appropriate
 // error from the service layer of our application.
 func HandleErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
-	var validationErr validation.Error
+	var validationErr validation.ValidationError
+
+	var singleValidationErr validation.Error
 
 	switch {
+	case errors.As(err, &singleValidationErr):
+		FailedValidationResponse(w, r, []validation.Error{singleValidationErr})
 	case errors.As(err, &validationErr):
-		FailedValidationResponse(w, r, []validation.Error{validationErr})
+		FailedValidationResponse(w, r, validationErr.Errors)
 	case errors.Is(err, dbutils.ErrRecordNotFound):
 		NotFoundResponse(w, r)
 	case errors.Is(err, dbutils.ErrEditConflict):

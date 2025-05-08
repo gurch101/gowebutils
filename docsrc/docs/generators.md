@@ -31,7 +31,12 @@ Follow the interactive prompts to:
 - `internal/<dbtable>/create_<dbtable>.go` - This file contains a handler, service, and repository to create a new record in the database.
 - `internal/<dbtable>/get_<dbtable>_by_id.go` - This file contains a handler, service, and repository to get a record from the database by id.
 - `internal/<dbtable>/search_<dbtable>.go` - This file contains a handler, service, and repository to search for records in the database by enabling pagination, filter on any field, and sort by any field. You can also control the fields that are returned in the response.
-- `internal/<dbtable>/update_<dbtable>.go` - This file contains a handler, service, and repository to update a record in the database via a PATCH request.
+- `internal/<dbtable>/update_<dbtable>.go` - This file contains a handler, service, and repository to update a record in the database via a PATCH request. This file is only generated if your database table has a `version` field.
+- `internal/<dbtable>/delete_<dbtable>_by_id.go` - This file contains a handler, service, and repository to delete a record from the database.
+- `internal/<dbtable>/<dbtable>_exists.go` - A helper function to check if a record exists in the database.
+- `internal/<dbtable>/model.go` - This file contains a struct representing the database table.
+- `internal/<dbtable>/test_helpers.go` - This file contains helper functions to create test records for the database table.
+- `internal/<dbtable>/routes.go` - This file contains binds the handler functions to the routes through the `app` object.
 
 Each program will have a corresponding end-to-end test file named `internal/<dbtable>/<progname>_test.go`.
 

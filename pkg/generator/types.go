@@ -1,11 +1,16 @@
 package generator
 
-import "github.com/gurch101/gowebutils/pkg/stringutils"
+import (
+	"strings"
+
+	"github.com/gurch101/gowebutils/pkg/stringutils"
+)
 
 type Table struct {
 	Name          string
 	Fields        []Field
 	UniqueIndexes []UniqueIndex
+	ForeignKeys   []ForeignKey
 }
 
 type Field struct {
@@ -22,6 +27,34 @@ type UniqueIndex struct {
 type CheckConstraint struct {
 	Name       string
 	Expression string
+}
+
+type ForeignKey struct {
+	Table      string
+	FromColumn string
+	ToColumn   string
+	OnDelete   string
+	OnUpdate   string
+}
+
+func (fk ForeignKey) HumanTableName() string {
+	return stringutils.SnakeToHuman(strings.TrimSuffix(fk.Table, "s"))
+}
+
+func (fk ForeignKey) SingularTitleCaseTableName() string {
+	return stringutils.SnakeToTitle(strings.TrimSuffix(fk.Table, "s"))
+}
+
+func (fk ForeignKey) SingularCamelCaseTableName() string {
+	return stringutils.SnakeToCamel(strings.TrimSuffix(fk.Table, "s"))
+}
+
+func (fk ForeignKey) TitleCaseFromColumnName() string {
+	return stringutils.SnakeToTitle(fk.FromColumn)
+}
+
+func (fk ForeignKey) JSONName() string {
+	return stringutils.SnakeToCamel(fk.FromColumn)
 }
 
 type SQLDataType string
@@ -85,6 +118,7 @@ type createHandlerTemplateData struct {
 	UniqueFields          []UniqueField
 	Fields                []RequestField
 	ModelFields           []ModelField
+	ForeignKeys           []ForeignKey
 }
 
 type deleteHandlerTemplateData struct {
@@ -109,6 +143,8 @@ type getHandlerTemplateData struct {
 	KebabCaseTableName    string
 	ModelFields           []ModelField
 	CreateFields          []RequestField
+	HasCreatedAt          bool
+	HasUpdatedAt          bool
 }
 
 type updateHandlerTemplateData struct {
@@ -119,8 +155,10 @@ type updateHandlerTemplateData struct {
 	KebabCaseTableName    string
 	SingularTitleCaseName string
 	SingularCamelCaseName string
+	RequireValidation     bool
 	ModelFields           []ModelField
 	Fields                []RequestField
+	ForeignKeys           []ForeignKey
 }
 
 type searchHandlerTemplateData struct {
@@ -144,8 +182,11 @@ type modelTemplateData struct {
 	SingularTitleCaseName string
 	SingularCamelCaseName string
 	IncludeTime           bool
+	IncludeValidation     bool
 	ModelFields           []ModelField
 	Fields                []RequestField
+	UniqueFields          []UniqueField
+	ForeignKeys           []ForeignKey
 }
 
 type testHelperTemplateData struct {
@@ -155,6 +196,8 @@ type testHelperTemplateData struct {
 	TitleCaseTableName    string
 	SingularTitleCaseName string
 	Fields                []RequestField
+	UniqueFields          []UniqueField
+	ForeignKeys           []ForeignKey
 }
 
 type UniqueField struct {

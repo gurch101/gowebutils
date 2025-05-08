@@ -7,8 +7,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/gurch101/gowebutils/internal/tenants"
 	"github.com/gurch101/gowebutils/internal/users"
+	"github.com/gurch101/gowebutils/pkg/collectionutils"
+	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
+	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -20,9 +24,9 @@ func TestCreateUser(t *testing.T) {
 
 		controller := users.NewCreateUserController(app.App)
 		app.TestRouter.Post("/users", controller.CreateUserHandler)
-
+		tenantID, _ := tenants.CreateTestTenant(t, app.DB())
 		body := users.CreateTestUserRequest(t)
-
+		body.TenantID = tenantID
 		req := testutils.CreatePostRequest(t, "/users", body)
 		rr := app.MakeRequest(req)
 
@@ -52,12 +56,14 @@ func TestCreateUser(t *testing.T) {
 		var name string
 		var email string
 		var someInt64 int64
+		var tenantId int64
 		var someBool bool
 
-		err = app.DB().QueryRowContext(context.Background(), fmt.Sprintf("SELECT  name  ,email  ,some_int64  ,some_bool  FROM users WHERE id = %d", response.ID)).Scan(
+		err = app.DB().QueryRowContext(context.Background(), fmt.Sprintf("SELECT  name  ,email  ,some_int64  ,tenant_id  ,some_bool  FROM users WHERE id = %d", response.ID)).Scan(
 			&name,
 			&email,
 			&someInt64,
+			&tenantId,
 			&someBool,
 		)
 		if err != nil {
@@ -71,6 +77,9 @@ func TestCreateUser(t *testing.T) {
 		}
 		if someInt64 != body.SomeInt64 {
 			t.Errorf("expected someInt64 to be %v, got %v", body.SomeInt64, someInt64)
+		}
+		if tenantId != body.TenantID {
+			t.Errorf("expected tenantId to be %v, got %v", body.TenantID, tenantId)
 		}
 		if someBool != body.SomeBool {
 			t.Errorf("expected someBool to be %v, got %v", body.SomeBool, someBool)
@@ -103,8 +112,9 @@ func TestCreateUser(t *testing.T) {
 		app.TestRouter.Post("/users", controller.CreateUserHandler)
 
 		body := users.CreateUserRequest{
-			Name:  "",
-			Email: "invalidemail",
+			Name:     "",
+			Email:    "invalidemail",
+			TenantID: 0,
 		}
 
 		req := testutils.CreatePostRequest(t, "/users", body)
@@ -126,22 +136,29 @@ func TestCreateUser(t *testing.T) {
 			t.Error("Expected validation errors, got none")
 		}
 
-		if errorResponse.Errors[0].Field != "name" {
-			t.Errorf("Expected error field to be 'name', got %s", errorResponse.Errors[0].Field)
-		}
+		var ok bool
 
-		if errorResponse.Errors[0].Message != "Name is required" {
-			t.Errorf("Expected error message to be 'Name is required', got %s", errorResponse.Errors[0].Message)
-		}
+		ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "name" && e.Message == "Name is required"
+		})
 
-		if errorResponse.Errors[1].Field != "email" {
-			t.Errorf("Expected error field to be 'email', got %s", errorResponse.Errors[1].Field)
+		if !ok {
+			t.Errorf("Expected error message for name, but got none")
 		}
+		ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "email" && e.Message == "Email must be a valid email address"
+		})
 
-		if errorResponse.Errors[1].Message != "Email must be a valid email address" {
-			t.Errorf("Expected error message to be 'Email must be a valid email address', got %s", errorResponse.Errors[1].Message)
+		if !ok {
+			t.Errorf("Expected error message for email, but got none")
 		}
+		ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "tenantId" && e.Message == "Tenant ID is required"
+		})
 
+		if !ok {
+			t.Errorf("Expected error message for tenantId, but got none")
+		}
 	})
 
 	t.Run("failed unique constraints", func(t *testing.T) {
@@ -151,15 +168,8 @@ func TestCreateUser(t *testing.T) {
 		controller := users.NewCreateUserController(app.App)
 		app.TestRouter.Post("/users", controller.CreateUserHandler)
 
-		users.CreateUser(context.Background(), app.DB(), &users.CreateUserRequest{
-			Name:  "name",
-			Email: "email@example.com",
-		})
-
-		payload := users.CreateUserRequest{
-			Name:  "name",
-			Email: "email@example.com",
-		}
+		_, payload := users.CreateTestUser(t, app.DB())
+		users.CreateUser(context.Background(), app.DB(), &payload)
 
 		req := testutils.CreatePostRequest(t, "/users", payload)
 		rr := app.MakeRequest(req)
@@ -179,21 +189,53 @@ func TestCreateUser(t *testing.T) {
 			t.Error("Expected validation errors, got none")
 		}
 
-		if errorResponse.Errors[0].Field != "name" {
-			t.Errorf("Expected error field to be 'name', got %s", errorResponse.Errors[0].Field)
+		var ok bool
+
+		ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "name" && e.Message == "Name already exists"
+		})
+
+		if !ok {
+			t.Errorf("Expected error message for name, but got none")
+		}
+		ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "email" && e.Message == "Email already exists"
+		})
+
+		if !ok {
+			t.Errorf("Expected error message for email, but got none")
+		}
+	})
+
+	t.Run("failed Tenant foreign key constraint", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		controller := users.NewCreateUserController(app.App)
+		app.TestRouter.Post("/users", controller.CreateUserHandler)
+
+		payload := users.CreateTestUserRequest(t)
+		payload.TenantID = 100
+
+		req := testutils.CreatePostRequest(t, "/users", payload)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code 400 Bad Request, got %d", rr.Code)
 		}
 
-		if errorResponse.Errors[0].Message != "Name already exists" {
-			t.Errorf("Expected error message to be 'Name already exists', got %s", errorResponse.Errors[0].Message)
+		var errorResponse httputils.ErrorResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
+		if err != nil {
+			t.Fatal(err)
 		}
 
-		if errorResponse.Errors[1].Field != "email" {
-			t.Errorf("Expected error field to be 'email', got %s", errorResponse.Errors[1].Field)
-		}
+		ok := collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "tenantId" && e.Message == "Tenant not found"
+		})
 
-		if errorResponse.Errors[1].Message != "Email already exists" {
-			t.Errorf("Expected error message to be 'Email already exists', got %s", errorResponse.Errors[1].Message)
+		if !ok {
+			t.Errorf("Expected error message for tenantId, but got none")
 		}
-
 	})
 }

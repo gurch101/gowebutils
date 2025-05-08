@@ -15,6 +15,11 @@ import (
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
+	"github.com/gurch101/gowebutils/pkg/validation"
+
+	{{- range .ForeignKeys}}
+	"{{$.ModuleName}}/internal/{{.Table}}"
+	{{- end}}
 )
 
 func CreateTest{{.SingularTitleCaseName}}Request(t *testing.T) Create{{.SingularTitleCaseName}}Request {
@@ -35,10 +40,27 @@ func CreateTest{{.SingularTitleCaseName}}Request(t *testing.T) Create{{.Singular
 	}
 }
 
+func CreateTest{{.SingularTitleCaseName}}RequestWithValues(t * testing.T, req Update{{.SingularTitleCaseName}}Request) (Create{{.SingularTitleCaseName}}Request) {
+	t.Helper()
+	createRequest := CreateTest{{.SingularTitleCaseName}}Request(t)
+	{{- range .Fields}}
+	createRequest.{{.TitleCaseName}} = validation.Coalesce(req.{{.TitleCaseName}}, createRequest.{{.TitleCaseName}})
+	{{- end}}
+
+	return createRequest
+}
+
 func CreateTest{{.SingularTitleCaseName}}(t *testing.T, db dbutils.DB) (int64, Create{{.SingularTitleCaseName}}Request) {
 	t.Helper()
 
+	{{- range .ForeignKeys}}
+	{{.SingularCamelCaseTableName}}ID, _ := {{.Table}}.CreateTest{{.SingularTitleCaseTableName}}(t, db)
+	{{- end}}
+
 	createReq := CreateTest{{.SingularTitleCaseName}}Request(t)
+	{{- range .ForeignKeys}}
+	createReq.{{.SingularTitleCaseTableName}}ID = {{.SingularCamelCaseTableName}}ID
+	{{- end}}
 
 	ID, err := Create{{.SingularTitleCaseName}}(context.Background(), db, &createReq)
 
@@ -64,6 +86,26 @@ func CreateTestUpdate{{.SingularTitleCaseName}}Request(t *testing.T) Update{{.Si
 	{{.TitleCaseName}}: testutils.StringPtr("newtest@example.com"),
 	{{- else}}
 	{{.TitleCaseName}}: testutils.StringPtr("new{{.TitleCaseName}}"),
+	{{- end}}
+	{{- end}}
+	}
+}
+
+func CreateTestUpdate{{.SingularTitleCaseName}}RequestWithValues(t *testing.T, req Update{{.SingularTitleCaseName}}Request) Update{{.SingularTitleCaseName}}Request {
+	t.Helper()
+
+	return Update{{.SingularTitleCaseName}}Request{
+	{{- range .Fields}}
+	{{- if eq .GoType "int64"}}
+	{{.TitleCaseName}}: testutils.Int64Ptr(validation.Coalesce(req.{{.TitleCaseName}}, 2)),
+	{{- else if eq .GoType "int"}}
+	{{.TitleCaseName}}: testutils.IntPtr(validation.Coalesce(req.{{.TitleCaseName}}, 2)),
+	{{- else if eq .GoType "bool"}}
+	{{.TitleCaseName}}: testutils.BoolPtr(validation.Coalesce(req.{{.TitleCaseName}}, false)),
+	{{- else if .IsEmail}}
+	{{.TitleCaseName}}: testutils.StringPtr(validation.Coalesce(req.{{.TitleCaseName}}, "newtest@example.com")),
+	{{- else}}
+	{{.TitleCaseName}}: testutils.StringPtr(validation.Coalesce(req.{{.TitleCaseName}}, "new{{.TitleCaseName}}")),
 	{{- end}}
 	{{- end}}
 	}
@@ -95,6 +137,7 @@ func newTestHelperTemplateData(moduleName string, schema Table) testHelperTempla
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
 		Fields:                fields,
+		ForeignKeys:           schema.ForeignKeys,
 	}
 }
 

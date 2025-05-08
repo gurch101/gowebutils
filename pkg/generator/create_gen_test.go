@@ -37,6 +37,11 @@ func getTestUserSchema() generator.Table {
 				Constraints: []string{},
 			},
 			{
+				Name:        "tenant_id",
+				DataType:    generator.SQLInt64,
+				Constraints: []string{"NOT NULL"},
+			},
+			{
 				Name:        "some_bool",
 				DataType:    generator.SQLBoolean,
 				Constraints: []string{},
@@ -53,6 +58,13 @@ func getTestUserSchema() generator.Table {
 			},
 		},
 		UniqueIndexes: []generator.UniqueIndex{},
+		ForeignKeys: []generator.ForeignKey{
+			{
+				Table:      "tenants",
+				FromColumn: "tenant_id",
+				ToColumn:   "id",
+			},
+		},
 	}
 }
 

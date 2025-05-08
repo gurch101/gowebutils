@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gurch101/gowebutils/internal/tenants"
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
@@ -26,6 +27,7 @@ type CreateUserRequest struct {
 	Name      string `json:"name" validate:"required"`
 	Email     string `json:"email"`
 	SomeInt64 int64  `json:"someInt64"`
+	TenantID  int64  `json:"tenantId" validate:"required"`
 	SomeBool  bool   `json:"someBool"`
 }
 
@@ -37,7 +39,7 @@ type CreateUserResponse struct {
 //
 //	@Summary			Create a User
 //	@Description	Create a new User
-//	@Tags					users
+//	@Tags					Users
 //	@Accept				json
 //	@Produce			json
 //	@Param				user	body		CreateUserRequest	true	"Create user"
@@ -57,6 +59,7 @@ func (c *CreateUserController) CreateUserHandler(
 	v := validation.NewValidator()
 	v.Required(req.Name, "name", "Name is required")
 	v.Email(req.Email, "email", "Email must be a valid email address")
+	v.Check(req.TenantID > 0, "tenantId", "Tenant ID is required")
 
 	if v.HasErrors() {
 		httputils.FailedValidationResponse(w, r, v.Errors)
@@ -79,24 +82,20 @@ func (c *CreateUserController) CreateUserHandler(
 }
 
 /* Service */
-var ErrNameAlreadyExists = validation.Error{
-	Field:   "name",
-	Message: "Name already exists",
-}
-var ErrEmailAlreadyExists = validation.Error{
-	Field:   "email",
-	Message: "Email already exists",
-}
-
 func CreateUser(
 	ctx context.Context,
 	db dbutils.DB,
 	req *CreateUserRequest) (*int64, error) {
 
+	if !tenants.TenantExists(ctx, db, req.TenantID) {
+		return nil, ErrTenantNotFound
+	}
+
 	model := newCreateUserModel(
 		req.Name,
 		req.Email,
 		req.SomeInt64,
+		req.TenantID,
 		req.SomeBool,
 	)
 
@@ -128,6 +127,7 @@ func insertUser(
 		"name":       model.Name,
 		"email":      model.Email,
 		"some_int64": model.SomeInt64,
+		"tenant_id":  model.TenantID,
 		"some_bool":  model.SomeBool,
 	})
 }

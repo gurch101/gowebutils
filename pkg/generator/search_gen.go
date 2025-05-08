@@ -48,7 +48,7 @@ type Search{{.SingularTitleCaseName}}Response struct {
 //
 //	@Summary		List {{.HumanName}}
 //	@Description	get {{.HumanName}}
-//	@Tags			{{.Name}}
+//	@Tags			{{.HumanName}}
 //	@Accept			json
 //	@Produce		json
 	{{- range .ModelFields}}
@@ -237,7 +237,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         }
 
         if len(response.Data) != 1 {
-            t.Errorf("expected 1 user, got %d", len(response.Data))
+            t.Fatalf("expected 1 user, got %d", len(response.Data))
         }
 
 				actualRecord, err := {{.PackageName}}.Get{{.SingularTitleCaseName}}ByID(context.Background(), app.DB(), ID)

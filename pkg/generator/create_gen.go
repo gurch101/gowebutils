@@ -19,7 +19,11 @@ import (
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
-	{{if .RequireValidation}}"github.com/gurch101/gowebutils/pkg/validation"{{end}}
+	{{if or (.RequireValidation) (.ForeignKeys)}}"github.com/gurch101/gowebutils/pkg/validation"{{end}}
+
+	{{- range .ForeignKeys}}
+	"{{$.ModuleName}}/internal/{{.Table}}"
+	{{- end}}
 )
 
 /* Handler */
@@ -45,7 +49,7 @@ type Create{{.SingularTitleCaseName}}Response struct {
 //
 //	@Summary			Create a {{.HumanName}}
 //	@Description	Create a new {{.HumanName}}
-//	@Tags					{{.Name}}
+//	@Tags					{{.HumanName}}s
 //	@Accept				json
 //	@Produce			json
 //	@Param				{{.SingularCamelCaseName}}	body		Create{{.SingularTitleCaseName}}Request	true	"Create {{.SingularCamelCaseName}}"
@@ -67,7 +71,11 @@ func (c *Create{{.SingularTitleCaseName}}Controller) Create{{.SingularTitleCaseN
 			{{- if .IsEmail}}
 				v.Email(req.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} must be a valid email address")
 			{{- else if .Required}}
+				{{- if eq .GoType "string"}}
 				v.Required(req.{{.TitleCaseName}}, "{{.JSONName}}", "{{.HumanName}} is required")
+				{{- else}}
+				v.Check(req.{{.TitleCaseName}} > 0, "{{.JSONName}}", "{{.HumanName}} is required")
+				{{- end}}
 			{{- end}}
 		{{- end}}
 
@@ -93,17 +101,16 @@ func (c *Create{{.SingularTitleCaseName}}Controller) Create{{.SingularTitleCaseN
 }
 
 /* Service */
-{{- range .UniqueFields}}
-var Err{{.TitleCaseName}}AlreadyExists = validation.Error{
-	Field:   "{{.JSONName}}",
-	Message: "{{.HumanName}} already exists",
-}
-{{- end}}
-
 func Create{{.SingularTitleCaseName}}(
 	ctx context.Context,
 	db dbutils.DB,
 	req *Create{{.SingularTitleCaseName}}Request) (*int64, error) {
+
+	{{range .ForeignKeys}}
+	if !{{.Table}}.{{.SingularTitleCaseTableName}}Exists(ctx, db, req.{{.TitleCaseFromColumnName}}) {
+		return nil, Err{{.SingularTitleCaseTableName}}NotFound
+	}
+	{{- end}}
 
 	model := newCreate{{.SingularTitleCaseName}}Model(
 		{{- range .Fields}}
@@ -156,6 +163,14 @@ import (
 	"testing"
 
 	"{{.ModuleName}}/internal/{{.PackageName}}"
+	{{- range .ForeignKeys}}
+	"{{$.ModuleName}}/internal/{{.Table}}"
+	{{- end}}
+	{{- if .RequireValidation}}
+	"github.com/gurch101/gowebutils/pkg/collectionutils"
+	"github.com/gurch101/gowebutils/pkg/validation"
+	{{- end}}
+	{{if .ForeignKeys}}"github.com/gurch101/gowebutils/pkg/httputils"{{end}}
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
@@ -169,8 +184,13 @@ t.Parallel()
 		controller := {{.PackageName}}.NewCreate{{.SingularTitleCaseName}}Controller(app.App)
 		app.TestRouter.Post("/{{.KebabCaseTableName}}", controller.Create{{.SingularTitleCaseName}}Handler)
 
+		{{- range .ForeignKeys}}
+		{{.SingularCamelCaseTableName}}ID, _ := {{.Table}}.CreateTest{{.SingularTitleCaseTableName}}(t, app.DB())
+		{{- end}}
 		body := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}Request(t)
-
+		{{- range .ForeignKeys}}
+		body.{{.SingularTitleCaseTableName}}ID = {{.SingularCamelCaseTableName}}ID
+		{{- end}}
 		req := testutils.CreatePostRequest(t, "/{{.KebabCaseTableName}}", body)
 		rr := app.MakeRequest(req)
 
@@ -248,7 +268,11 @@ t.Parallel()
 				{{- if .IsEmail}}
 				{{.TitleCaseName}}: "invalidemail",
 				{{- else if .Required}}
-				{{.TitleCaseName}}: "",
+						{{- if or (eq .GoType "int") (eq .GoType "int64")}}
+						{{.TitleCaseName}}: 0,
+						{{- else}}
+						{{.TitleCaseName}}: "",
+						{{- end}}
 				{{- end}}
 			{{- end}}
 		}
@@ -272,26 +296,24 @@ t.Parallel()
 			t.Error("Expected validation errors, got none")
 		}
 
-		{{$idx := 0}}
+		var ok bool
 		{{range .Fields}}
 			{{- if .IsEmail}}
-			if errorResponse.Errors[{{$idx}}].Field != "{{.JSONName}}" {
-				t.Errorf("Expected error field to be '{{.JSONName}}', got %s", errorResponse.Errors[{{$idx}}].Field)
-			}
+			ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+				return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanName}} must be a valid email address"
+			})
 
-			if errorResponse.Errors[{{$idx}}].Message != "{{.HumanName}} must be a valid email address" {
-				t.Errorf("Expected error message to be '{{.HumanName}} must be a valid email address', got %s", errorResponse.Errors[{{$idx}}].Message)
+			if !ok {
+				t.Errorf("Expected error message for {{.JSONName}}, but got none")
 			}
-			{{$idx = incr $idx}}
 			{{- else if .Required}}
-			if errorResponse.Errors[{{$idx}}].Field != "{{.JSONName}}" {
-				t.Errorf("Expected error field to be '{{.JSONName}}', got %s", errorResponse.Errors[{{$idx}}].Field)
-			}
+			ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+				return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanName}} is required"
+			})
 
-			if errorResponse.Errors[{{$idx}}].Message != "{{.HumanName}} is required" {
-				t.Errorf("Expected error message to be '{{.HumanName}} is required', got %s", errorResponse.Errors[{{$idx}}].Message)
+			if !ok {
+				t.Errorf("Expected error message for {{.JSONName}}, but got none")
 			}
-			{{$idx = incr $idx}}
 			{{- end}}
 		{{- end}}
 	})
@@ -305,25 +327,8 @@ t.Parallel()
 		controller := {{.PackageName}}.NewCreate{{.SingularTitleCaseName}}Controller(app.App)
 		app.TestRouter.Post("/{{.KebabCaseTableName}}", controller.Create{{.SingularTitleCaseName}}Handler)
 
-		{{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &{{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-			{{- range .Fields}}
-				{{- if .IsEmail}}
-				{{.TitleCaseName}}: "{{.JSONName}}@example.com",
-				{{- else if .Required}}
-				{{.TitleCaseName}}: "{{.JSONName}}",
-				{{- end}}
-			{{- end}}
-		})
-
-		payload := {{.PackageName}}.Create{{.SingularTitleCaseName}}Request{
-			{{- range .Fields}}
-				{{- if .IsEmail}}
-				{{.TitleCaseName}}: "{{.JSONName}}@example.com",
-				{{- else if .Required}}
-				{{.TitleCaseName}}: "{{.JSONName}}",
-				{{- end}}
-			{{- end}}
-		}
+		_, payload := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
+		{{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &payload)
 
 		req := testutils.CreatePostRequest(t, "/{{.KebabCaseTableName}}", payload)
 		rr := app.MakeRequest(req)
@@ -343,17 +348,50 @@ t.Parallel()
 			t.Error("Expected validation errors, got none")
 		}
 
-		{{$idx := 0}}
+		var ok bool
 		{{range .UniqueFields}}
-		if errorResponse.Errors[{{$idx}}].Field != "{{.JSONName}}" {
-			t.Errorf("Expected error field to be '{{.JSONName}}', got %s", errorResponse.Errors[{{$idx}}].Field)
+		ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanName}} already exists"
+		})
+
+		if !ok {
+			t.Errorf("Expected error message for {{.JSONName}}, but got none")
+		}
+		{{- end}}
+	})
+	{{- end}}
+
+	{{range .ForeignKeys}}
+	t.Run("failed {{.HumanTableName}} foreign key constraint", func(t *testing.T) {
+		app := testutils.NewTestApp(t)
+		defer app.Close()
+
+		controller := {{$.PackageName}}.NewCreate{{$.SingularTitleCaseName}}Controller(app.App)
+		app.TestRouter.Post("/{{$.KebabCaseTableName}}", controller.Create{{$.SingularTitleCaseName}}Handler)
+
+		payload := {{$.PackageName}}.CreateTest{{$.SingularTitleCaseName}}Request(t)
+		payload.{{.TitleCaseFromColumnName}} = 100
+
+		req := testutils.CreatePostRequest(t, "/{{$.KebabCaseTableName}}", payload)
+		rr := app.MakeRequest(req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code 400 Bad Request, got %d", rr.Code)
 		}
 
-		if errorResponse.Errors[{{$idx}}].Message != "{{.HumanName}} already exists" {
-			t.Errorf("Expected error message to be '{{.HumanName}} already exists', got %s", errorResponse.Errors[{{$idx}}].Message)
+		var errorResponse httputils.ErrorResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
+		if err != nil {
+			t.Fatal(err)
 		}
-		{{$idx = incr $idx}}
-		{{- end}}
+
+		ok := collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
+			return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanTableName}} not found"
+		})
+
+		if !ok {
+			t.Errorf("Expected error message for {{.JSONName}}, but got none")
+		}
 	})
 	{{- end}}
 }
@@ -373,6 +411,28 @@ func hasUniqueConstraint(constraints []string) bool {
 	for _, constraint := range constraints {
 		if strings.Contains(constraint, "UNIQUE") {
 			return true
+		}
+	}
+
+	return false
+}
+
+func isNotNullForeignKey(schema Table, field Field) bool {
+	isNotNull := false
+
+	for _, constraint := range field.Constraints {
+		if strings.Contains(constraint, "NOT NULL") {
+			isNotNull = true
+
+			break
+		}
+	}
+
+	if isNotNull {
+		for _, fk := range schema.ForeignKeys {
+			if fk.FromColumn == field.Name {
+				return true
+			}
 		}
 	}
 
@@ -410,7 +470,7 @@ func newCreateHandlerTemplateData(moduleName string, schema Table) createHandler
 				uniqueFields = append(uniqueFields, newUniqueField(field))
 			}
 
-			required := hasBlankConstraint(field.Constraints)
+			required := hasBlankConstraint(field.Constraints) || isNotNullForeignKey(schema, field)
 			email := isEmail(sanitizedName)
 
 			if required || email {
@@ -440,11 +500,12 @@ func newCreateHandlerTemplateData(moduleName string, schema Table) createHandler
 		RequireValidation:     requireValidation,
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
-		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
+		SingularCamelCaseName: stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s")),
 		KebabCaseTableName:    strings.ToLower(stringutils.SnakeToKebab(schema.Name)),
 		UniqueFields:          uniqueFields,
 		Fields:                fields,
 		ModelFields:           modelFields,
+		ForeignKeys:           schema.ForeignKeys,
 	}
 }
 
