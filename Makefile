@@ -11,6 +11,9 @@ migrate/down:
 test:
 	go test -race -shuffle=on ./...
 
+docs:
+	cd docsrc && npm run build && cd ..
+
 coverage:
 	go test -coverpkg=./... -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out

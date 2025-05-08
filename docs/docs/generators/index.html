@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.7.0">
 <title data-rh="true">Generators | gowebutils</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://your-docusaurus-site.example.com/gowebutils/img/docusaurus-social-card.jpg"><meta data-rh="true" name="twitter:image" content="https://your-docusaurus-site.example.com/gowebutils/img/docusaurus-social-card.jpg"><meta data-rh="true" property="og:url" content="https://your-docusaurus-site.example.com/gowebutils/docs/generators"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Generators | gowebutils"><meta data-rh="true" name="description" content="gowebutils includes a CLI-based generator that scaffolds boilerplate code based on your SQLite database schema. It can quickly create handlers, services, and repositories using your existing DDL statements—saving time and ensuring consistency across your project."><meta data-rh="true" property="og:description" content="gowebutils includes a CLI-based generator that scaffolds boilerplate code based on your SQLite database schema. It can quickly create handlers, services, and repositories using your existing DDL statements—saving time and ensuring consistency across your project."><link data-rh="true" rel="icon" href="/gowebutils/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://your-docusaurus-site.example.com/gowebutils/docs/generators"><link data-rh="true" rel="alternate" href="https://your-docusaurus-site.example.com/gowebutils/docs/generators" hreflang="en"><link data-rh="true" rel="alternate" href="https://your-docusaurus-site.example.com/gowebutils/docs/generators" hreflang="x-default"><link rel="stylesheet" href="/gowebutils/assets/css/styles.57d8f497.css">
-<script src="/gowebutils/assets/js/runtime~main.31f4cdd6.js" defer="defer"></script>
+<script src="/gowebutils/assets/js/runtime~main.5861d767.js" defer="defer"></script>
 <script src="/gowebutils/assets/js/main.b7939465.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -29,7 +29,12 @@
 <li><code>internal/&lt;dbtable&gt;/create_&lt;dbtable&gt;.go</code> - This file contains a handler, service, and repository to create a new record in the database.</li>
 <li><code>internal/&lt;dbtable&gt;/get_&lt;dbtable&gt;_by_id.go</code> - This file contains a handler, service, and repository to get a record from the database by id.</li>
 <li><code>internal/&lt;dbtable&gt;/search_&lt;dbtable&gt;.go</code> - This file contains a handler, service, and repository to search for records in the database by enabling pagination, filter on any field, and sort by any field. You can also control the fields that are returned in the response.</li>
-<li><code>internal/&lt;dbtable&gt;/update_&lt;dbtable&gt;.go</code> - This file contains a handler, service, and repository to update a record in the database via a PATCH request.</li>
+<li><code>internal/&lt;dbtable&gt;/update_&lt;dbtable&gt;.go</code> - This file contains a handler, service, and repository to update a record in the database via a PATCH request. This file is only generated if your database table has a <code>version</code> field.</li>
+<li><code>internal/&lt;dbtable&gt;/delete_&lt;dbtable&gt;_by_id.go</code> - This file contains a handler, service, and repository to delete a record from the database.</li>
+<li><code>internal/&lt;dbtable&gt;/&lt;dbtable&gt;_exists.go</code> - A helper function to check if a record exists in the database.</li>
+<li><code>internal/&lt;dbtable&gt;/model.go</code> - This file contains a struct representing the database table.</li>
+<li><code>internal/&lt;dbtable&gt;/test_helpers.go</code> - This file contains helper functions to create test records for the database table.</li>
+<li><code>internal/&lt;dbtable&gt;/routes.go</code> - This file contains binds the handler functions to the routes through the <code>app</code> object.</li>
 </ul>
 <p>Each program will have a corresponding end-to-end test file named <code>internal/&lt;dbtable&gt;/&lt;progname&gt;_test.go</code>.</p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="openapi-documentation">OpenAPI Documentation<a href="#openapi-documentation" class="hash-link" aria-label="Direct link to OpenAPI Documentation" title="Direct link to OpenAPI Documentation">​</a></h3>
@@ -43,10 +48,10 @@
 <p>Primary Key: Must be named <code>id</code> and of type <code>int64</code>.</p>
 </li>
 <li>
-<p>Table Names: Use <strong><em>plural</em></strong>, <strong><em>snake_case</em></strong>, and <strong><em>lowercase</em></strong> (e.g., <code>users</code>, <code>order_items</code>).</p>
+<p>Table Names: Use <em>plural</em>, <em>snake_case</em>, and <em>lowercase</em> (e.g., <code>users</code>, <code>order_items</code>).</p>
 </li>
 <li>
-<p>Column Names: Use <strong><em>snake_case</em></strong> and <strong><em>lowercase</em></strong>.</p>
+<p>Column Names: Use <em>snake_case</em> and <em>lowercase</em>.</p>
 </li>
 <li>
 <p>Required Fields: Add <code>CHECK</code> constraints like <code>CHECK (column_name &lt;&gt; &#x27;&#x27;)</code> to mark fields as required in the generated create/update handlers.</p>
