@@ -362,7 +362,7 @@ func newSearchHandlerTemplateData(moduleName string, schema Table) searchHandler
 		ModuleName:            moduleName,
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
-		SingularCamelCaseName: strings.ToLower(stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s"))),
+		SingularCamelCaseName: stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s")),
 		KebabCaseTableName:    stringutils.SnakeToKebab(schema.Name),
 		Fields:                fields,
 		ModelFields:           modelFields,

@@ -21,7 +21,6 @@ func CreateTestUserRequest(t *testing.T) CreateUserRequest {
 		SomeBool:  true,
 	}
 }
-
 func CreateTestUserRequestWithValues(t *testing.T, req UpdateUserRequest) CreateUserRequest {
 	t.Helper()
 	createRequest := CreateTestUserRequest(t)
@@ -41,6 +40,10 @@ func CreateTestUser(t *testing.T, db dbutils.DB) (int64, CreateUserRequest) {
 	createReq := CreateTestUserRequest(t)
 	createReq.TenantID = tenantID
 
+	if UserExists(context.Background(), db, 1) {
+		return 1, createReq
+	}
+
 	ID, err := CreateUser(context.Background(), db, &createReq)
 
 	if err != nil {
@@ -49,15 +52,14 @@ func CreateTestUser(t *testing.T, db dbutils.DB) (int64, CreateUserRequest) {
 
 	return *ID, createReq
 }
-
 func CreateTestUpdateUserRequest(t *testing.T) UpdateUserRequest {
 	t.Helper()
 
 	return UpdateUserRequest{
 		Name:      testutils.StringPtr("newName"),
 		Email:     testutils.StringPtr("newtest@example.com"),
-		SomeInt64: testutils.Int64Ptr(2),
-		TenantID:  testutils.Int64Ptr(2),
+		SomeInt64: testutils.Int64Ptr(1),
+		TenantID:  testutils.Int64Ptr(1),
 		SomeBool:  testutils.BoolPtr(false),
 	}
 }
@@ -68,8 +70,8 @@ func CreateTestUpdateUserRequestWithValues(t *testing.T, req UpdateUserRequest) 
 	return UpdateUserRequest{
 		Name:      testutils.StringPtr(validation.Coalesce(req.Name, "newName")),
 		Email:     testutils.StringPtr(validation.Coalesce(req.Email, "newtest@example.com")),
-		SomeInt64: testutils.Int64Ptr(validation.Coalesce(req.SomeInt64, 2)),
-		TenantID:  testutils.Int64Ptr(validation.Coalesce(req.TenantID, 2)),
+		SomeInt64: testutils.Int64Ptr(validation.Coalesce(req.SomeInt64, 1)),
+		TenantID:  testutils.Int64Ptr(validation.Coalesce(req.TenantID, 1)),
 		SomeBool:  testutils.BoolPtr(validation.Coalesce(req.SomeBool, false)),
 	}
 }

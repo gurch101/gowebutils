@@ -3,6 +3,7 @@ package generator
 import (
 	"strings"
 
+	"github.com/gurch101/gowebutils/pkg/collectionutils"
 	"github.com/gurch101/gowebutils/pkg/stringutils"
 )
 
@@ -11,6 +12,12 @@ type Table struct {
 	Fields        []Field
 	UniqueIndexes []UniqueIndex
 	ForeignKeys   []ForeignKey
+}
+
+func (t Table) HasUpdateAt() bool {
+	return collectionutils.Contains(t.Fields, func(field Field) bool {
+		return field.Name == "updated_at"
+	})
 }
 
 type Field struct {
@@ -195,6 +202,7 @@ type testHelperTemplateData struct {
 	Name                  string
 	TitleCaseTableName    string
 	SingularTitleCaseName string
+	HasUpdate             bool
 	Fields                []RequestField
 	UniqueFields          []UniqueField
 	ForeignKeys           []ForeignKey

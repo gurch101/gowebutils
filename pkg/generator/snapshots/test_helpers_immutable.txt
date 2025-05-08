@@ -1,0 +1,41 @@
+package users
+
+import (
+	"context"
+	"testing"
+
+	"github.com/gurch101/gowebutils/internal/tenants"
+	"github.com/gurch101/gowebutils/pkg/dbutils"
+)
+
+func CreateTestUserRequest(t *testing.T) CreateUserRequest {
+	t.Helper()
+
+	return CreateUserRequest{
+		Name:      "Name",
+		Email:     "test@example.com",
+		SomeInt64: 1,
+		TenantID:  1,
+		SomeBool:  true,
+	}
+}
+
+func CreateTestUser(t *testing.T, db dbutils.DB) (int64, CreateUserRequest) {
+	t.Helper()
+	tenantID, _ := tenants.CreateTestTenant(t, db)
+
+	createReq := CreateTestUserRequest(t)
+	createReq.TenantID = tenantID
+
+	if UserExists(context.Background(), db, 1) {
+		return 1, createReq
+	}
+
+	ID, err := CreateUser(context.Background(), db, &createReq)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return *ID, createReq
+}

@@ -179,7 +179,6 @@ func newGetOneHandlerTemplateData(moduleName string, schema Table) getHandlerTem
 	modelFields := []ModelField{}
 	createFields := []RequestField{}
 	hasCreatedAt := false
-	hasUpdatedAt := false
 
 	for _, field := range schema.Fields {
 		sanitizedName := field.Name
@@ -189,10 +188,6 @@ func newGetOneHandlerTemplateData(moduleName string, schema Table) getHandlerTem
 
 		if field.Name == "created_at" {
 			hasCreatedAt = true
-		}
-
-		if field.Name == "updated_at" {
-			hasUpdatedAt = true
 		}
 
 		modelFields = append(modelFields, ModelField{
@@ -230,7 +225,7 @@ func newGetOneHandlerTemplateData(moduleName string, schema Table) getHandlerTem
 		ModelFields:           modelFields,
 		CreateFields:          createFields,
 		HasCreatedAt:          hasCreatedAt,
-		HasUpdatedAt:          hasUpdatedAt,
+		HasUpdatedAt:          schema.HasUpdateAt(),
 	}
 }
 

@@ -19,7 +19,7 @@ import (
 	"github.com/gurch101/gowebutils/pkg/app"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
-	{{if or (.RequireValidation) (.ForeignKeys)}}"github.com/gurch101/gowebutils/pkg/validation"{{end}}
+	{{if .RequireValidation}}"github.com/gurch101/gowebutils/pkg/validation"{{end}}
 
 	{{- range .ForeignKeys}}
 	"{{$.ModuleName}}/internal/{{.Table}}"
@@ -166,7 +166,7 @@ import (
 	{{- range .ForeignKeys}}
 	"{{$.ModuleName}}/internal/{{.Table}}"
 	{{- end}}
-	{{- if .RequireValidation}}
+	{{- if or (.RequireValidation) (.ForeignKeys)}}
 	"github.com/gurch101/gowebutils/pkg/collectionutils"
 	"github.com/gurch101/gowebutils/pkg/validation"
 	{{- end}}
@@ -369,7 +369,7 @@ t.Parallel()
 		controller := {{$.PackageName}}.NewCreate{{$.SingularTitleCaseName}}Controller(app.App)
 		app.TestRouter.Post("/{{$.KebabCaseTableName}}", controller.Create{{$.SingularTitleCaseName}}Handler)
 
-		payload := {{$.PackageName}}.CreateTest{{$.SingularTitleCaseName}}Request(t)
+		_, payload := {{$.PackageName}}.CreateTest{{$.SingularTitleCaseName}}(t, app.DB())
 		payload.{{.TitleCaseFromColumnName}} = 100
 
 		req := testutils.CreatePostRequest(t, "/{{$.KebabCaseTableName}}", payload)

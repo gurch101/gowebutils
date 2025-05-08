@@ -14,9 +14,10 @@ import (
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	{{- if .HasUpdate}}
 	"github.com/gurch101/gowebutils/pkg/testutils"
 	"github.com/gurch101/gowebutils/pkg/validation"
-
+	{{- end}}
 	{{- range .ForeignKeys}}
 	"{{$.ModuleName}}/internal/{{.Table}}"
 	{{- end}}
@@ -40,6 +41,7 @@ func CreateTest{{.SingularTitleCaseName}}Request(t *testing.T) Create{{.Singular
 	}
 }
 
+{{- if .HasUpdate}}
 func CreateTest{{.SingularTitleCaseName}}RequestWithValues(t * testing.T, req Update{{.SingularTitleCaseName}}Request) (Create{{.SingularTitleCaseName}}Request) {
 	t.Helper()
 	createRequest := CreateTest{{.SingularTitleCaseName}}Request(t)
@@ -49,6 +51,7 @@ func CreateTest{{.SingularTitleCaseName}}RequestWithValues(t * testing.T, req Up
 
 	return createRequest
 }
+{{- end}}
 
 func CreateTest{{.SingularTitleCaseName}}(t *testing.T, db dbutils.DB) (int64, Create{{.SingularTitleCaseName}}Request) {
 	t.Helper()
@@ -62,6 +65,10 @@ func CreateTest{{.SingularTitleCaseName}}(t *testing.T, db dbutils.DB) (int64, C
 	createReq.{{.SingularTitleCaseTableName}}ID = {{.SingularCamelCaseTableName}}ID
 	{{- end}}
 
+	if {{.SingularTitleCaseName}}Exists(context.Background(), db, 1) {
+		return 1, createReq
+	}
+
 	ID, err := Create{{.SingularTitleCaseName}}(context.Background(), db, &createReq)
 
 	if err != nil {
@@ -71,13 +78,14 @@ func CreateTest{{.SingularTitleCaseName}}(t *testing.T, db dbutils.DB) (int64, C
 	return *ID, createReq
 }
 
+{{- if .HasUpdate}}
 func CreateTestUpdate{{.SingularTitleCaseName}}Request(t *testing.T) Update{{.SingularTitleCaseName}}Request {
 	t.Helper()
 
 	return Update{{.SingularTitleCaseName}}Request{
 	{{- range .Fields}}
 	{{- if eq .GoType "int64"}}
-	{{.TitleCaseName}}: testutils.Int64Ptr(2),
+	{{.TitleCaseName}}: testutils.Int64Ptr(1),
 	{{- else if eq .GoType "int"}}
 	{{.TitleCaseName}}: testutils.IntPtr(2),
 	{{- else if eq .GoType "bool"}}
@@ -97,7 +105,7 @@ func CreateTestUpdate{{.SingularTitleCaseName}}RequestWithValues(t *testing.T, r
 	return Update{{.SingularTitleCaseName}}Request{
 	{{- range .Fields}}
 	{{- if eq .GoType "int64"}}
-	{{.TitleCaseName}}: testutils.Int64Ptr(validation.Coalesce(req.{{.TitleCaseName}}, 2)),
+	{{.TitleCaseName}}: testutils.Int64Ptr(validation.Coalesce(req.{{.TitleCaseName}}, 1)),
 	{{- else if eq .GoType "int"}}
 	{{.TitleCaseName}}: testutils.IntPtr(validation.Coalesce(req.{{.TitleCaseName}}, 2)),
 	{{- else if eq .GoType "bool"}}
@@ -110,6 +118,7 @@ func CreateTestUpdate{{.SingularTitleCaseName}}RequestWithValues(t *testing.T, r
 	{{- end}}
 	}
 }
+{{- end}}
 `
 
 func newTestHelperTemplateData(moduleName string, schema Table) testHelperTemplateData {
@@ -138,6 +147,7 @@ func newTestHelperTemplateData(moduleName string, schema Table) testHelperTempla
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
 		Fields:                fields,
 		ForeignKeys:           schema.ForeignKeys,
+		HasUpdate:             schema.HasUpdateAt(),
 	}
 }
 

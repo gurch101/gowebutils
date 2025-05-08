@@ -82,6 +82,7 @@ func makeSetClause(fields map[string]any) (string, []any) {
 	}
 
 	setClause = append(setClause, "version = version + 1")
+	setClause = append(setClause, "updated_at = datetime('now', 'utc')")
 
 	return strings.Join(setClause, ", "), args
 }

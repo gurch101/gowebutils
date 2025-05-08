@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/gurch101/gowebutils/pkg/collectionutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/generator"
 	"github.com/gurch101/gowebutils/pkg/parser"
@@ -42,9 +43,11 @@ func main() {
 
 func runCli(module string, tableSchema []generator.Table) {
 	selectedTables := getTableSelection(tableSchema)
-	selectedActions := getActionSelection()
+	selectedActions := []string{"create", "get", "update", "list", "delete", "exists", "model", "routes", "test_helper"}
 
 	actionMap := getActionMap()
+
+	writeFileIfNotExist("internal/schema_test.go", []byte(generator.GetSchemaTest()))
 
 	for _, table := range selectedTables {
 		singularModelName := strings.ToLower(strings.TrimSuffix(table.Name, "s"))
@@ -56,6 +59,16 @@ func runCli(module string, tableSchema []generator.Table) {
 		}
 
 		for _, action := range selectedActions {
+			if action == "update" {
+				ok := collectionutils.Contains(table.Fields, func(field generator.Field) bool {
+					return field.Name == "version"
+				})
+
+				if !ok {
+					continue
+				}
+			}
+
 			cfg := actionMap[action]
 
 			template, testTemplate, err := cfg.renderFunc(module, table)
@@ -163,62 +176,6 @@ func filterValidTables(names []string, schema []generator.Table) ([]generator.Ta
 	}
 
 	return result, false
-}
-
-func getActionSelection() []string {
-	allActions := []string{"create", "get", "update", "list", "delete", "exists", "model", "routes", "test_helper"}
-
-	printActions(allActions)
-
-	for {
-		actionNames := getUserInput("Enter actions (comma-separated): ")
-
-		normalized := normalizeInput(actionNames)
-		if isSelectAll(normalized) {
-			return allActions
-		}
-
-		selectedActions, invalid := filterValidActions(normalized, allActions)
-		if invalid {
-			fmt.Println("One or more actions are invalid.")
-			continue
-		}
-
-		return selectedActions
-	}
-}
-
-func printActions(actions []string) {
-	fmt.Println("Select actions to generate:")
-
-	for _, action := range actions {
-		fmt.Println(action)
-	}
-}
-
-func filterValidActions(actions, validActions []string) ([]string, bool) {
-	var result []string
-
-	for _, action := range actions {
-		if !contains(validActions, action) {
-			fmt.Printf("Action %s does not exist.\n", action)
-			return nil, true
-		}
-
-		result = append(result, action)
-	}
-
-	return result, false
-}
-
-func contains(slice []string, val string) bool {
-	for _, item := range slice {
-		if item == val {
-			return true
-		}
-	}
-
-	return false
 }
 
 type actionConfig struct {
