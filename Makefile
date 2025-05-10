@@ -40,6 +40,9 @@ commit:
 	git add .
 	git commit -m "${m}"
 
+generator:
+	go build -o ./bin/generator ./cmd/generator
+
 dev/run: check-env
 	rm ${DB_FILEPATH}
 	$(MAKE) migrate/up
