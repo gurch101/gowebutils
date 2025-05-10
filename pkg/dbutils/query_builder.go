@@ -157,6 +157,10 @@ func (qb *QueryBuilder) GroupBy(fields ...string) *QueryBuilder {
 func (qb *QueryBuilder) OrderBy(fields ...string) *QueryBuilder {
 	// fields will be -<name> for descending order and <name> for ascending order
 	// e.g. "name", "-age"
+	if len(fields) == 0 || fields[0] == "" {
+		return qb
+	}
+
 	for i, field := range fields {
 		if strings.HasPrefix(field, "-") {
 			fields[i] = stringutils.CamelToSnake(strings.TrimPrefix(field, "-")) + " DESC"

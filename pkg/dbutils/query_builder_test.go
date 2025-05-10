@@ -112,6 +112,19 @@ func TestQueryBuilder_SelectWithOrderBy(t *testing.T) {
 	}
 }
 
+func TestQueryBuilder_SelectWithEmptyStringOrderBy(t *testing.T) {
+	t.Parallel()
+
+	qb := dbutils.NewQueryBuilder(nil).Select("id", "name").From("users").OrderBy("")
+
+	query, _ := qb.Build()
+
+	expectedQuery := "SELECT id, name FROM users"
+	if query != expectedQuery {
+		t.Errorf("Expected query %q, got %q", expectedQuery, query)
+	}
+}
+
 func TestQueryBuilder_SelectWithLimitAndOffset(t *testing.T) {
 	t.Parallel()
 
