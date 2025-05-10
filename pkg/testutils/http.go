@@ -15,9 +15,18 @@ import (
 func createRequestWithBody(t *testing.T, method, url string, payload interface{}) *http.Request {
 	t.Helper()
 
-	requestBody, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatalf("Failed to marshal request body: %v", err)
+	var requestBody []byte
+
+	var err error
+
+	// check if payload is a string
+	if strPayload, ok := payload.(string); ok {
+		requestBody = []byte(strPayload)
+	} else {
+		requestBody, err = json.Marshal(payload)
+		if err != nil {
+			t.Fatalf("Failed to marshal request body: %v", err)
+		}
 	}
 
 	req := httptest.NewRequest(method, url, bytes.NewReader(requestBody))
