@@ -22,6 +22,9 @@ export OIDC_CLIENT_SECRET="your-client-secret"
 export OIDC_DISCOVERY_URL="https://cognito-idp.us-east-1.amazonaws.com/us-east-1_123456789"
 # The IDP user signup URL
 export REGISTRATION_URL="https://us-east-123456789.auth.us-east-1.amazoncognito.com/signup"
+# The URL to redirect to after a successful login/registration. Defaults to /.
+# For local dev, you can override this to redirect to your single-page app.
+export REDIRECT_URL=/
 # The IDP user logout URL
 export LOGOUT_URL="https://us-east-123456789.auth.us-east-1.amazoncognito.com/logout"
 # The URL to redirect to after the user has logged out

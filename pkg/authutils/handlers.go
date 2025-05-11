@@ -39,6 +39,7 @@ type OidcController struct {
 	oauth2Config      *oauth2Config
 	getOrCreateUserFn GetOrCreateUser
 	sessionManager    *scs.SessionManager
+	redirectURL       string
 }
 
 type oauth2Config struct {
@@ -59,7 +60,7 @@ func createOauthConfig(
 	registrationURL,
 	logoutURL,
 	postLogoutURL,
-	redirectURL string,
+	authCallbackURL string,
 ) (*oauth2Config, error) {
 	ctx := context.Background()
 
@@ -86,7 +87,7 @@ func createOauthConfig(
 		config: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
-			RedirectURL:  redirectURL,
+			RedirectURL:  authCallbackURL,
 			Scopes:       []string{oidc.ScopeOpenID, "email"},
 			Endpoint:     provider.Endpoint(),
 		},
@@ -116,7 +117,9 @@ func CreateOidcController(
 		panic(err)
 	}
 
-	return &OidcController{sessionManager: sessionManager, getOrCreateUserFn: getOrCreateUserFn, oauth2Config: config}
+	redirectURL := parser.ParseEnvString("REDIRECT_URL", "/")
+
+	return &OidcController{sessionManager: sessionManager, getOrCreateUserFn: getOrCreateUserFn, oauth2Config: config, redirectURL: redirectURL}
 }
 
 func NewOidcController(
@@ -236,7 +239,7 @@ func (c *OidcController) AuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	c.sessionManager.Put(r.Context(), "user", user)
 
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, c.redirectURL, http.StatusTemporaryRedirect)
 }
 
 func (c *OidcController) LogoutHandler(w http.ResponseWriter, r *http.Request) {

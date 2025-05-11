@@ -22,6 +22,8 @@ export OIDC_CLIENT_SECRET=
 export OIDC_DISCOVERY_URL=
 # The IDP user signup URL
 export REGISTRATION_URL=
+# The URL to redirect to after a successful login/registration. Defaults to /.
+export REDIRECT_URL=
 # The IDP user logout URL
 export LOGOUT_URL=
 # Needs to be added as allowed callback URL in the IDP
