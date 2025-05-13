@@ -132,6 +132,18 @@ func DeleteTenantByID(ctx context.Context, db dbutils.DB, userID int64) error {
 }
 ```
 
+#### Delete By
+
+Removes a record from the table using a custom WHERE clause. Unlike `DeleteByID`, this function does not return an error if no rows were deleted.
+
+```go
+func DeleteUserByEmail(ctx context.Context, db dbutils.DB, email string) error {
+  rowsAffected, err := dbutils.DeleteBy(ctx, db, "users", map[string]any{
+    "email": email,
+  })
+}
+```
+
 ## Error Handling
 
 All SQL errors returned by the `dbutils` helper functions are wrapped with additional context. Use `errors.Is` to check for specific error types and handle them appropriately.

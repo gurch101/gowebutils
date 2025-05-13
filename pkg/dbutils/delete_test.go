@@ -76,3 +76,45 @@ func TestDelete_ErrorHandling(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteBy(t *testing.T) {
+	t.Parallel()
+	db := testutils.SetupTestDB(t)
+
+	defer fsutils.CloseAndPanic(db)
+
+	t.Run("successful deletion", func(t *testing.T) {
+		filters := map[string]any{"user_name": "admin"}
+
+		rowsAffected, err := dbutils.DeleteBy(context.Background(), db, "users", filters)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+
+		if rowsAffected != 1 {
+			t.Errorf("Expected 1 row to be deleted, got %d", rowsAffected)
+		}
+	})
+
+	t.Run("no filters provided", func(t *testing.T) {
+		filters := map[string]any{}
+
+		_, err := dbutils.DeleteBy(context.Background(), db, "users", filters)
+		if !errors.Is(err, dbutils.ErrNoDeleteFilters) {
+			t.Errorf("Expected ErrNoDeleteFilters, got %v", err)
+		}
+	})
+
+	t.Run("no rows deleted", func(t *testing.T) {
+		filters := map[string]any{"user_name": "nonexistent"}
+
+		rowsAffected, err := dbutils.DeleteBy(context.Background(), db, "users", filters)
+		if err != nil {
+			t.Errorf("Expected no errors, got %v", err)
+		}
+
+		if rowsAffected != 0 {
+			t.Errorf("Expected 0 rows to be deleted, got %d", rowsAffected)
+		}
+	})
+}
