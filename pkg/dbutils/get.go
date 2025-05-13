@@ -70,22 +70,11 @@ func Exists(ctx context.Context, db DB, tableName string, id int64) bool {
 		return false
 	}
 
-	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE id = $1)", tableName)
-
-	ctx, cancel := context.WithTimeout(ctx, getTimeout)
-	defer cancel()
-
-	var exists bool
-
-	err := db.QueryRowContext(ctx, query, id).Scan(&exists)
-	if err != nil {
-		return false
-	}
-
-	return exists
+	return ExistsBy(ctx, db, tableName, map[string]any{"id": id})
 }
 
 // ExistsBy checks if a record exists in the database matching the provided filters.
+// Filter keys ending with __NEQ will perform a "not equals" comparison.
 func ExistsBy(ctx context.Context, db DB, tableName string, filters map[string]any) bool {
 	if len(filters) == 0 {
 		return false
@@ -97,7 +86,15 @@ func ExistsBy(ctx context.Context, db DB, tableName string, filters map[string]a
 	argPos := 1
 
 	for field, value := range filters {
-		whereClauses = append(whereClauses, fmt.Sprintf("%s = $%d", field, argPos))
+		// Check for __NEQ suffix
+		if strings.HasSuffix(field, "__NEQ") {
+			// Remove the suffix to get the actual field name
+			actualField := strings.TrimSuffix(field, "__NEQ")
+			whereClauses = append(whereClauses, fmt.Sprintf("%s != $%d", actualField, argPos))
+		} else {
+			whereClauses = append(whereClauses, fmt.Sprintf("%s = $%d", field, argPos))
+		}
+
 		whereArgs = append(whereArgs, value)
 		argPos++
 	}

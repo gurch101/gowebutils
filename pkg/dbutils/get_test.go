@@ -108,6 +108,16 @@ func TestExistsBy(t *testing.T) {
 		}
 	})
 
+	t.Run("existing record with NEQ filter", func(t *testing.T) {
+		exists := dbutils.ExistsBy(context.Background(), db, "users", map[string]interface{}{
+			"user_name__NEQ": "admin",
+		})
+
+		if !exists {
+			t.Error("Expected record to exist")
+		}
+	})
+
 	t.Run("non-existent record", func(t *testing.T) {
 		exists := dbutils.ExistsBy(context.Background(), db, "users", map[string]interface{}{
 			"user_name": "nonexistent",

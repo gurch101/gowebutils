@@ -74,20 +74,7 @@ func TestCreateTenantInvalidPlan(t *testing.T) {
 	req := testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
 	rr := app.MakeRequest(req)
 
-	// Check the response status code
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 Created, got %d", rr.Code)
-	}
-
-	// Check the response body
-	var response map[string]interface{}
-
-	err := json.Unmarshal(rr.Body.Bytes(), &response)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
-
-	testutils.AssertError(t, response, "plan", "Invalid plan")
+	testutils.AssertValidationError(t, rr, "plan", "Invalid plan")
 }
 
 func TestCreateTenant_DuplicateTenant(t *testing.T) {
@@ -117,20 +104,7 @@ func TestCreateTenant_DuplicateTenant(t *testing.T) {
 	req = testutils.CreatePostRequest(t, "/tenants", createTenantRequest)
 	rr = app.MakeRequest(req)
 
-	// Check the response status code
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("Expected status 400 Bad Request, got %d", rr.Code)
-	}
-
-	// Check the response body
-	var response map[string]interface{}
-
-	err := json.Unmarshal(rr.Body.Bytes(), &response)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
-
-	testutils.AssertError(t, response, "tenantName", "This tenant is already registered")
+	testutils.AssertValidationError(t, rr, "tenantName", "This tenant is already registered")
 }
 
 func TestGetTenantHandler(t *testing.T) {

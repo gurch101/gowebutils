@@ -96,11 +96,7 @@ func TestDelete{{.SingularTitleCaseName}}(t *testing.T) {
 		ID, _ := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
 
 		deleteURL := fmt.Sprintf("/{{.KebabCaseTableName}}/%d", ID)
-		deleteReq, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		deleteReq := testutils.CreateDeleteRequest(deleteURL)
 		deleteRr := app.MakeRequest(deleteReq)
 
 		if deleteRr.Code != http.StatusOK {
@@ -139,12 +135,7 @@ func TestDelete{{.SingularTitleCaseName}}(t *testing.T) {
 		// Use a non-existent ID
 		nonExistentID := int64(99999)
 		deleteURL := fmt.Sprintf("/{{.KebabCaseTableName}}/%d", nonExistentID)
-
-		req, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		deleteReq := testutils.CreateDeleteRequest(deleteURL)
 		rr := app.MakeRequest(req)
 
 		if rr.Code != http.StatusNotFound {
@@ -161,12 +152,7 @@ func TestDelete{{.SingularTitleCaseName}}(t *testing.T) {
 
 		// Use an invalid ID format
 		deleteURL := "/{{.KebabCaseTableName}}/invalid-id"
-
-		req, err := http.NewRequest(http.MethodDelete, deleteURL, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		deleteReq := testutils.CreateDeleteRequest(deleteURL)
 		rr := app.MakeRequest(req)
 
 		// Should return 404 Not Found for invalid ID format
