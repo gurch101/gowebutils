@@ -93,6 +93,18 @@ func GetUserExists(ctx context.Context, db dbutils.DB, id int64) bool {
 }
 ```
 
+#### Exists By
+
+Checks if a record exists in the table using a custom WHERE clause.
+
+```go
+func GetUserExistsByEmail(ctx context.Context, db dbutils.DB, email string) bool {
+  return dbutils.ExistsBy(ctx, db, "users", map[string]any{
+    "email": "test@example.com",
+  })
+}
+```
+
 ### Update Operations
 
 #### Update By ID

@@ -91,3 +91,29 @@ func TestExists(t *testing.T) {
 		}
 	})
 }
+
+func TestExistsBy(t *testing.T) {
+	t.Parallel()
+	db := testutils.SetupTestDB(t)
+
+	defer fsutils.CloseAndPanic(db)
+
+	t.Run("existing record", func(t *testing.T) {
+		exists := dbutils.ExistsBy(context.Background(), db, "users", map[string]interface{}{
+			"user_name": "admin",
+			"email":     "admin@acme.com",
+		})
+		if !exists {
+			t.Error("Expected record to exist")
+		}
+	})
+
+	t.Run("non-existent record", func(t *testing.T) {
+		exists := dbutils.ExistsBy(context.Background(), db, "users", map[string]interface{}{
+			"user_name": "nonexistent",
+		})
+		if exists {
+			t.Error("Expected record to not exist")
+		}
+	})
+}

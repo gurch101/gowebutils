@@ -84,3 +84,40 @@ func Exists(ctx context.Context, db DB, tableName string, id int64) bool {
 
 	return exists
 }
+
+// ExistsBy checks if a record exists in the database matching the provided filters.
+func ExistsBy(ctx context.Context, db DB, tableName string, filters map[string]any) bool {
+	if len(filters) == 0 {
+		return false
+	}
+
+	// Build the WHERE clause
+	whereClauses := make([]string, 0, len(filters))
+	whereArgs := make([]any, 0, len(filters))
+	argPos := 1
+
+	for field, value := range filters {
+		whereClauses = append(whereClauses, fmt.Sprintf("%s = $%d", field, argPos))
+		whereArgs = append(whereArgs, value)
+		argPos++
+	}
+
+	// Construct the full query
+	query := fmt.Sprintf(
+		"SELECT EXISTS(SELECT 1 FROM %s WHERE %s)",
+		tableName,
+		strings.Join(whereClauses, " AND "),
+	)
+
+	ctx, cancel := context.WithTimeout(ctx, getTimeout)
+	defer cancel()
+
+	var exists bool
+
+	err := db.QueryRowContext(ctx, query, whereArgs...).Scan(&exists)
+	if err != nil {
+		return false
+	}
+
+	return exists
+}
