@@ -32,6 +32,11 @@ type SearchUserRequest struct {
 }
 
 type SearchUserResponse struct {
+	Metadata parser.PaginationMetadata `json:"metadata"`
+	Data     []SearchUserResponseData  `json:"data"`
+}
+
+type SearchUserResponseData struct {
 	ID        int64     `json:"id"`
 	Version   int64     `json:"version"`
 	Name      string    `json:"name"`
@@ -63,7 +68,7 @@ type SearchUserResponse struct {
 //	@Param      page query int false "page number" minimum(1) default(1)
 //	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
 //	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
-//	@Success		200	{array}		SearchUserResponse
+//	@Success		200	{object}		SearchUserResponse
 //	@Failure		400,404,500	{object}	httputils.ErrorResponse
 //	@Router			/users [get]
 func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,27 +112,24 @@ func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-	response, pagination, err := SearchUsers(r.Context(), tc.app.DB(), request)
+	response, err := SearchUsers(r.Context(), tc.app.DB(), request)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
 
-	filteredResponse, err := parser.StructsToFilteredMaps(response, request.Fields)
+	filteredResponse, err := parser.StructsToFilteredMaps(response.Data, request.Fields)
 
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 		return
 	}
 
-	err = httputils.WriteJSON(
-		w,
-		http.StatusOK,
-		map[string]interface{}{
-			"metadata": pagination,
-			"users":    filteredResponse,
-		}, nil,
-	)
+	err = httputils.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"metadata": response.Metadata,
+		"data":     filteredResponse,
+	}, nil)
+
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
@@ -137,16 +139,16 @@ func SearchUsers(
 	ctx context.Context,
 	db dbutils.DB,
 	searchUserRequest *SearchUserRequest,
-) ([]*SearchUserResponse, parser.PaginationMetadata, error) {
+) (*SearchUserResponse, error) {
 	models, pagination, err := findUsers(ctx, db, searchUserRequest)
 	if err != nil {
-		return nil, pagination, err
+		return nil, err
 	}
 
-	response := make([]*SearchUserResponse, 0)
+	response := make([]SearchUserResponseData, 0)
 
 	for _, model := range models {
-		user := &SearchUserResponse{
+		user := SearchUserResponseData{
 			ID:        model.ID,
 			Version:   model.Version,
 			Name:      model.Name,
@@ -159,7 +161,10 @@ func SearchUsers(
 		}
 		response = append(response, user)
 	}
-	return response, pagination, nil
+	return &SearchUserResponse{
+		Metadata: pagination,
+		Data:     response,
+	}, nil
 }
 
 func findUsers(

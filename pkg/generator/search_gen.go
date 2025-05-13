@@ -39,6 +39,11 @@ type Search{{.SingularTitleCaseName}}Request struct {
 }
 
 type Search{{.SingularTitleCaseName}}Response struct {
+	Metadata parser.PaginationMetadata ` + "`" + `json:"metadata"` + "`" + `
+	Data     []Search{{.SingularTitleCaseName}}ResponseData ` + "`" + `json:"data"` + "`" + `
+}
+
+type Search{{.SingularTitleCaseName}}ResponseData struct {
 	{{- range .ModelFields}}
 	{{.TitleCaseName}} {{.GoType}} ` + "`" + `json:"{{.CamelCaseName}}"` + "`" + `
 	{{- end}}
@@ -58,7 +63,7 @@ type Search{{.SingularTitleCaseName}}Response struct {
 //	@Param      page query int false "page number" minimum(1) default(1)
 //	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
 //	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
-//	@Success		200	{array}		Search{{.SingularTitleCaseName}}Response
+//	@Success		200	{object}		Search{{.SingularTitleCaseName}}Response
 //	@Failure		400,404,500	{object}	httputils.ErrorResponse
 //	@Router			/{{.KebabCaseTableName}} [get]
 func (tc *Search{{.SingularTitleCaseName}}Controller) Search{{.SingularTitleCaseName}}Handler(w http.ResponseWriter, r *http.Request) {
@@ -88,27 +93,24 @@ func (tc *Search{{.SingularTitleCaseName}}Controller) Search{{.SingularTitleCase
 		return
 	}
 
-	response, pagination, err := Search{{.TitleCaseTableName}}(r.Context(), tc.app.DB(), request)
+	response, err := Search{{.TitleCaseTableName}}(r.Context(), tc.app.DB(), request)
 	if err != nil {
 		httputils.HandleErrorResponse(w, r, err)
 		return
 	}
 
-	filteredResponse, err := parser.StructsToFilteredMaps(response, request.Fields)
+	filteredResponse, err := parser.StructsToFilteredMaps(response.Data, request.Fields)
 
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 		return
 	}
 
-	err = httputils.WriteJSON(
-		w,
-		http.StatusOK,
-		map[string]interface{}{
-			"metadata": pagination,
-			"{{.Name}}": filteredResponse,
-		}, nil,
-	)
+	err = httputils.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"metadata": response.Metadata,
+		"data":     filteredResponse,
+	}, nil)
+
 	if err != nil {
 		httputils.ServerErrorResponse(w, r, err)
 	}
@@ -119,23 +121,26 @@ func Search{{.TitleCaseTableName}}(
 	ctx context.Context,
 	db dbutils.DB,
 	search{{.SingularTitleCaseName}}Request *Search{{.SingularTitleCaseName}}Request,
-) ([]*Search{{.SingularTitleCaseName}}Response, parser.PaginationMetadata, error) {
+) (*Search{{.SingularTitleCaseName}}Response, error) {
 	models, pagination, err := find{{.TitleCaseTableName}}(ctx, db, search{{.SingularTitleCaseName}}Request)
 	if err != nil {
-		return nil, pagination, err
+		return nil, err
 	}
 
-	response := make([]*Search{{.SingularTitleCaseName}}Response, 0)
+	response := make([]Search{{.SingularTitleCaseName}}ResponseData, 0)
 
 	for _, model := range models {
-		{{.SingularCamelCaseName}} := &Search{{.SingularTitleCaseName}}Response{
+		{{.SingularCamelCaseName}} := Search{{.SingularTitleCaseName}}ResponseData{
 		{{- range .ModelFields}}
 			{{.TitleCaseName}}: model.{{.TitleCaseName}},
 		{{- end}}
 		}
 		response = append(response, {{.SingularCamelCaseName}})
 	}
-	return response, pagination, nil
+	return &Search{{.SingularTitleCaseName}}Response{
+		Metadata: pagination,
+		Data:     response,
+	}, nil
 }
 
 func find{{.TitleCaseTableName}}(
@@ -229,7 +234,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         }
 
         var response struct {
-            Data []{{.PackageName}}.Search{{.SingularTitleCaseName}}Response ` + "`" + `json:"{{.Name}}"` + "`" + `
+            Data []{{.PackageName}}.Search{{.SingularTitleCaseName}}ResponseData ` + "`" + `json:"{{.Name}}"` + "`" + `
         }
         err := json.Unmarshal(rr.Body.Bytes(), &response)
         if err != nil {

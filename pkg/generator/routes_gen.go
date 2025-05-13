@@ -16,13 +16,13 @@ import (
 )
 
 func Routes(app *app.App) {
-	app.AddProtectedRoute(http.MethodGet, "/{{.KebabCaseTableName}}", NewSearch{{.SingularTitleCaseName}}Controller(app).Search{{.SingularTitleCaseName}}Handler)
-	app.AddProtectedRoute(http.MethodPost, "/{{.KebabCaseTableName}}", NewCreate{{.SingularTitleCaseName}}Controller(app).Create{{.SingularTitleCaseName}}Handler)
-	app.AddProtectedRoute(http.MethodGet, "/{{.KebabCaseTableName}}/{id}", NewGet{{.SingularTitleCaseName}}ByIDController(app).Get{{.SingularTitleCaseName}}ByIDHandler)
+	app.AddProtectedRoute(http.MethodGet, "/api/{{.KebabCaseTableName}}", NewSearch{{.SingularTitleCaseName}}Controller(app).Search{{.SingularTitleCaseName}}Handler)
+	app.AddProtectedRoute(http.MethodPost, "/api/{{.KebabCaseTableName}}", NewCreate{{.SingularTitleCaseName}}Controller(app).Create{{.SingularTitleCaseName}}Handler)
+	app.AddProtectedRoute(http.MethodGet, "/api/{{.KebabCaseTableName}}/{id}", NewGet{{.SingularTitleCaseName}}ByIDController(app).Get{{.SingularTitleCaseName}}ByIDHandler)
 	{{- if .HasUpdate}}
-	app.AddProtectedRoute(http.MethodPatch, "/{{.KebabCaseTableName}}/{id}", NewUpdate{{.SingularTitleCaseName}}Controller(app).Update{{.SingularTitleCaseName}}Handler)
+	app.AddProtectedRoute(http.MethodPatch, "/api/{{.KebabCaseTableName}}/{id}", NewUpdate{{.SingularTitleCaseName}}Controller(app).Update{{.SingularTitleCaseName}}Handler)
 	{{- end}}
-	app.AddProtectedRoute(http.MethodDelete, "/{{.KebabCaseTableName}}/{id}", NewDelete{{.SingularTitleCaseName}}Controller(app).Delete{{.SingularTitleCaseName}}Handler)
+	app.AddProtectedRoute(http.MethodDelete, "/api/{{.KebabCaseTableName}}/{id}", NewDelete{{.SingularTitleCaseName}}Controller(app).Delete{{.SingularTitleCaseName}}Handler)
 }
 `
 

@@ -7,9 +7,9 @@ import (
 )
 
 func Routes(app *app.App) {
-	app.AddProtectedRoute(http.MethodGet, "/users", NewSearchUserController(app).SearchUserHandler)
-	app.AddProtectedRoute(http.MethodPost, "/users", NewCreateUserController(app).CreateUserHandler)
-	app.AddProtectedRoute(http.MethodGet, "/users/{id}", NewGetUserByIDController(app).GetUserByIDHandler)
-	app.AddProtectedRoute(http.MethodPatch, "/users/{id}", NewUpdateUserController(app).UpdateUserHandler)
-	app.AddProtectedRoute(http.MethodDelete, "/users/{id}", NewDeleteUserController(app).DeleteUserHandler)
+	app.AddProtectedRoute(http.MethodGet, "/api/users", NewSearchUserController(app).SearchUserHandler)
+	app.AddProtectedRoute(http.MethodPost, "/api/users", NewCreateUserController(app).CreateUserHandler)
+	app.AddProtectedRoute(http.MethodGet, "/api/users/{id}", NewGetUserByIDController(app).GetUserByIDHandler)
+	app.AddProtectedRoute(http.MethodPatch, "/api/users/{id}", NewUpdateUserController(app).UpdateUserHandler)
+	app.AddProtectedRoute(http.MethodDelete, "/api/users/{id}", NewDeleteUserController(app).DeleteUserHandler)
 }
