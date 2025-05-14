@@ -1,14 +1,18 @@
 package testutils
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"text/tabwriter"
 
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/fsutils"
+
 	// needed for sqlite3 driver.
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -106,4 +110,129 @@ func SetupTestDB(t *testing.T) *sql.DB {
 	}
 
 	return db
+}
+
+// DumpTable pretty-prints the contents of a database table for debugging purposes.
+func DumpTable(t *testing.T, db *dbutils.DBPool, tableName string) {
+	t.Helper()
+
+	cols, rowsData, err := getTableData(db, tableName)
+	if err != nil {
+		t.Logf("Failed to get data for table %s: %v", tableName, err)
+		return
+	}
+
+	if len(cols) == 0 {
+		t.Logf("Table %s is empty or doesn't exist", tableName)
+		return
+	}
+
+	// Create a tabwriter for pretty output
+	var buf bytes.Buffer
+	writer := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
+	//nolint: errcheck
+	defer writer.Flush()
+
+	// Header
+	_, err = fmt.Fprintf(writer, strings.Join(cols, "\t")+"\n")
+
+	if err != nil {
+		t.Errorf("Failed to write header: %v", err)
+		return
+	}
+
+	// Rows
+	for _, row := range rowsData {
+		_, err := fmt.Fprintf(writer, strings.Join(row, "\t")+"\n")
+		if err != nil {
+			t.Errorf("Failed to write row: %v", err)
+			return
+		}
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		t.Errorf("Failed to flush tabwriter: %v", err)
+		return
+	}
+
+	// Print result to test log
+	t.Logf("\nContents of table %q:\n%s", tableName, buf.String())
+}
+func getTableData(db *dbutils.DBPool, tableName string) ([]string, [][]string, error) {
+	cols, err := getColumnNames(db, tableName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rowsData, err := getRowsAsStrings(db, tableName, cols)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cols, rowsData, nil
+}
+
+func getColumnNames(db *dbutils.DBPool, tableName string) ([]string, error) {
+	query := fmt.Sprintf("SELECT * FROM %s LIMIT 0", tableName)
+	rows, err := db.Query(query)
+
+	defer fsutils.CloseAndPanic(rows)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rows.Columns()
+}
+
+func getRowsAsStrings(db *dbutils.DBPool, tableName string, cols []string) ([][]string, error) {
+	query := fmt.Sprintf("SELECT * FROM %s", tableName)
+	rows, err := db.Query(query)
+
+	defer fsutils.CloseAndPanic(rows)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var result [][]string
+
+	values := make([]interface{}, len(cols))
+	valuePtrs := make([]interface{}, len(cols))
+
+	for i := range cols {
+		valuePtrs[i] = &values[i]
+	}
+
+	for rows.Next() {
+		if err := rows.Scan(valuePtrs...); err != nil {
+			return nil, err
+		}
+
+		result = append(result, convertRowToStrings(values))
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func convertRowToStrings(values []interface{}) []string {
+	row := make([]string, len(values))
+
+	for i, v := range values {
+		switch val := v.(type) {
+		case nil:
+			row[i] = "NULL"
+		case []byte:
+			row[i] = string(val)
+		default:
+			row[i] = fmt.Sprintf("%v", val)
+		}
+	}
+
+	return row
 }
