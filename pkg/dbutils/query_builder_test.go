@@ -67,7 +67,7 @@ func TestQueryBuilder_SelectWithJoin(t *testing.T) {
 	qb := dbutils.NewQueryBuilder(nil).
 		Select("u.id", "u.name", "p.name").
 		From("users u").
-		Join("INNER", "profiles p", "u.id = p.user_id")
+		Join(dbutils.InnerJoin, "profiles p", "u.id = p.user_id")
 	query, args := qb.Build()
 
 	expectedQuery := "SELECT u.id, u.name, p.name FROM users u INNER JOIN profiles p ON u.id = p.user_id"
@@ -199,7 +199,7 @@ func TestQueryBuilder_ComplexSelect(t *testing.T) {
 	queryBuilder := dbutils.NewQueryBuilder(nil).
 		Select("u.id", "u.name", "p.name").
 		From("users u").
-		Join("INNER", "profiles p", "u.id = p.user_id").
+		Join(dbutils.InnerJoin, "profiles p", "u.id = p.user_id").
 		Where("u.age > ?", 18).
 		AndWhere("p.active = ?", true).
 		OrWhereLike("u.name", dbutils.OpContains, &name).

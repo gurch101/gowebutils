@@ -35,6 +35,13 @@ const (
 	OpEndsWith   QueryOperator = "ends_with"
 )
 
+type JoinType string
+
+const (
+	InnerJoin JoinType = "INNER JOIN"
+	LeftJoin  JoinType = "LEFT JOIN"
+)
+
 // NewQueryBuilder creates a new QueryBuilder instance which can be used to build and execute SQL queries.
 func NewQueryBuilder(db DB) *QueryBuilder {
 	return &QueryBuilder{
@@ -66,8 +73,8 @@ func (qb *QueryBuilder) From(table string) *QueryBuilder {
 }
 
 // Join adds a JOIN clause to the query.
-func (qb *QueryBuilder) Join(joinType, table, onCondition string) *QueryBuilder {
-	qb.joins = append(qb.joins, fmt.Sprintf("%s JOIN %s ON %s", joinType, table, onCondition))
+func (qb *QueryBuilder) Join(joinType JoinType, table, onCondition string) *QueryBuilder {
+	qb.joins = append(qb.joins, fmt.Sprintf("%s %s ON %s", joinType, table, onCondition))
 
 	return qb
 }
