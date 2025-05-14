@@ -1,3 +1,4 @@
+//nolint:dupl
 package stringutils_test
 
 import (
@@ -46,6 +47,11 @@ func TestCamelToSnake(t *testing.T) {
 			name:     "with numbers",
 			input:    "User123Name",
 			expected: "user123_name",
+		},
+		{
+			name:     "with id",
+			input:    "UserID",
+			expected: "user_id",
 		},
 	}
 
