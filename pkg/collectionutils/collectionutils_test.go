@@ -1,6 +1,8 @@
 package collectionutils_test
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/gurch101/gowebutils/pkg/collectionutils"
@@ -230,6 +232,143 @@ func TestFindFirst(t *testing.T) {
 
 		if found || gotPerson != (person{}) {
 			t.Errorf("FindFirst() = (%v, %v), want (%v, false)", gotPerson, found, person{})
+		}
+	})
+}
+
+func TestEquals(t *testing.T) {
+	t.Parallel()
+
+	t.Run("int equals", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			a, b     []int
+			expected bool
+		}{
+			{
+				name:     "equal sets, same order",
+				a:        []int{1, 2, 3},
+				b:        []int{1, 2, 3},
+				expected: true,
+			},
+			{
+				name:     "equal sets, different order",
+				a:        []int{1, 2, 3},
+				b:        []int{3, 1, 2},
+				expected: true,
+			},
+			{
+				name:     "different values",
+				a:        []int{1, 2, 3},
+				b:        []int{4, 5, 6},
+				expected: false,
+			},
+			{
+				name:     "one extra element",
+				a:        []int{1, 2},
+				b:        []int{1, 2, 3},
+				expected: false,
+			},
+			{
+				name:     "duplicates in one slice",
+				a:        []int{1, 2, 2, 3},
+				b:        []int{3, 1, 2},
+				expected: true,
+			},
+			{
+				name:     "both empty",
+				a:        []int{},
+				b:        []int{},
+				expected: true,
+			},
+			{
+				name:     "one empty",
+				a:        []int{},
+				b:        []int{1},
+				expected: false,
+			},
+		}
+
+		for _, test := range tests {
+			result := collectionutils.Equals(test.a, test.b)
+			if result != test.expected {
+				t.Errorf("Test '%s' failed: Equals(%v, %v) = %v, expected %v",
+					test.name, test.a, test.b, result, test.expected)
+			}
+		}
+	})
+
+	t.Run("string equals", func(t *testing.T) {
+		a := []string{"apple", "banana", "cherry"}
+		b := []string{"banana", "cherry", "apple"}
+		c := []string{"apple", "banana"}
+
+		if !collectionutils.Equals(a, b) {
+			t.Errorf("Expected Equals(a, b) to be true")
+		}
+
+		if collectionutils.Equals(a, c) {
+			t.Errorf("Expected Equals(a, c) to be false")
+		}
+	})
+}
+
+func TestMap(t *testing.T) {
+	t.Parallel()
+
+	t.Run("int to int", func(t *testing.T) {
+		input := []int{1, 2, 3}
+		expected := []int{2, 4, 6}
+
+		result := collectionutils.Map(input, func(x int) int {
+			return x * 2
+		})
+
+		if len(result) != len(expected) {
+			t.Errorf("Expected length %d, got %d", len(expected), len(result))
+		}
+
+		for i := range expected {
+			if result[i] != expected[i] {
+				t.Errorf("At index %d: expected %d, got %d", i, expected[i], result[i])
+			}
+		}
+	})
+
+	t.Run("int to string", func(t *testing.T) {
+		input := []int{1, 2, 3}
+		expected := []string{"1", "2", "3"}
+
+		result := collectionutils.Map(input, strconv.Itoa)
+
+		for i := range expected {
+			if result[i] != expected[i] {
+				t.Errorf("At index %d: expected %s, got %s", i, expected[i], result[i])
+			}
+		}
+	})
+
+	t.Run("string to upper", func(t *testing.T) {
+		input := []string{"apple", "banana", "cherry"}
+		expected := []string{"APPLE", "BANANA", "CHERRY"}
+
+		result := collectionutils.Map(input, strings.ToUpper)
+
+		for i := range expected {
+			if result[i] != expected[i] {
+				t.Errorf("At index %d: expected %s, got %s", i, expected[i], result[i])
+			}
+		}
+	})
+
+	t.Run("empty slice", func(t *testing.T) {
+		input := []int{}
+		result := collectionutils.Map(input, func(x int) int {
+			return x * 2
+		})
+
+		if len(result) != 0 {
+			t.Errorf("Expected empty slice, got length %d", len(result))
 		}
 	})
 }
