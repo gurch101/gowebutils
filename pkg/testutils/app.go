@@ -67,6 +67,70 @@ func NewTestApp(t *testing.T, opts ...Option) TestApp {
 	}
 }
 
+// MakeAuthenticatedGetRequest issues a GET request to the given path with a default test user as the authenticated user.
+// The caller is responsible for ensuring that the test user exists in the database.
+func (a *TestApp) MakeAuthenticatedGetRequest(t *testing.T, path string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := CreateGetRequest(t, path)
+	req = authutils.ContextSetUser(req, authutils.User{
+		ID:       1,
+		TenantID: 1,
+		UserName: "doesntmatter",
+		Email:    "doesntmatter@example.com",
+	})
+
+	return a.MakeRequest(req)
+}
+
+// MakeAuthenticatedPostRequest issues a POST request to the given path with a default test user as the authenticated user.
+// The caller is responsible for ensuring that the test user exists in the database.
+func (a *TestApp) MakeAuthenticatedPostRequest(t *testing.T, path string, body interface{}) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := CreatePostRequest(t, "/users/invite", body)
+	req = authutils.ContextSetUser(req, authutils.User{
+		ID:       1,
+		TenantID: 1,
+		UserName: "doesntmatter",
+		Email:    "doesntmatter@example.com",
+	})
+
+	return a.MakeRequest(req)
+}
+
+// MakeAuthenticatedDeleteRequest issues a DELETE request to the given path with a default test user as the authenticated user.
+// The caller is responsible for ensuring that the test user exists in the database.
+func (a *TestApp) MakeAuthenticatedDeleteRequest(t *testing.T, path string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := CreateDeleteRequest(path)
+	req = authutils.ContextSetUser(req, authutils.User{
+		ID:       1,
+		TenantID: 1,
+		UserName: "doesntmatter",
+		Email:    "doesntmatter@example.com",
+	})
+
+	return a.MakeRequest(req)
+}
+
+// MakeAuthenticatedPatchRequest issues a PATCH request to the given path with a default test user as the authenticated user.
+// The caller is responsible for ensuring that the test user exists in the database.
+func (a *TestApp) MakeAuthenticatedPatchRequest(t *testing.T, path string, body interface{}) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := CreatePatchRequest(t, path, body)
+	req = authutils.ContextSetUser(req, authutils.User{
+		ID:       1,
+		TenantID: 1,
+		UserName: "doesntmatter",
+		Email:    "doesntmatter@example.com",
+	})
+
+	return a.MakeRequest(req)
+}
+
 func (a *TestApp) MakeRequest(req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	a.TestRouter.ServeHTTP(rr, req)

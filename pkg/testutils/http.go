@@ -88,7 +88,7 @@ func AssertValidationErrors(t *testing.T, responseRecorder *httptest.ResponseRec
 		})
 
 		if !ok {
-			t.Errorf("Expected error %v", expectedError)
+			t.Errorf("Expected error %v, got %v", expectedError, response.Errors)
 		}
 	}
 }
