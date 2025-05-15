@@ -202,6 +202,7 @@ type testHelperTemplateData struct {
 	Name                  string
 	TitleCaseTableName    string
 	SingularTitleCaseName string
+	SingularCamelCaseName string
 	HasUpdate             bool
 	Fields                []RequestField
 	UniqueFields          []UniqueField

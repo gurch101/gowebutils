@@ -31,11 +31,11 @@ func CreateTestUser(t *testing.T, db dbutils.DB) (int64, CreateUserRequest) {
 		return 1, createReq
 	}
 
-	ID, err := CreateUser(context.Background(), db, &createReq)
+	userID, err := CreateUser(context.Background(), db, &createReq)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return *ID, createReq
+	return *userID, createReq
 }

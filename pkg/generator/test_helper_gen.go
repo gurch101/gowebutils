@@ -41,18 +41,6 @@ func CreateTest{{.SingularTitleCaseName}}Request(t *testing.T) Create{{.Singular
 	}
 }
 
-{{- if .HasUpdate}}
-func CreateTest{{.SingularTitleCaseName}}RequestWithValues(t * testing.T, req Update{{.SingularTitleCaseName}}Request) (Create{{.SingularTitleCaseName}}Request) {
-	t.Helper()
-	createRequest := CreateTest{{.SingularTitleCaseName}}Request(t)
-	{{- range .Fields}}
-	createRequest.{{.TitleCaseName}} = validation.Coalesce(req.{{.TitleCaseName}}, createRequest.{{.TitleCaseName}})
-	{{- end}}
-
-	return createRequest
-}
-{{- end}}
-
 func CreateTest{{.SingularTitleCaseName}}(t *testing.T, db dbutils.DB) (int64, Create{{.SingularTitleCaseName}}Request) {
 	t.Helper()
 
@@ -69,16 +57,26 @@ func CreateTest{{.SingularTitleCaseName}}(t *testing.T, db dbutils.DB) (int64, C
 		return 1, createReq
 	}
 
-	ID, err := Create{{.SingularTitleCaseName}}(context.Background(), db, &createReq)
+	{{.SingularCamelCaseName}}ID, err := Create{{.SingularTitleCaseName}}(context.Background(), db, &createReq)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	return *ID, createReq
+	return *{{.SingularCamelCaseName}}ID, createReq
 }
 
-{{- if .HasUpdate}}
+{{if .HasUpdate}}
+func CreateTest{{.SingularTitleCaseName}}RequestWithValues(t * testing.T, req Update{{.SingularTitleCaseName}}Request) (Create{{.SingularTitleCaseName}}Request) {
+	t.Helper()
+	createRequest := CreateTest{{.SingularTitleCaseName}}Request(t)
+	{{- range .Fields}}
+	createRequest.{{.TitleCaseName}} = validation.Coalesce(req.{{.TitleCaseName}}, createRequest.{{.TitleCaseName}})
+	{{- end}}
+
+	return createRequest
+}
+
 func CreateTestUpdate{{.SingularTitleCaseName}}Request(t *testing.T) Update{{.SingularTitleCaseName}}Request {
 	t.Helper()
 
@@ -145,6 +143,7 @@ func newTestHelperTemplateData(moduleName string, schema Table) testHelperTempla
 		ModuleName:            moduleName,
 		TitleCaseTableName:    stringutils.SnakeToTitle(schema.Name),
 		SingularTitleCaseName: stringutils.SnakeToTitle(strings.TrimSuffix(schema.Name, "s")),
+		SingularCamelCaseName: stringutils.SnakeToCamel(strings.TrimSuffix(schema.Name, "s")),
 		Fields:                fields,
 		ForeignKeys:           schema.ForeignKeys,
 		HasUpdate:             schema.HasUpdateAt(),
