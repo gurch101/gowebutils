@@ -151,11 +151,6 @@ import (
 
 	"{{.ModuleName}}/internal/{{.PackageName}}"
 	"github.com/gurch101/gowebutils/pkg/testutils"
-	{{if .ForeignKeys}}
-	"github.com/gurch101/gowebutils/pkg/collectionutils"
-	"github.com/gurch101/gowebutils/pkg/httputils"
-	"github.com/gurch101/gowebutils/pkg/validation"
-	{{- end}}
 )
 
 func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
@@ -253,23 +248,7 @@ func TestUpdate{{.SingularTitleCaseName}}Handler(t *testing.T) {
 		req := testutils.CreatePatchRequest(t, fmt.Sprintf("/{{$.KebabCaseTableName}}/%d", ID), updateReq)
 		rr := app.MakeRequest(req)
 
-		if rr.Code != http.StatusBadRequest {
-			t.Errorf("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
-		}
-
-		var errorResponse httputils.ErrorResponse
-		err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		ok := collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
-			return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanTableName}} not found"
-		})
-
-		if !ok {
-			t.Errorf("Expected error message for {{.JSONName}}, but got none")
-		}
+		testutils.AssertValidationError(t, rr, "{{.JSONName}}", "{{.HumanTableName}} not found")
 	});
 	{{- end}}
 
