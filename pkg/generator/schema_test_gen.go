@@ -10,6 +10,7 @@ import (
 
 	"github.com/gurch101/gowebutils/pkg/collectionutils"
 	"github.com/gurch101/gowebutils/pkg/dbutils"
+	"github.com/gurch101/gowebutils/pkg/fsutils"
 	"github.com/gurch101/gowebutils/pkg/generator"
 	"github.com/gurch101/gowebutils/pkg/stringutils"
 	"github.com/gurch101/gowebutils/pkg/testutils"
@@ -19,7 +20,7 @@ func TestSchema(t *testing.T) {
 	t.Parallel()
 
 	db := testutils.SetupTestDB(t)
-	defer db.Close()
+	defer fsutils.CloseAndPanic(db)
 
 	pool := dbutils.FromDB(db)
 
