@@ -234,7 +234,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         }
 
         var response struct {
-            Data []{{.PackageName}}.Search{{.SingularTitleCaseName}}ResponseData ` + "`" + `json:"{{.Name}}"` + "`" + `
+            Data []{{.PackageName}}.Search{{.SingularTitleCaseName}}ResponseData ` + "`" + `json:"data"` + "`" + `
         }
         err := json.Unmarshal(rr.Body.Bytes(), &response)
         if err != nil {

@@ -31,7 +31,7 @@ func TestSearchUser(t *testing.T) {
 		}
 
 		var response struct {
-			Data []users.SearchUserResponseData `json:"users"`
+			Data []users.SearchUserResponseData `json:"data"`
 		}
 		err := json.Unmarshal(rr.Body.Bytes(), &response)
 		if err != nil {
