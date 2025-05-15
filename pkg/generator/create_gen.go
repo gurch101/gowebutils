@@ -170,12 +170,11 @@ import (
 	"github.com/gurch101/gowebutils/pkg/collectionutils"
 	"github.com/gurch101/gowebutils/pkg/validation"
 	{{- end}}
-	{{if .ForeignKeys}}"github.com/gurch101/gowebutils/pkg/httputils"{{end}}
 	"github.com/gurch101/gowebutils/pkg/testutils"
 )
 
 func TestCreate{{.SingularTitleCaseName}}(t *testing.T) {
-t.Parallel()
+	t.Parallel()
 
 	t.Run("successful create", func(t *testing.T) {
 		app := testutils.NewTestApp(t)
@@ -280,42 +279,23 @@ t.Parallel()
 		req := testutils.CreatePostRequest(t, "/{{.KebabCaseTableName}}", body)
 		rr := app.MakeRequest(req)
 
-		if rr.Code != http.StatusBadRequest {
-			t.Errorf("Expected status code 400 Bad Request, got %d", rr.Code)
-		}
-
-		// Verify error message
-		var errorResponse testutils.ValidationErrorResponse
-		err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if len(errorResponse.Errors) == 0 {
-			t.Error("Expected validation errors, got none")
-		}
-
-		var ok bool
-		{{range .Fields}}
-			{{- if .IsEmail}}
-			ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
-				return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanName}} must be a valid email address"
-			})
-
-			if !ok {
-				t.Errorf("Expected error message for {{.JSONName}}, but got none")
-			}
-			{{- else if .Required}}
-			ok = collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
-				return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanName}} is required"
-			})
-
-			if !ok {
-				t.Errorf("Expected error message for {{.JSONName}}, but got none")
-			}
-			{{- end}}
-		{{- end}}
+		testutils.AssertValidationErrors(t, rr, validation.ValidationError{
+			Errors: []validation.Error{
+				{{- range .Fields}}
+					{{- if .IsEmail}}
+					{
+						Field:   "{{.JSONName}}",
+						Message: "{{.HumanName}} must be a valid email address",
+					},
+					{{- else if .Required}}
+					{
+						Field:   "{{.JSONName}}",
+						Message: "{{.HumanName}} is required",
+					},
+					{{- end}}
+				{{- end}}
+			},
+		})
 	})
 	{{- end}}
 
@@ -328,7 +308,6 @@ t.Parallel()
 		app.TestRouter.Post("/{{.KebabCaseTableName}}", controller.Create{{.SingularTitleCaseName}}Handler)
 
 		_, payload := {{.PackageName}}.CreateTest{{.SingularTitleCaseName}}(t, app.DB())
-		{{.PackageName}}.Create{{.SingularTitleCaseName}}(context.Background(), app.DB(), &payload)
 
 		req := testutils.CreatePostRequest(t, "/{{.KebabCaseTableName}}", payload)
 		rr := app.MakeRequest(req)
@@ -375,23 +354,7 @@ t.Parallel()
 		req := testutils.CreatePostRequest(t, "/{{$.KebabCaseTableName}}", payload)
 		rr := app.MakeRequest(req)
 
-		if rr.Code != http.StatusBadRequest {
-			t.Errorf("Expected status code 400 Bad Request, got %d", rr.Code)
-		}
-
-		var errorResponse httputils.ErrorResponse
-		err := json.Unmarshal(rr.Body.Bytes(), &errorResponse)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		ok := collectionutils.Contains(errorResponse.Errors, func(e validation.Error) bool {
-			return e.Field == "{{.JSONName}}" && e.Message == "{{.HumanTableName}} not found"
-		})
-
-		if !ok {
-			t.Errorf("Expected error message for {{.JSONName}}, but got none")
-		}
+		testutils.AssertValidationError(t, rr, "{{.JSONName}}", "{{.HumanTableName}} not found")
 	})
 	{{- end}}
 }

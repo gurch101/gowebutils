@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gurch101/gowebutils/pkg/collectionutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/validation"
 )
@@ -63,34 +64,46 @@ func CreateDeleteRequest(url string) *http.Request {
 	return req
 }
 
-func AssertValidationError(t *testing.T, responseRecorder *httptest.ResponseRecorder, expectedErrorField string, expectedErrorMessage string) {
+func AssertValidationErrors(t *testing.T, responseRecorder *httptest.ResponseRecorder, expectedErrors validation.ValidationError) {
 	t.Helper()
 
 	if responseRecorder.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", responseRecorder.Code)
 	}
 
-	var response map[string]interface{}
+	var response validation.ValidationError
 
 	err := json.Unmarshal(responseRecorder.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
 
-	errMap, ok := response["errors"].([]interface{})[0].(map[string]interface{})
-	if !ok {
-		t.Errorf("expected error; got %v", response)
+	if len(response.Errors) != len(expectedErrors.Errors) {
+		t.Errorf("Expected %d errors, got %d", len(expectedErrors.Errors), len(response.Errors))
 	}
 
-	errorKey, ok := errMap["field"]
-	if !ok || errorKey != expectedErrorField {
-		t.Errorf("expected error field %s; got %v", expectedErrorField, response)
-	}
+	for _, expectedError := range expectedErrors.Errors {
+		ok := collectionutils.Contains(response.Errors, func(error validation.Error) bool {
+			return error.Field == expectedError.Field && error.Message == expectedError.Message
+		})
 
-	errorMessage, ok := errMap["message"]
-	if !ok || errorMessage != expectedErrorMessage {
-		t.Errorf("expected error message %s; got %v", expectedErrorMessage, response)
+		if !ok {
+			t.Errorf("Expected error %v", expectedError)
+		}
 	}
+}
+
+func AssertValidationError(t *testing.T, responseRecorder *httptest.ResponseRecorder, expectedErrorField string, expectedErrorMessage string) {
+	t.Helper()
+
+	AssertValidationErrors(t, responseRecorder, validation.ValidationError{
+		Errors: []validation.Error{
+			{
+				Field:   expectedErrorField,
+				Message: expectedErrorMessage,
+			},
+		},
+	})
 }
 
 func NewRouter() *chi.Mux {
