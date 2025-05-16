@@ -19,7 +19,6 @@ import (
 	"github.com/gurch101/gowebutils/pkg/dbutils"
 	"github.com/gurch101/gowebutils/pkg/httputils"
 	"github.com/gurch101/gowebutils/pkg/parser"
-	"github.com/gurch101/gowebutils/pkg/stringutils"
 	"github.com/gurch101/gowebutils/pkg/validation"
 )
 
@@ -56,15 +55,15 @@ type Search{{.SingularTitleCaseName}}ResponseData struct {
 //	@Tags			{{.HumanName}}
 //	@Accept			json
 //	@Produce		json
-	{{- range .ModelFields}}
-//	@Param 			{{.CamelCaseName}} query {{.GoType}} false "{{.CamelCaseName}}"
-	{{- end}}
+{{- range .Fields}}
+//	@Param 			{{.JSONName}} query {{.GoType}} false "{{.JSONName}}"
+{{- end}}
 //	@Param			fields query string false "csv list of fields to include. By default all fields are included"
 //	@Param      page query int false "page number" minimum(1) default(1)
 //	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
 //	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
 //	@Success		200	{object}		Search{{.SingularTitleCaseName}}Response
-//	@Failure		400,404,500	{object}	httputils.ErrorResponse
+//	@Failure		400,500	{object}	httputils.ErrorResponse
 //	@Router			/{{.KebabCaseTableName}} [get]
 func (tc *Search{{.SingularTitleCaseName}}Controller) Search{{.SingularTitleCaseName}}Handler(w http.ResponseWriter, r *http.Request) {
 	queryString := r.URL.Query()
@@ -127,35 +126,20 @@ func Search{{.TitleCaseTableName}}(
 		return nil, err
 	}
 
-	response := make([]Search{{.SingularTitleCaseName}}ResponseData, 0)
-
-	for _, model := range models {
-		{{.SingularCamelCaseName}} := Search{{.SingularTitleCaseName}}ResponseData{
-		{{- range .ModelFields}}
-			{{.TitleCaseName}}: model.{{.TitleCaseName}},
-		{{- end}}
-		}
-		response = append(response, {{.SingularCamelCaseName}})
-	}
 	return &Search{{.SingularTitleCaseName}}Response{
 		Metadata: pagination,
-		Data:     response,
+		Data:     models,
 	}, nil
 }
 
 func find{{.TitleCaseTableName}}(
 	ctx context.Context,
 	db dbutils.DB,
-	request *Search{{.SingularTitleCaseName}}Request) ([]{{.SingularCamelCaseName}}Model, parser.PaginationMetadata, error) {
-	var models []{{.SingularCamelCaseName}}Model
+	request *Search{{.SingularTitleCaseName}}Request) ([]Search{{.SingularTitleCaseName}}ResponseData, parser.PaginationMetadata, error) {
+	var models []Search{{.SingularTitleCaseName}}ResponseData
 	var totalRecords int
 
-	dbFields := make([]string, len(request.Fields) + 1)
-	dbFields[0] = "count(*) over()"
-
-	for i, field := range request.Fields {
-		dbFields[i + 1] = stringutils.CamelToSnake(field)
-	}
+	dbFields := dbutils.BuildSearchSelectFields("{{.Name}}", request.Fields, nil)
 
 	err := dbutils.NewQueryBuilder(db).
 		Select(
@@ -164,31 +148,22 @@ func find{{.TitleCaseTableName}}(
 		From("{{.Name}}").
 		{{range $i, $field := .Fields}}
 			{{if eq $i 0}}
-			Where("{{$field.Name}} = ?", request.{{$field.TitleCaseName}}).
+			Where("{{$.Name}}.{{$field.Name}} = ?", request.{{$field.TitleCaseName}}).
 			{{else}}
-			AndWhere("{{$field.Name}} = ?", request.{{$field.TitleCaseName}}).
+			AndWhere("{{$.Name}}.{{$field.Name}} = ?", request.{{$field.TitleCaseName}}).
 			{{end}}
 		{{end}}
-		OrderBy(request.Sort).
+		OrderBy("{{.Name}}."+request.Sort).
 		Page(request.Page, request.PageSize).
 		QueryContext(ctx, func(rows *sql.Rows) error {
-			var model {{.SingularCamelCaseName}}Model
-
-			fieldsToBindTo := make([]interface{}, len(dbFields))
-			fieldsToBindTo[0] = &totalRecords
-			for i, field := range dbFields[1:] {
-				fieldsToBindTo[i + 1] = model.Field(field)
-			}
-
-			err := rows.Scan(
-				fieldsToBindTo...,
-			)
+			model, err := Scan{{.SingularTitleCaseName}}Record(rows, dbFields, &totalRecords)
 
 			if err != nil {
 				return err
 			}
 
 			models = append(models, model)
+
 			return nil
 		})
 
@@ -198,6 +173,32 @@ func find{{.TitleCaseTableName}}(
 
 	metadata := parser.ParsePaginationMetadata(totalRecords, request.Page, request.PageSize)
 	return models, metadata, nil
+}
+
+func Scan{{.SingularTitleCaseName}}Record(rows *sql.Rows, dbFields []string, totalRecords *int) (Search{{.SingularTitleCaseName}}ResponseData, error) {
+	var m Search{{.SingularTitleCaseName}}ResponseData
+
+	fieldsToBindTo := make([]interface{}, len(dbFields))
+	fieldsToBindTo[0] = &totalRecords
+
+	for i, field := range dbFields[1:] {
+		switch field {
+			{{- range .ModelFields}}
+			case "{{$.Name}}.{{.Name}}":
+				fieldsToBindTo[i+1] = &m.{{.TitleCaseName}}
+			{{- end}}
+		}
+	}
+
+	err := rows.Scan(
+		fieldsToBindTo...,
+	)
+
+	if err != nil {
+		return m, err
+	}
+
+	return m, nil
 }
 `
 
@@ -227,6 +228,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         app.TestRouter.Get("/{{.KebabCaseTableName}}", controller.Search{{.SingularTitleCaseName}}Handler)
 
         req := testutils.CreateGetRequest(t, "/{{.KebabCaseTableName}}")
+
         rr := app.MakeRequest(req)
 
         if rr.Code != http.StatusOK {
@@ -242,7 +244,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         }
 
         if len(response.Data) != 1 {
-            t.Fatalf("expected 1 user, got %d", len(response.Data))
+            t.Fatalf("expected 1 {{.HumanName}}, got %d", len(response.Data))
         }
 
 				actualRecord, err := {{.PackageName}}.Get{{.SingularTitleCaseName}}ByID(context.Background(), app.DB(), ID)
@@ -267,19 +269,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         req := testutils.CreateGetRequest(t, "/{{.KebabCaseTableName}}?sort=invalid")
         rr := app.MakeRequest(req)
 
-        if rr.Code != http.StatusBadRequest {
-            t.Errorf("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
-        }
-
-        var response map[string]interface{}
-        err := json.Unmarshal(rr.Body.Bytes(), &response)
-        if err != nil {
-            t.Fatal(err)
-        }
-
-        if _, ok := response["errors"]; !ok {
-            t.Error("expected validation errors in response")
-        }
+				testutils.AssertValidationError(t, rr, "sort", "invalid sort value")
     })
 
     t.Run("bad field parameter", func(t *testing.T) {
@@ -292,19 +282,7 @@ func TestSearch{{.SingularTitleCaseName}}(t *testing.T) {
         req := testutils.CreateGetRequest(t, "/{{.KebabCaseTableName}}?fields=invalidField")
         rr := app.MakeRequest(req)
 
-        if rr.Code != http.StatusBadRequest {
-            t.Errorf("expected status code %d, got %d", http.StatusBadRequest, rr.Code)
-        }
-
-        var response map[string]interface{}
-        err := json.Unmarshal(rr.Body.Bytes(), &response)
-        if err != nil {
-            t.Fatal(err)
-        }
-
-        if _, ok := response["errors"]; !ok {
-            t.Error("expected validation errors in response")
-        }
+				testutils.AssertValidationError(t, rr, "fields", "invalid field: invalidField")
     })
 
 		t.Run("single field", func(t *testing.T) {
@@ -335,20 +313,15 @@ func newSearchHandlerTemplateData(moduleName string, schema Table) searchHandler
 	modelFields := []ModelField{}
 
 	for _, field := range schema.Fields {
-		sanitizedName := field.Name
-		if strings.HasSuffix(field.Name, "id") {
-			sanitizedName = strings.TrimSuffix(field.Name, "id")
-		}
-
 		if IsRequestField(field) {
 			fields = append(fields, RequestField{
 				Name:          field.Name,
-				TitleCaseName: stringutils.SnakeToTitle(sanitizedName),
-				JSONName:      stringutils.SnakeToCamel(sanitizedName),
-				HumanName:     stringutils.SnakeToHuman(sanitizedName),
+				TitleCaseName: stringutils.SnakeToTitle(field.Name),
+				JSONName:      stringutils.SnakeToCamel(field.Name),
+				HumanName:     stringutils.SnakeToHuman(field.Name),
 				GoType:        field.DataType.GoType(),
 				Required:      hasBlankConstraint(field.Constraints),
-				IsEmail:       isEmail(sanitizedName),
+				IsEmail:       isEmail(field.Name),
 			})
 		}
 

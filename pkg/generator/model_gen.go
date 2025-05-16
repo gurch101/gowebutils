@@ -44,17 +44,6 @@ func newCreate{{.SingularTitleCaseName}}Model(
 		{{- end}}
 	}
 }
-
-func (m *{{.SingularCamelCaseName}}Model) Field(field string) interface{} {
-	switch field {
-	{{- range .ModelFields}}
-	case "{{.Name}}":
-		return &m.{{.TitleCaseName}}
-	{{- end}}
-	default:
-		return nil
-	}
-}
 `
 
 func newModelTemplateData(moduleName string, schema Table) modelTemplateData {

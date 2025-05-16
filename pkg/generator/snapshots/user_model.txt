@@ -45,28 +45,3 @@ func newCreateUserModel(
 		SomeBool:  someBool,
 	}
 }
-
-func (m *userModel) Field(field string) interface{} {
-	switch field {
-	case "id":
-		return &m.ID
-	case "version":
-		return &m.Version
-	case "name":
-		return &m.Name
-	case "email":
-		return &m.Email
-	case "some_int64":
-		return &m.SomeInt64
-	case "tenant_id":
-		return &m.TenantID
-	case "some_bool":
-		return &m.SomeBool
-	case "created_at":
-		return &m.CreatedAt
-	case "updated_at":
-		return &m.UpdatedAt
-	default:
-		return nil
-	}
-}

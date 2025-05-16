@@ -50,8 +50,6 @@ func runCli(module string, tableSchema []generator.Table) {
 	writeFileIfNotExist("internal/schema_test.go", []byte(generator.GetSchemaTest()))
 
 	for _, table := range selectedTables {
-		singularModelName := strings.ToLower(strings.TrimSuffix(table.Name, "s"))
-
 		if _, err := os.Stat("internal/" + table.Name); os.IsNotExist(err) {
 			if err := os.Mkdir("internal/"+table.Name, generatedDirectoryPermission); err != nil {
 				panic(err)
@@ -76,11 +74,10 @@ func runCli(module string, tableSchema []generator.Table) {
 				panic(err)
 			}
 
-			filename := fmt.Sprintf(cfg.fileNameFmt, table.Name, singularModelName)
+			filename, testFilename := cfg.fileNameFunc(table)
 			writeFileIfNotExist(filename, template)
 
 			if testTemplate != nil {
-				testFilename := fmt.Sprintf(cfg.testFileFmt, table.Name, singularModelName)
 				writeFileIfNotExist(testFilename, testTemplate)
 			}
 		}
@@ -179,69 +176,88 @@ func filterValidTables(names []string, schema []generator.Table) ([]generator.Ta
 }
 
 type actionConfig struct {
-	renderFunc  func(string, generator.Table) ([]byte, []byte, error)
-	fileNameFmt string
-	testFileFmt string
+	renderFunc   func(string, generator.Table) ([]byte, []byte, error)
+	fileNameFunc func(generator.Table) (string, string)
 }
 
+// nolint: funlen
 func getActionMap() map[string]actionConfig {
 	return map[string]actionConfig{
 		"create": {
 			generator.RenderCreateTemplate,
-			"internal/%s/create_%s.go",
-			"internal/%s/create_%s_test.go",
+			func(table generator.Table) (string, string) {
+				singularModelName := strings.ToLower(strings.TrimSuffix(table.Name, "s"))
+				return fmt.Sprintf("internal/%s/create_%s.go", strings.ToLower(table.Name), singularModelName),
+					fmt.Sprintf("internal/%s/create_%s_test.go", strings.ToLower(table.Name), singularModelName)
+			},
 		},
 		"get": {
 			generator.RenderGetOneTemplate,
-			"internal/%s/get_%s_by_id.go",
-			"internal/%s/get_%s_by_id_test.go",
+			func(table generator.Table) (string, string) {
+				singularModelName := strings.ToLower(strings.TrimSuffix(table.Name, "s"))
+				return fmt.Sprintf("internal/%s/get_%s_by_id.go", strings.ToLower(table.Name), singularModelName),
+					fmt.Sprintf("internal/%s/get_%s_by_id_test.go", strings.ToLower(table.Name), singularModelName)
+			},
 		},
 		"update": {
 			generator.RenderUpdateTemplate,
-			"internal/%s/update_%s.go",
-			"internal/%s/update_%s_test.go",
+			func(table generator.Table) (string, string) {
+				singularModelName := strings.ToLower(strings.TrimSuffix(table.Name, "s"))
+				return fmt.Sprintf("internal/%s/update_%s.go", strings.ToLower(table.Name), singularModelName),
+					fmt.Sprintf("internal/%s/update_%s_test.go", strings.ToLower(table.Name), singularModelName)
+			},
 		},
 		"list": {
 			generator.RenderSearchTemplate,
-			"internal/%s/search_%s.go",
-			"internal/%s/search_%s_test.go",
+			func(table generator.Table) (string, string) {
+				return fmt.Sprintf("internal/%s/search_%s.go", strings.ToLower(table.Name), strings.ToLower(table.Name)),
+					fmt.Sprintf("internal/%s/search_%s_test.go", strings.ToLower(table.Name), strings.ToLower(table.Name))
+			},
 		},
 		"delete": {
 			generator.RenderDeleteTemplate,
-			"internal/%s/delete_%s_by_id.go",
-			"internal/%s/delete_%s_by_id_test.go",
+			func(table generator.Table) (string, string) {
+				singularModelName := strings.ToLower(strings.TrimSuffix(table.Name, "s"))
+				return fmt.Sprintf("internal/%s/delete_%s_by_id.go", strings.ToLower(table.Name), singularModelName),
+					fmt.Sprintf("internal/%s/delete_%s_by_id_test.go", strings.ToLower(table.Name), singularModelName)
+			},
 		},
 		"model": {
 			func(module string, table generator.Table) ([]byte, []byte, error) {
 				modelTemplate, err := generator.RenderModelTemplate(module, table)
 				return modelTemplate, nil, err
 			},
-			"internal/%s/%s_models.go",
-			"",
+			func(table generator.Table) (string, string) {
+				return fmt.Sprintf("internal/%s/models.go", strings.ToLower(table.Name)), ""
+			},
 		},
 		"routes": {
 			func(module string, table generator.Table) ([]byte, []byte, error) {
 				routesTemplate, err := generator.RenderRoutesTemplate(module, table)
 				return routesTemplate, nil, err
 			},
-			"internal/%s/%s_routes.go",
-			"",
+			func(table generator.Table) (string, string) {
+				return fmt.Sprintf("internal/%s/routes.go", strings.ToLower(table.Name)), ""
+			},
 		},
 		"test_helper": {
 			func(module string, table generator.Table) ([]byte, []byte, error) {
 				testHelperTemplate, err := generator.RenderTestHelperTemplate(module, table)
 				return testHelperTemplate, nil, err
 			},
-			"internal/%s/%s_test_helpers.go",
-			"",
+			func(table generator.Table) (string, string) {
+				return fmt.Sprintf("internal/%s/test_helpers.go", strings.ToLower(table.Name)), ""
+			},
 		},
 		"exists": {
 			func(module string, table generator.Table) ([]byte, []byte, error) {
 				existsTemplate, err := generator.RenderExistsTemplate(module, table)
 				return existsTemplate, nil, err
 			},
-			"internal/%s/%s_exists.go",
-			"",
+			func(table generator.Table) (string, string) {
+				singularModelName := strings.ToLower(strings.TrimSuffix(table.Name, "s"))
+				return fmt.Sprintf("internal/%s/%s_exists.go", strings.ToLower(table.Name), singularModelName), ""
+			},
 		},
 	}
 }

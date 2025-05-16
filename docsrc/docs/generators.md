@@ -28,9 +28,9 @@ In your project directory, run `generator` in the terminal and select the databa
 - `internal/<dbtable>/update_<dbtable>.go` - This file contains a handler, service, and repository to update a record in the database via a PATCH request. This file is only generated if your database table has a `version` field.
 - `internal/<dbtable>/delete_<dbtable>_by_id.go` - This file contains a handler, service, and repository to delete a record from the database.
 - `internal/<dbtable>/<dbtable>_exists.go` - A helper function to check if a record exists in the database.
-- `internal/<dbtable>/<dbtable>_model.go` - This file contains a struct representing the database table.
-- `internal/<dbtable>/<dbtable>_test_helpers.go` - This file contains helper functions to create test records for the database table.
-- `internal/<dbtable>/<dbtable>_routes.go` - This file contains binds the handler functions to the routes through the `app` object.
+- `internal/<dbtable>/models.go` - This file contains a struct representing the database table.
+- `internal/<dbtable>/test_helpers.go` - This file contains helper functions to create test records for the database table.
+- `internal/<dbtable>/routes.go` - This file contains binds the handler functions to the routes through the `app` object.
 - `internal/schema_test.go` - This file contains tests to ensure the database schema meets the requirements of the generator.
 
 Each program will have a corresponding end-to-end test file named `internal/<dbtable>/<progname>_test.go`.
