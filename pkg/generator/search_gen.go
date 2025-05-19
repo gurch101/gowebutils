@@ -156,13 +156,14 @@ func find{{.TitleCaseTableName}}(
 		OrderBy("{{.Name}}."+request.Sort).
 		Page(request.Page, request.PageSize).
 		QueryContext(ctx, func(rows *sql.Rows) error {
-			model, err := Scan{{.SingularTitleCaseName}}Record(rows, dbFields, &totalRecords)
+			model, numRecords, err := Scan{{.SingularTitleCaseName}}Record(rows, dbFields)
 
 			if err != nil {
 				return err
 			}
 
 			models = append(models, model)
+			totalRecords = numRecords
 
 			return nil
 		})
@@ -175,8 +176,9 @@ func find{{.TitleCaseTableName}}(
 	return models, metadata, nil
 }
 
-func Scan{{.SingularTitleCaseName}}Record(rows *sql.Rows, dbFields []string, totalRecords *int) (Search{{.SingularTitleCaseName}}ResponseData, error) {
+func Scan{{.SingularTitleCaseName}}Record(rows *sql.Rows, dbFields []string) (Search{{.SingularTitleCaseName}}ResponseData, int, error) {
 	var m Search{{.SingularTitleCaseName}}ResponseData
+	var totalRecords int
 
 	fieldsToBindTo := make([]interface{}, len(dbFields))
 	fieldsToBindTo[0] = &totalRecords
@@ -195,10 +197,10 @@ func Scan{{.SingularTitleCaseName}}Record(rows *sql.Rows, dbFields []string, tot
 	)
 
 	if err != nil {
-		return m, err
+		return m, 0, err
 	}
 
-	return m, nil
+	return m, totalRecords, nil
 }
 `
 

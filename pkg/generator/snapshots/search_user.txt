@@ -168,13 +168,14 @@ func findUsers(
 		OrderBy("users."+request.Sort).
 		Page(request.Page, request.PageSize).
 		QueryContext(ctx, func(rows *sql.Rows) error {
-			model, err := ScanUserRecord(rows, dbFields, &totalRecords)
+			model, numRecords, err := ScanUserRecord(rows, dbFields)
 
 			if err != nil {
 				return err
 			}
 
 			models = append(models, model)
+			totalRecords = numRecords
 
 			return nil
 		})
@@ -187,8 +188,9 @@ func findUsers(
 	return models, metadata, nil
 }
 
-func ScanUserRecord(rows *sql.Rows, dbFields []string, totalRecords *int) (SearchUserResponseData, error) {
+func ScanUserRecord(rows *sql.Rows, dbFields []string) (SearchUserResponseData, int, error) {
 	var m SearchUserResponseData
+	var totalRecords int
 
 	fieldsToBindTo := make([]interface{}, len(dbFields))
 	fieldsToBindTo[0] = &totalRecords
@@ -221,8 +223,8 @@ func ScanUserRecord(rows *sql.Rows, dbFields []string, totalRecords *int) (Searc
 	)
 
 	if err != nil {
-		return m, err
+		return m, 0, err
 	}
 
-	return m, nil
+	return m, totalRecords, nil
 }
