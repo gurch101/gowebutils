@@ -88,7 +88,7 @@ func (a *TestApp) MakeAuthenticatedGetRequest(t *testing.T, path string) *httpte
 func (a *TestApp) MakeAuthenticatedPostRequest(t *testing.T, path string, body interface{}) *httptest.ResponseRecorder {
 	t.Helper()
 
-	req := CreatePostRequest(t, "/users/invite", body)
+	req := CreatePostRequest(t, path, body)
 	req = authutils.ContextSetUser(req, authutils.User{
 		ID:       1,
 		TenantID: 1,

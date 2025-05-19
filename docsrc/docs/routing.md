@@ -47,3 +47,11 @@ Each route type automatically applies appropriate middleware:
 For more details on the specific middleware applied to each route type, see the middleware documentation.
 
 By using these route registration methods, you can ensure consistent security policies across your application with minimal boilerplate code.
+
+### Routes with Custom Middleware
+
+You can also add custom middleware to your routes using the `AddProtectedRouteWithMiddleware` methods:
+
+```go
+app.AddProtectedRouteWithMiddleware("POST", "/api/users", usersController.CreateUser, someCustomMiddleware1, someCustomMiddleware2)
+```

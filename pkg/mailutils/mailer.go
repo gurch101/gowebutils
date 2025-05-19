@@ -74,8 +74,8 @@ func InitMailerWithDialer(dialer Dialer, sender string, templates map[string]*te
 func (m *Emailer) Send(recipient, templateName string, data map[string]string) {
 	threads.Background(func() {
 		err := m.sendInternal(recipient, templateName, data)
-		if err == nil {
-			slog.Error("failed to send invite email", "error", err)
+		if err != nil {
+			slog.Error("failed to send email", "error", err)
 		}
 	})
 }

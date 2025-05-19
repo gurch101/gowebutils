@@ -55,3 +55,20 @@ func RequirePermission(permission string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// IsAdmin checks if user is admin. If not, returns 403.
+func IsAdmin(next http.Handler) http.Handler {
+	middlewareFn := func(w http.ResponseWriter, r *http.Request) {
+		// Get user from context (set by auth middleware)
+		user := GetUserFromContext(r.Context())
+		if !user.IsAdmin {
+			httputils.ForbiddenResponse(w, r)
+
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+
+	return http.HandlerFunc(middlewareFn)
+}

@@ -18,3 +18,7 @@ Requests added as protected routes will have the following additional middleware
 Requests can also be added as protected routes with additional permissions required which would apply the following middleware:
 
 - PermissionsMiddleware - ensure the user has the required permissions for the request, otherwise returns a 403 status code
+
+There is also optional middleware that can be used to add to your routes via `AddProtectedRouteWithMiddleware`:
+
+- authutils.IsAdmin - ensures the user is an admin

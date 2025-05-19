@@ -79,7 +79,7 @@ func AssertValidationErrors(t *testing.T, responseRecorder *httptest.ResponseRec
 	}
 
 	if len(response.Errors) != len(expectedErrors.Errors) {
-		t.Errorf("Expected %d errors, got %d", len(expectedErrors.Errors), len(response.Errors))
+		t.Errorf("Expected %d errors, got %d, %v", len(expectedErrors.Errors), len(response.Errors), response.Errors)
 	}
 
 	for _, expectedError := range expectedErrors.Errors {

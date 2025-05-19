@@ -270,6 +270,16 @@ func (a *App) AddProtectedRoute(method, path string, handler http.HandlerFunc) {
 	a.router.With(a.sessionMiddleware, middleware.NoCache).Method(method, path, handler)
 }
 
+// AddProtectedRouteWithMiddleware adds a route with the given middleware to the App.
+func (a *App) AddProtectedRouteWithMiddleware(method, path string, handler http.HandlerFunc, otherMiddleware ...func(http.Handler) http.Handler) {
+	allMiddleware := make([]func(http.Handler) http.Handler, 0)
+	allMiddleware = append(allMiddleware, a.sessionMiddleware)
+	allMiddleware = append(allMiddleware, middleware.NoCache)
+	allMiddleware = append(allMiddleware, otherMiddleware...)
+
+	a.router.With(allMiddleware...).Method(method, path, handler)
+}
+
 func (a *App) AddProtectedRouteWithPermission(method, path string, handler http.HandlerFunc, permission string) {
 	a.router.With(
 		a.sessionMiddleware,
