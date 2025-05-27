@@ -131,6 +131,22 @@ func (a *TestApp) MakeAuthenticatedPatchRequest(t *testing.T, path string, body 
 	return a.MakeRequest(req)
 }
 
+// MakeAuthenticatedPutRequest issues a PUT request to the given path with a default test user as the authenticated user.
+// The caller is responsible for ensuring that the test user exists in the database.
+func (a *TestApp) MakeAuthenticatedPutRequest(t *testing.T, path string, body interface{}) *httptest.ResponseRecorder {
+	t.Helper()
+
+	req := CreatePutRequest(t, path, body)
+	req = authutils.ContextSetUser(req, authutils.User{
+		ID:       1,
+		TenantID: 1,
+		UserName: "doesntmatter",
+		Email:    "doesntmatter@example.com",
+	})
+
+	return a.MakeRequest(req)
+}
+
 func (a *TestApp) MakeRequest(req *http.Request) *httptest.ResponseRecorder {
 	rr := httptest.NewRecorder()
 	a.TestRouter.ServeHTTP(rr, req)

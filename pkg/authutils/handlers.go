@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
@@ -40,6 +41,7 @@ type OidcController struct {
 	getOrCreateUserFn GetOrCreateUser
 	sessionManager    *scs.SessionManager
 	redirectURL       string
+	secureStateSessionCookie bool
 }
 
 type oauth2Config struct {
@@ -119,7 +121,13 @@ func CreateOidcController(
 
 	redirectURL := parser.ParseEnvString("REDIRECT_URL", "/")
 
-	return &OidcController{sessionManager: sessionManager, getOrCreateUserFn: getOrCreateUserFn, oauth2Config: config, redirectURL: redirectURL}
+	secureSessionCookie := false
+	_, err = os.Stat("./tls/cert.pem")
+	if err == nil {
+		secureSessionCookie = true
+	}
+
+	return &OidcController{sessionManager: sessionManager, getOrCreateUserFn: getOrCreateUserFn, oauth2Config: config, redirectURL: redirectURL, secureStateSessionCookie: secureSessionCookie}
 }
 
 func NewOidcController(
@@ -142,14 +150,15 @@ func (c *OidcController) RegisterHandler(w http.ResponseWriter, r *http.Request)
 	defaultInvite := ""
 
 	invite := parser.ParseQSString(r.URL.Query(), "invite", &defaultInvite)
-
 	if *invite != "" {
 		_, err := VerifyInviteToken(*invite)
 		if err != nil {
 			httputils.BadRequestResponse(w, r, ErrInvalidInviteToken)
+
+			return
 		}
 
-		payload["invite"] = invite
+		payload["invite"] = *invite
 	}
 
 	state, err := Encrypt(payload)
@@ -163,7 +172,7 @@ func (c *OidcController) RegisterHandler(w http.ResponseWriter, r *http.Request)
 		Value:    state,
 		Quoted:   false,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   c.secureStateSessionCookie,
 		Path:     "/",
 		// use lax since we are using a third-party for auth
 		SameSite: http.SameSiteLaxMode,
@@ -185,7 +194,7 @@ func (c *OidcController) RegisterHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *OidcController) AuthCallback(w http.ResponseWriter, r *http.Request) {
-	state, err := verifyState(w, r)
+	state, err := verifyState(w, r, c.secureStateSessionCookie)
 	if err != nil {
 		slog.Info("failed to verify state", "error", err)
 		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
@@ -285,7 +294,7 @@ func (c *OidcController) redirectToAuthURL(w http.ResponseWriter, r *http.Reques
 		Value:    state,
 		Quoted:   false,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   c.secureStateSessionCookie,
 		Path:     "/",
 		// use lax since we are using a third-party for auth
 		SameSite: http.SameSiteLaxMode,
@@ -295,7 +304,7 @@ func (c *OidcController) redirectToAuthURL(w http.ResponseWriter, r *http.Reques
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func verifyState(w http.ResponseWriter, r *http.Request) (map[string]any, error) {
+func verifyState(w http.ResponseWriter, r *http.Request, secureCookie bool) (map[string]any, error) {
 	//nolint: exhaustruct
 	cookie := &http.Cookie{
 		Name:     "state",
@@ -303,7 +312,7 @@ func verifyState(w http.ResponseWriter, r *http.Request) (map[string]any, error)
 		Quoted:   false,
 		Expires:  time.Now().Add(-1 * time.Hour),
 		Path:     "/",
-		Secure:   true,
+		Secure:   secureCookie,
 		SameSite: http.SameSiteLaxMode,
 	}
 

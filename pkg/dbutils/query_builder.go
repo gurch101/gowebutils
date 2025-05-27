@@ -164,7 +164,7 @@ func (qb *QueryBuilder) GroupBy(fields ...string) *QueryBuilder {
 func (qb *QueryBuilder) OrderBy(fields ...string) *QueryBuilder {
 	// fields will be -<name> for descending order and <name> for ascending order
 	// e.g. "name", "-age"
-	if len(fields) == 0 || fields[0] == "" {
+	if len(fields) == 0 || fields[0] == "" || strings.HasSuffix(fields[0], ".") {
 		return qb
 	}
 
@@ -271,7 +271,6 @@ func (qb *QueryBuilder) Query(callback func(*sql.Rows) error) error {
 func (qb *QueryBuilder) QueryContext(ctx context.Context, callback func(*sql.Rows) error) error {
 	query, args := qb.Build()
 	rows, err := qb.db.QueryContext(ctx, query, args...)
-
 	if err != nil {
 		return fmt.Errorf("query builder exec error: %w", err)
 	}

@@ -48,6 +48,12 @@ func CreatePatchRequest(t *testing.T, url string, payload interface{}) *http.Req
 	return createRequestWithBody(t, http.MethodPatch, url, payload)
 }
 
+func CreatePutRequest(t *testing.T, url string, payload interface{}) *http.Request {
+	t.Helper()
+
+	return createRequestWithBody(t, http.MethodPut, url, payload)
+}
+
 func CreateGetRequest(t *testing.T, url string) *http.Request {
 	t.Helper()
 

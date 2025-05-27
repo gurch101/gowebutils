@@ -31,7 +31,7 @@ func seedDB(db *sql.DB) error {
 	}
 
 	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".sql") {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".sql") || !strings.Contains(file.Name(), "test_") {
 			continue
 		}
 

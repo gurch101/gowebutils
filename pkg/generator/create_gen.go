@@ -166,8 +166,10 @@ import (
 	{{- range .ForeignKeys}}
 	"{{$.ModuleName}}/internal/{{.Table}}"
 	{{- end}}
-	{{- if or (.RequireValidation) (.ForeignKeys)}}
+	{{-if .UniqueConstraint}}
 	"github.com/gurch101/gowebutils/pkg/collectionutils"
+	{{- end}}
+	{{- if .RequireValidation}}
 	"github.com/gurch101/gowebutils/pkg/validation"
 	{{- end}}
 	"github.com/gurch101/gowebutils/pkg/testutils"
