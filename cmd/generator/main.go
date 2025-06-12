@@ -63,6 +63,7 @@ func runCli(module string, tableSchema []generator.Table) {
 				})
 
 				if !ok {
+					fmt.Printf("Table %s does not have a version field. Skipping update action.\n", table.Name)
 					continue
 				}
 			}

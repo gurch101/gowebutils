@@ -166,7 +166,7 @@ import (
 	{{- range .ForeignKeys}}
 	"{{$.ModuleName}}/internal/{{.Table}}"
 	{{- end}}
-	{{-if .UniqueConstraint}}
+	{{- if .UniqueConstraint}}
 	"github.com/gurch101/gowebutils/pkg/collectionutils"
 	{{- end}}
 	{{- if .RequireValidation}}
