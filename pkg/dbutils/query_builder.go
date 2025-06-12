@@ -270,6 +270,7 @@ func (qb *QueryBuilder) Query(callback func(*sql.Rows) error) error {
 // QueryContext executes the query with the given context and calls the callback function for each row.
 func (qb *QueryBuilder) QueryContext(ctx context.Context, callback func(*sql.Rows) error) error {
 	query, args := qb.Build()
+
 	rows, err := qb.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("query builder exec error: %w", err)

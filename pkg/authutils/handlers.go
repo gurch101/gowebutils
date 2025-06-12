@@ -37,10 +37,10 @@ var ErrNoIDToken = errors.New("no id token")
 var ErrInvalidInviteToken = errors.New("invalid invite token")
 
 type OidcController struct {
-	oauth2Config      *oauth2Config
-	getOrCreateUserFn GetOrCreateUser
-	sessionManager    *scs.SessionManager
-	redirectURL       string
+	oauth2Config             *oauth2Config
+	getOrCreateUserFn        GetOrCreateUser
+	sessionManager           *scs.SessionManager
+	redirectURL              string
 	secureStateSessionCookie bool
 }
 
@@ -122,6 +122,7 @@ func CreateOidcController(
 	redirectURL := parser.ParseEnvString("REDIRECT_URL", "/")
 
 	secureSessionCookie := false
+
 	_, err = os.Stat("./tls/cert.pem")
 	if err == nil {
 		secureSessionCookie = true

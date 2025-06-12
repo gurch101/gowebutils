@@ -13,6 +13,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gurch101/gowebutils/pkg/app"
@@ -48,25 +49,8 @@ type Search{{.SingularTitleCaseName}}ResponseData struct {
 	{{- end}}
 }
 
-// List{{.SingularTitleCaseName}} godoc
-//
-//	@Summary		List {{.HumanName}}
-//	@Description	get {{.HumanName}}
-//	@Tags			{{.HumanName}}
-//	@Accept			json
-//	@Produce		json
-{{- range .Fields}}
-//	@Param 			{{.JSONName}} query {{.GoType}} false "{{.JSONName}}"
-{{- end}}
-//	@Param			fields query string false "csv list of fields to include. By default all fields are included"
-//	@Param      page query int false "page number" minimum(1) default(1)
-//	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
-//	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
-//	@Success		200	{object}		Search{{.SingularTitleCaseName}}Response
-//	@Failure		400,500	{object}	httputils.ErrorResponse
-//	@Router			/{{.KebabCaseTableName}} [get]
-func (tc *Search{{.SingularTitleCaseName}}Controller) Search{{.SingularTitleCaseName}}Handler(w http.ResponseWriter, r *http.Request) {
-	queryString := r.URL.Query()
+
+func validateSearch{{.SingularTitleCaseName}}Request(queryString url.Values) (*Search{{.SingularTitleCaseName}}Request, []validation.Error) {
 	request := &Search{{.SingularTitleCaseName}}Request{
 		{{- range .Fields}}
 		{{.TitleCaseName}}: parser.ParseQS{{if eq .GoType "bool"}}Bool{{else if (eq .GoType "int64")}}Int64{{else if (eq .GoType "int")}}Int{{else}}String{{end}}(queryString, "{{.JSONName}}", nil),
@@ -88,7 +72,35 @@ func (tc *Search{{.SingularTitleCaseName}}Controller) Search{{.SingularTitleCase
 	},)
 
 	if v.HasErrors() {
-		httputils.FailedValidationResponse(w, r, v.Errors)
+		return nil, v.Errors
+	}
+
+	return request, nil
+}
+
+// List{{.SingularTitleCaseName}} godoc
+//
+//	@Summary		List {{.HumanName}}
+//	@Description	get {{.HumanName}}
+//	@Tags			{{.HumanName}}
+//	@Accept			json
+//	@Produce		json
+{{- range .Fields}}
+//	@Param 			{{.JSONName}} query {{.GoType}} false "{{.JSONName}}"
+{{- end}}
+//	@Param			fields query string false "csv list of fields to include. By default all fields are included"
+//	@Param      page query int false "page number" minimum(1) default(1)
+//	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
+//	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
+//	@Success		200	{object}		Search{{.SingularTitleCaseName}}Response
+//	@Failure		400,500	{object}	httputils.ErrorResponse
+//	@Router			/{{.KebabCaseTableName}} [get]
+func (tc *Search{{.SingularTitleCaseName}}Controller) Search{{.SingularTitleCaseName}}Handler(w http.ResponseWriter, r *http.Request) {
+	queryString := r.URL.Query()
+
+	request, validationErr := validateSearch{{.SingularTitleCaseName}}Request(queryString)
+	if validationErr != nil {
+		httputils.FailedValidationResponse(w, r, validationErr)
 		return
 	}
 
@@ -177,7 +189,7 @@ func find{{.TitleCaseTableName}}(
 }
 
 func Scan{{.SingularTitleCaseName}}Record(rows *sql.Rows, dbFields []string) (Search{{.SingularTitleCaseName}}ResponseData, int, error) {
-	var m Search{{.SingularTitleCaseName}}ResponseData
+	var model Search{{.SingularTitleCaseName}}ResponseData
 	var totalRecords int
 
 	fieldsToBindTo := make([]interface{}, len(dbFields))
@@ -187,7 +199,7 @@ func Scan{{.SingularTitleCaseName}}Record(rows *sql.Rows, dbFields []string) (Se
 		switch field {
 			{{- range .ModelFields}}
 			case "{{$.Name}}.{{.Name}}":
-				fieldsToBindTo[i+1] = &m.{{.TitleCaseName}}
+				fieldsToBindTo[i+1] = &model.{{.TitleCaseName}}
 			{{- end}}
 		}
 	}
@@ -197,10 +209,10 @@ func Scan{{.SingularTitleCaseName}}Record(rows *sql.Rows, dbFields []string) (Se
 	)
 
 	if err != nil {
-		return m, 0, err
+		return model, 0, err
 	}
 
-	return m, totalRecords, nil
+	return model, totalRecords, nil
 }
 `
 

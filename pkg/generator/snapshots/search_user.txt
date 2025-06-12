@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gurch101/gowebutils/pkg/app"
@@ -47,27 +48,7 @@ type SearchUserResponseData struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// ListUser godoc
-//
-//	@Summary		List Users
-//	@Description	get Users
-//	@Tags			Users
-//	@Accept			json
-//	@Produce		json
-//	@Param 			name query string false "name"
-//	@Param 			email query string false "email"
-//	@Param 			someInt64 query int64 false "someInt64"
-//	@Param 			tenantId query int64 false "tenantId"
-//	@Param 			someBool query bool false "someBool"
-//	@Param			fields query string false "csv list of fields to include. By default all fields are included"
-//	@Param      page query int false "page number" minimum(1) default(1)
-//	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
-//	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
-//	@Success		200	{object}		SearchUserResponse
-//	@Failure		400,500	{object}	httputils.ErrorResponse
-//	@Router			/users [get]
-func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http.Request) {
-	queryString := r.URL.Query()
+func validateSearchUserRequest(queryString url.Values) (*SearchUserRequest, []validation.Error) {
 	request := &SearchUserRequest{
 		Name:      parser.ParseQSString(queryString, "name", nil),
 		Email:     parser.ParseQSString(queryString, "email", nil),
@@ -103,7 +84,37 @@ func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http
 	})
 
 	if v.HasErrors() {
-		httputils.FailedValidationResponse(w, r, v.Errors)
+		return nil, v.Errors
+	}
+
+	return request, nil
+}
+
+// ListUser godoc
+//
+//	@Summary		List Users
+//	@Description	get Users
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param 			name query string false "name"
+//	@Param 			email query string false "email"
+//	@Param 			someInt64 query int64 false "someInt64"
+//	@Param 			tenantId query int64 false "tenantId"
+//	@Param 			someBool query bool false "someBool"
+//	@Param			fields query string false "csv list of fields to include. By default all fields are included"
+//	@Param      page query int false "page number" minimum(1) default(1)
+//	@Param			pageSize	query		int		false	"page size" minimum(1)  maximum(100) default(25)
+//	@Param			sort	query		string	false	"sort by field. e.g. field1,-field2"
+//	@Success		200	{object}		SearchUserResponse
+//	@Failure		400,500	{object}	httputils.ErrorResponse
+//	@Router			/users [get]
+func (tc *SearchUserController) SearchUserHandler(w http.ResponseWriter, r *http.Request) {
+	queryString := r.URL.Query()
+
+	request, validationErr := validateSearchUserRequest(queryString)
+	if validationErr != nil {
+		httputils.FailedValidationResponse(w, r, validationErr)
 		return
 	}
 
@@ -189,7 +200,7 @@ func findUsers(
 }
 
 func ScanUserRecord(rows *sql.Rows, dbFields []string) (SearchUserResponseData, int, error) {
-	var m SearchUserResponseData
+	var model SearchUserResponseData
 	var totalRecords int
 
 	fieldsToBindTo := make([]interface{}, len(dbFields))
@@ -198,23 +209,23 @@ func ScanUserRecord(rows *sql.Rows, dbFields []string) (SearchUserResponseData, 
 	for i, field := range dbFields[1:] {
 		switch field {
 		case "users.id":
-			fieldsToBindTo[i+1] = &m.ID
+			fieldsToBindTo[i+1] = &model.ID
 		case "users.version":
-			fieldsToBindTo[i+1] = &m.Version
+			fieldsToBindTo[i+1] = &model.Version
 		case "users.name":
-			fieldsToBindTo[i+1] = &m.Name
+			fieldsToBindTo[i+1] = &model.Name
 		case "users.email":
-			fieldsToBindTo[i+1] = &m.Email
+			fieldsToBindTo[i+1] = &model.Email
 		case "users.some_int64":
-			fieldsToBindTo[i+1] = &m.SomeInt64
+			fieldsToBindTo[i+1] = &model.SomeInt64
 		case "users.tenant_id":
-			fieldsToBindTo[i+1] = &m.TenantID
+			fieldsToBindTo[i+1] = &model.TenantID
 		case "users.some_bool":
-			fieldsToBindTo[i+1] = &m.SomeBool
+			fieldsToBindTo[i+1] = &model.SomeBool
 		case "users.created_at":
-			fieldsToBindTo[i+1] = &m.CreatedAt
+			fieldsToBindTo[i+1] = &model.CreatedAt
 		case "users.updated_at":
-			fieldsToBindTo[i+1] = &m.UpdatedAt
+			fieldsToBindTo[i+1] = &model.UpdatedAt
 		}
 	}
 
@@ -223,8 +234,8 @@ func ScanUserRecord(rows *sql.Rows, dbFields []string) (SearchUserResponseData, 
 	)
 
 	if err != nil {
-		return m, 0, err
+		return model, 0, err
 	}
 
-	return m, totalRecords, nil
+	return model, totalRecords, nil
 }
