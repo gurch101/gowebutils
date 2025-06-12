@@ -36,6 +36,7 @@ var (
 // App is the main application struct.
 type App struct {
 	db                *dbutils.DBPool
+	Cache             *Cache
 	FileService       fsutils.FileService
 	Mailer            mailutils.Mailer
 	htmlTemplateMap   map[string]*template.Template
@@ -253,6 +254,7 @@ func NewApp(opts ...Option) (*App, error) {
 
 	return &App{
 		db:                options.db,
+		Cache:             NewCache(),
 		FileService:       options.fileService,
 		Mailer:            options.mailer,
 		htmlTemplateMap:   options.htmlTemplateMap,

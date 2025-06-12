@@ -14,6 +14,7 @@ The App struct provides a comprehensive set of methods for building web applicat
 - File uploads/downloads with S3
 - HTML templating
 - Email delivery
+- Caching
 
 All these features are packaged in a single, easy-to-use interface.
 

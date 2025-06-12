@@ -11,6 +11,8 @@ migrate/down:
 test:
 	go test -race -shuffle=on ./...
 
+.PHONY: docs
+
 docs:
 	rm -rf docs
 	cd docsrc && npm run build && cd ..
